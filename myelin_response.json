@@ -1,0 +1,186 @@
+{
+    "success": true,
+    "is_mock": false,
+    "miner": {
+        "design_name": "Myelin-Inspired Coaxial Electrostatic Shield",
+        "inspiration_source": "Vertebrate myelin sheath",
+        "domain": "Electromagnetics",
+        "physical_mechanism": "Concentric lipid-bilayer wrapping that creates an alternating high-dielectric and low-dielectric coaxial barrier, reducing radial capacitive coupling and shielding the internal core from external electrostatic noise.",
+        "parameters": [
+            {
+                "name": "r_inner",
+                "value": 1e-06,
+                "min_bound": 1e-07,
+                "max_bound": 1e-05,
+                "justification": "Radius of the inner core, mimicking the typical axon diameter of vertebrate nerve fibers."
+            },
+            {
+                "name": "r_outer",
+                "value": 2e-06,
+                "min_bound": 2e-07,
+                "max_bound": 5e-05,
+                "justification": "Outer radius of the shield, based on typical myelin sheath thicknesses relative to the axon."
+            },
+            {
+                "name": "V_inner",
+                "value": 0.1,
+                "min_bound": 0.01,
+                "max_bound": 10.0,
+                "justification": "Action potential scale voltage of the inner conductor requiring shielding."
+            },
+            {
+                "name": "V_outer",
+                "value": 0.0,
+                "min_bound": 0.0,
+                "max_bound": 1.0,
+                "justification": "Grounded external extracellular environment potential."
+            }
+        ],
+        "governing_equation": "d2V_dr2 = -(1 / r) * dV_dr",
+        "boundary_conditions": [
+            "V(r_inner) = V_inner",
+            "V(r_outer) = V_outer"
+        ],
+        "independent_variables": [
+            "r"
+        ],
+        "dependent_variables": [
+            "V"
+        ]
+    },
+    "auditor": {
+        "audit_passed": true,
+        "audit_notes": "The parameters are physically realistic and bio-inspired. The inner radius of 1 um matches the scale of vertebrate axons, and the outer radius of 2 um represents a typical myelin sheath thickness. The potential difference of 0.1 V is aligned with mammalian biological action potentials. The governing equation is a standard 1D cylindrical Laplace equation which is linear and has a stable closed-form analytical solution. (Programmatic safety checks applied.)",
+        "audited_parameters": [
+            {
+                "name": "r_inner",
+                "value": 1e-06
+            },
+            {
+                "name": "r_outer",
+                "value": 2e-06
+            },
+            {
+                "name": "V_inner",
+                "value": 0.1
+            },
+            {
+                "name": "V_outer",
+                "value": 0.0
+            }
+        ],
+        "dimensionless_numbers": [
+            {
+                "name": "DimensionlessParameter",
+                "value": 100.0
+            }
+        ],
+        "simulation_coefficient": 0.1442695,
+        "solver_method": "analytical",
+        "ui_metadata": {
+            "domain_name": "Electromagnetics",
+            "independent_var": {
+                "label": "Radial Coordinate",
+                "unit": "m"
+            },
+            "dependent_var": {
+                "label": "Electrostatic Potential",
+                "unit": "V"
+            },
+            "primary_metric": {
+                "label": "Radial Electric Field Strength"
+            },
+            "reference_metric": {
+                "label": "Analytical Electrostatic Potential"
+            },
+            "performance_gain": {
+                "label": "Capacitive Noise Attenuation"
+            }
+        },
+        "audited_parameters_dict": {
+            "r_inner": 1e-06,
+            "r_outer": 2e-06,
+            "V_inner": 0.1,
+            "V_outer": 0.0
+        },
+        "dimensionless_numbers_dict": {
+            "DimensionlessParameter": 100.0
+        }
+    },
+    "simulator": {
+        "solver_method": "analytical",
+        "epochs_trained": 0,
+        "final_loss": 0.0,
+        "loss_history": [],
+        "performance_gain_pct": 0.0,
+        "relative_error": 0.0,
+        "sample_points": [
+            1e-06,
+            1.0526315789473683e-06,
+            1.1052631578947369e-06,
+            1.1578947368421053e-06,
+            1.2105263157894736e-06,
+            1.263157894736842e-06,
+            1.3157894736842103e-06,
+            1.368421052631579e-06,
+            1.4210526315789473e-06,
+            1.4736842105263156e-06,
+            1.5263157894736842e-06,
+            1.5789473684210526e-06,
+            1.631578947368421e-06,
+            1.6842105263157893e-06,
+            1.7368421052631577e-06,
+            1.7894736842105262e-06,
+            1.8421052631578946e-06,
+            1.894736842105263e-06,
+            1.9473684210526315e-06,
+            2e-06
+        ],
+        "solution_primary": [
+            0.10000000000000053,
+            0.09259994185562359,
+            0.08556100906648423,
+            0.07884958948063137,
+            0.07243655573865992,
+            0.06629650127224629,
+            0.06040713236688999,
+            0.05474877953025348,
+            0.04930400112801614,
+            0.044057259138603255,
+            0.038994651831606886,
+            0.03410369178351269,
+            0.02937312030567729,
+            0.024792751344365316,
+            0.02035333940852002,
+            0.016046467219331895,
+            0.011864449649869435,
+            0.0078002512001353885,
+            0.0038474147814717696,
+            8.43769498715119e-15
+        ],
+        "solution_reference": [
+            0.10000000000000053,
+            0.09259994185562359,
+            0.08556100906648423,
+            0.07884958948063137,
+            0.07243655573865992,
+            0.06629650127224629,
+            0.06040713236688999,
+            0.05474877953025348,
+            0.04930400112801614,
+            0.044057259138603255,
+            0.038994651831606886,
+            0.03410369178351269,
+            0.02937312030567729,
+            0.024792751344365316,
+            0.02035333940852002,
+            0.016046467219331895,
+            0.011864449649869435,
+            0.0078002512001353885,
+            0.0038474147814717696,
+            8.43769498715119e-15
+        ],
+        "primary_metric_value": -144269.50408888495,
+        "reference_metric_value": -144269.50408888495
+    }
+}

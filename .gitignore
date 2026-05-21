@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# Python build artifacts and caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+
+# Run-time archives (history, generated reports, models)
+history/
+reports/
+saved_models/
+
+# Server logs
+*.log

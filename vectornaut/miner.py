@@ -1,0 +1,163 @@
+from google import genai
+from google.genai import types
+from .config import get_client, MinerOutput, ParameterProposal
+
+class Miner:
+    def __init__(self, client: genai.Client = None):
+        self.client = client or get_client()
+
+    def mine_design(self, query: str) -> MinerOutput:
+        """
+        Explores bionics/materials spaces and outputs structured design targets.
+        Uses gemini-3.5-flash with thinking_level="medium".
+        """
+        prompt = f"""
+        Explore the semantic and physical space of biomimetic material design for the following request:
+        "{query}"
+
+        Analyze natural systems (e.g., plants, animals, structures, physics) that solve this physical problem.
+        Identify a specific natural inspiration source, describe the underlying physical mechanism, and extract concrete physical parameters that can be modeled.
+        Propose key parameters (such as height, spacing, viscosity, velocity, conductivity, density, etc.) with suggested initial values and reasonable physical bounds [min, max] that can be audited.
+
+        In addition, formulate a 1D or 2D second-order differential equation (BVP or PDE) that models this system:
+        - Decide if the system is best modeled in 1D (a single coordinate like y, e.g., velocity across a channel) or 2D (spatial coordinates x and y over a cross-section, e.g., temperature profile in a plate or electrostatic field in a 2D coaxial geometry). Choose 2D if the query explicitly mentions 2D, or if the physical setup inherently requires two independent dimensions.
+        
+        1. governing_equation:
+           - For 1D: A second-order ODE in the format 'd2[dep]_d[ind]2 = RHS', where [dep] is the dependent variable (e.g., u, T, V) and [ind] is the independent variable (e.g., y, x).
+             Example: 'd2u_dy2 = -pressure_gradient / viscosity'
+           - For 2D: A second-order PDE in the format 'd2[dep]_d[ind1]2 + d2[dep]_d[ind2]2 = RHS', where [dep] is the dependent variable (e.g., T, V) and [ind1], [ind2] are the two independent variables (e.g., x, y).
+             Example for 2D heat conduction: 'd2T_dx2 + d2T_dy2 = 0'
+             Example for 2D Poisson electrostatics: 'd2V_dx2 + d2V_dy2 = -charge_density / permittivity'
+             Ensure all symbols in RHS are defined in your proposed parameters.
+        2. boundary_conditions: A list of symbolic boundary equations at the boundaries.
+           - For 1D: exactly two boundary conditions at 0 and 1. Example: ['T(0) = T_hot', 'T(1) = T_cold']
+           - For 2D: boundary conditions at the edges of the unit domain [0, 1] x [0, 1]. Provide boundary conditions for the four edges: x=0, x=1, y=0, y=1.
+             Example: ['T(0, y) = T_hot', 'T(1, y) = T_cold', 'dT_dy(x, 0) = 0', 'dT_dy(x, 1) = 0'] (which represent hot/cold walls and insulated bottom/top).
+        3. independent_variables: A list containing the independent variables:
+           - For 1D: a single element, e.g., ['y'] or ['x'].
+           - For 2D: two elements, e.g., ['x', 'y'].
+             Make sure it matches the governing equation and BCs.
+        4. dependent_variables: A list containing the single dependent variable, e.g., ['u'] or ['T'] or ['V'].
+             Make sure it matches the governing equation and BCs.
+        """
+
+        response = self.client.models.generate_content(
+            model="gemini-3.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(
+                    thinking_level="medium"
+                ),
+                response_mime_type="application/json",
+                response_schema=MinerOutput,
+            )
+        )
+        return response.parsed
+
+    def mock_mine_design(self, query: str) -> MinerOutput:
+        """
+        Returns a mock MinerOutput for testing without active API credentials.
+        """
+        q_lower = query.lower()
+        if any(keyword in q_lower for keyword in ["plastron", "ski", "collembola"]):
+            return MinerOutput(
+                design_name="PlastronGlide Hydrophobic Ski Base",
+                inspiration_source="Collembola cuticle (springtail)",
+                domain="Fluid Dynamics",
+                physical_mechanism="The hierarchical micro- and nanostructures of the Collembola cuticle trap a persistent layer of air (plastron) when in contact with water. This plastron layer changes the boundary condition at the liquid-solid interface from no-slip to shear-free (slip), significantly reducing viscous drag in the meltwater film under the ski.",
+                parameters=[
+                    ParameterProposal(
+                        name="film_thickness",
+                        value=0.00001,
+                        min_bound=0.000001,
+                        max_bound=0.0001,
+                        justification="Thickness of the liquid meltwater film generated by friction between the ski and snow."
+                    ),
+                    ParameterProposal(
+                        name="slip_length",
+                        value=0.00002,
+                        min_bound=0.000001,
+                        max_bound=0.0001,
+                        justification="Effective Navier slip length enabled by the trapped plastron within the Collembola-inspired structures."
+                    ),
+                    ParameterProposal(
+                        name="viscosity",
+                        value=0.00179,
+                        min_bound=0.001,
+                        max_bound=0.002,
+                        justification="Dynamic viscosity of water near 0 degrees Celsius."
+                    ),
+                    ParameterProposal(
+                        name="pressure_gradient",
+                        value=-10000.0,
+                        min_bound=-1000000.0,
+                        max_bound=0.0,
+                        justification="Pressure gradient driving the fluid flow in the meltwater film."
+                    ),
+                    ParameterProposal(
+                        name="ski_velocity",
+                        value=10.0,
+                        min_bound=0.0,
+                        max_bound=50.0,
+                        justification="Relative velocity of the ski base with respect to the snow surface."
+                    )
+                ],
+                governing_equation="d2u_dy2 = pressure_gradient * film_thickness^2 / viscosity",
+                boundary_conditions=[
+                    "u(0) = (slip_length / film_thickness) * du_dy(0)",
+                    "u(1) = ski_velocity"
+                ],
+                independent_variables=["y"],
+                dependent_variables=["u"]
+            )
+
+        return MinerOutput(
+            design_name="Shark-Skin Inspired Riblet Foil",
+            inspiration_source="Galeocerdo cuvier (Tiger Shark)",
+            domain="Fluid Dynamics",
+            physical_mechanism="Micro-grooves aligned with flow direction reduce viscous drag by lifting turbulent vortices off the wall.",
+            parameters=[
+                ParameterProposal(
+                    name="riblet_height",
+                    value=0.015,
+                    min_bound=0.001,
+                    max_bound=0.1,
+                    justification="Optimal height to stay inside the viscous sublayer."
+                ),
+                ParameterProposal(
+                    name="riblet_spacing",
+                    value=0.03,
+                    min_bound=0.005,
+                    max_bound=0.2,
+                    justification="Optimizes vortex spacing control, typically s+ of around 15."
+                ),
+                ParameterProposal(
+                    name="viscosity",
+                    value=0.001,
+                    min_bound=0.0001,
+                    max_bound=0.01,
+                    justification="Water viscosity at standard conditions."
+                ),
+                ParameterProposal(
+                    name="free_stream_velocity",
+                    value=1.5,
+                    min_bound=0.1,
+                    max_bound=5.0,
+                    justification="Operating velocity for testing conditions."
+                ),
+                ParameterProposal(
+                    name="pressure_gradient",
+                    value=2.0,
+                    min_bound=0.0,
+                    max_bound=10.0,
+                    justification="Simulates external pressure driven flow."
+                )
+            ],
+            governing_equation="d2u_dy2 = -pressure_gradient / viscosity",
+            boundary_conditions=[
+                "u(0) = slippage_coefficient * du_dy(0)",
+                "u(1) = free_stream_velocity"
+            ],
+            independent_variables=["y"],
+            dependent_variables=["u"]
+        )

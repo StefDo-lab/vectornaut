@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vectornaut 2.0 - Autonomous Material Design</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Marked.js CDN for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="style.css?v=2.4.1">
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header animate-fade-in">
+            <div class="logo-group">
+                <span class="logo-glow"></span>
+                <h1 class="logo-text">Vectornaut <span class="version">2.0</span></h1>
+            </div>
+            <p class="subtitle">Autonomous Decoupled Agentic Discovery Loop (Miner ➜ Auditor ➜ Simulator)</p>
+        </header>
+
+        <!-- Main Layout -->
+        <div class="main-grid">
+            
+            <!-- Left Panel: Controls -->
+            <section class="panel glass-panel animate-slide-in-left">
+                <h2>Control Panel</h2>
+                <div class="form-group">
+                    <label for="query-select">Select a Sample Request or Write Your Own</label>
+                    <select id="query-select" onchange="applySampleQuery()">
+                        <option value="">-- Custom Request --</option>
+                        <option value="design a microtextured biomimetic drag reduction surface for high-velocity water craft" selected>Shark-Skin Drag Reduction (Riblets)</option>
+                        <option value="design a lightweight thermal insulation material inspired by polar bear fur for extreme cold drone flights">Polar Bear Fur (Thermal insulation)</option>
+                        <option value="design a highly impact-resistant cellular composite material inspired by the mantis shrimp dactyl club">Mantis Shrimp Club (Impact Resistance)</option>
+                        <option value="design a hydrophobic self-cleaning surface inspired by the lotus leaf effect for solar panel coatings">Lotus Leaf Hydrophobicity (Self-Cleaning)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="query-input">Design Request Query</label>
+                    <textarea id="query-input" rows="4" placeholder="Describe the physical problem or biomimetic inspiration..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="epochs-input">PINN Epochs: <span id="epochs-val">200</span></label>
+                        <input type="range" id="epochs-input" min="50" max="1000" step="10" value="200" oninput="document.getElementById('epochs-val').innerText = this.value">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Execution Mode</label>
+                    <div class="toggle-container">
+                        <button id="mode-live" class="toggle-btn active" onclick="setMode(false)">
+                            <span class="indicator-dot green"></span> Live API (Gemini)
+                        </button>
+                        <button id="mode-mock" class="toggle-btn" onclick="setMode(true)">
+                            <span class="indicator-dot purple"></span> Offline Mock
+                        </button>
+                    </div>
+                </div>
+
+                <button id="run-btn" class="btn btn-primary" onclick="runDiscoveryLoop()">
+                    <span class="btn-text">Run Discovery Loop</span>
+                    <span class="btn-glow"></span>
+                </button>
+            </section>
+
+            <!-- Right Panel: Pipeline Progress & Results -->
+            <div class="results-container flex-column">
+                
+                <!-- Pipeline Stepper -->
+                <section class="panel glass-panel animate-slide-in-right">
+                    <h2>Pipeline Execution State</h2>
+                    <div class="pipeline-stepper">
+                        <div id="step-miner" class="step">
+                            <div class="step-icon">1</div>
+                            <div class="step-details">
+                                <h3>Stage 1: Miner</h3>
+                                <p class="step-status">Idle</p>
+                            </div>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div id="step-auditor" class="step">
+                            <div class="step-icon">2</div>
+                            <div class="step-details">
+                                <h3>Stage 2: Auditor</h3>
+                                <p class="step-status">Idle</p>
+                            </div>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div id="step-simulator" class="step">
+                            <div class="step-icon">3</div>
+                            <div class="step-details">
+                                <h3>Stage 3: Simulator</h3>
+                                <p class="step-status">Idle</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Results Output Tabs -->
+                <section class="panel glass-panel flex-1 min-h-400">
+                    <div class="tab-header">
+                        <button class="tab-link active" onclick="openTab(event, 'tab-overview')">Overview</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-params')">Parameters</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-simulation')">Physics Simulation</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-report')">Discovery Report</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-assistant')">Bionic Assistant</button>
+                    </div>
+
+                    <!-- Tab content: Overview -->
+                    <div id="tab-overview" class="tab-content active">
+                        <div class="empty-state">
+                            <p>No results yet. Run the discovery loop to generate data.</p>
+                        </div>
+                        <div class="overview-grid hidden">
+                            <div class="info-card span-2">
+                                <span class="label">Design Concept Name</span>
+                                <h3 id="concept-name" class="concept-title">-</h3>
+                            </div>
+                            <div class="info-card">
+                                <span class="label">Inspiration Source</span>
+                                <p id="inspiration-source" class="val-highlight">-</p>
+                            </div>
+                            <div class="info-card">
+                                <span class="label">Physical Domain</span>
+                                <p id="physical-domain">-</p>
+                            </div>
+                            <div class="info-card span-2">
+                                <span class="label">Physical Mechanism & Concept Description</span>
+                                <p id="physical-mechanism" class="desc-text">-</p>
+                            </div>
+                            <div class="info-card">
+                                <span class="label" id="derived-coefficient-label">Derived Simulation Coefficient</span>
+                                <p id="derived-coefficient" class="val-highlight">-</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab content: Parameters -->
+                    <div id="tab-params" class="tab-content">
+                        <div class="empty-state">
+                            <p>No results yet. Run the discovery loop to generate data.</p>
+                        </div>
+                        <div class="table-container hidden">
+                            <table class="params-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter Name</th>
+                                        <th>Mined Value</th>
+                                        <th>Audited Value</th>
+                                        <th>Suggested Bounds</th>
+                                        <th>Justification</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="params-table-body">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+
+                            <div class="dimensionless-group">
+                                <h3>Computed Dimensionless Numbers</h3>
+                                <div id="dimensionless-container" class="cards-grid">
+                                    <!-- Dynamic cards -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab content: Simulation -->
+                    <div id="tab-simulation" class="tab-content">
+                        <div class="empty-state">
+                            <p>No results yet. Run the discovery loop to generate data.</p>
+                        </div>
+                        <div class="simulation-view hidden">
+                            <div class="metrics-row">
+                                <div class="metric-card glow-purple" id="card-pinn-loss">
+                                    <span class="label">PINN Final Training Loss</span>
+                                    <h4 id="metric-loss">-</h4>
+                                </div>
+                                <div class="metric-card glow-blue">
+                                    <span class="label" id="metric-gain-label">Drag Reduction Efficiency</span>
+                                    <h4 id="metric-drag-reduction">-</h4>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="label" id="metric-primary-label">PINN Wall Shear Stress</span>
+                                    <h4 id="metric-wss-pinn">-</h4>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="label" id="metric-ref-label">Analytical Wall Shear Stress</span>
+                                    <h4 id="metric-wss-analytical">-</h4>
+                                </div>
+                            </div>
+                            
+                            <div class="charts-grid">
+                                <div class="chart-container" id="container-loss-chart">
+                                    <h4>PINN Loss Convergence History</h4>
+                                    <canvas id="lossChart"></canvas>
+                                </div>
+                                <div class="chart-container" id="container-field-chart">
+                                    <h4 id="field-chart-title">Flow Velocity Field (PINN vs Analytical)</h4>
+                                    <canvas id="velocityChart"></canvas>
+                                </div>
+                                <div class="chart-container" id="container-heatmap" style="display: none;">
+                                    <h4 id="heatmap-chart-title">2D Solution Heatmap (Interactive)</h4>
+                                    <div class="heatmap-wrapper" style="position: relative; display: inline-block; width: 100%; max-width: 400px; margin: 0 auto;">
+                                        <canvas id="heatmapCanvas" width="400" height="400" style="border-radius: 8px; background: #0f172a; cursor: crosshair; display: block; width: 100%; height: auto; aspect-ratio: 1/1;"></canvas>
+                                        <div id="heatmap-tooltip" style="position: absolute; display: none; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 4px; font-family: inherit; font-size: 12px; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100;"></div>
+                                    </div>
+                                    <div id="heatmap-legend" style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; color: var(--text-muted);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab content: Report -->
+                    <div id="tab-report" class="tab-content">
+                        <div class="empty-state">
+                            <p>No results yet. Run the discovery loop to generate data.</p>
+                        </div>
+                        <div class="report-actions hidden" id="report-actions-container" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" onclick="downloadRawReport()" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); cursor: pointer; font-family: var(--font-heading); font-weight: 600;">
+                                Download Raw JSON
+                            </button>
+                            <button class="btn btn-secondary" onclick="toggleRawReport()" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); cursor: pointer; font-family: var(--font-heading); font-weight: 600;">
+                                Toggle Developer JSON
+                            </button>
+                        </div>
+                        <div id="markdown-report" class="markdown-body hidden"></div>
+                        <pre id="raw-json-report" class="code-block hidden" style="display: none;"></pre>
+                    </div>
+
+                    <!-- Tab content: Bionic Assistant -->
+                    <div id="tab-assistant" class="tab-content">
+                        <div class="empty-state" id="assistant-empty-state">
+                            <p>No simulation run active. Run a discovery loop to initialize the Bionic Assistant.</p>
+                        </div>
+                        
+                        <div class="assistant-wrapper hidden" id="assistant-wrapper">
+                            <!-- Findings Summary card -->
+                            <div class="info-card glow-blue" style="margin-bottom: 1.25rem;">
+                                <span class="label">Bionic Executive Summary</span>
+                                <h3 id="findings-summary-title" style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--success-color); border: none; padding: 0; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">Analyzing results...</h3>
+                                <p id="findings-summary-desc" class="desc-text" style="margin-bottom: 0.75rem;">Loading simulation findings...</p>
+                                <div id="findings-stats-grid" class="findings-stats-grid"></div>
+                            </div>
+
+                            <!-- Suggested Questions -->
+                            <div style="margin-bottom: 1.25rem;">
+                                <span class="label">Suggested Questions</span>
+                                <div class="suggested-questions" id="suggested-questions" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;">
+                                    <!-- Populated dynamically or statically -->
+                                </div>
+                            </div>
+
+                            <!-- Chat interface container -->
+                            <div class="assistant-container">
+                                <div class="chat-history" id="chat-history">
+                                    <div class="chat-message system-message">
+                                        <p>Hallo! Ich bin dein Bionischer Design-Assistent. Ich habe Zugriff auf alle Parameter und Testergebnisse deines aktuellen Entwurfs. Wie kann ich dir heute helfen?</p>
+                                    </div>
+                                </div>
+                                <div class="chat-input-row">
+                                    <textarea id="chat-input" rows="3" placeholder="Frage mich zum Beispiel nach der Herstellung oder schreibe 'Optimieren'..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"></textarea>
+                                    <button class="btn btn-primary" id="chat-send-btn" onclick="sendChatMessage()">Senden</button>
+                                </div>
+                            </div>
+
+                            <!-- Optimization proposal card -->
+                            <div id="optimization-proposal" class="optimization-proposal hidden">
+                                <h3>
+                                    <span class="indicator-dot green" style="box-shadow: 0 0 6px var(--success-color);"></span>
+                                    Vorgeschlagene Parameter-Optimierungen
+                                </h3>
+                                <p class="desc-text" id="opt-explanation" style="margin-bottom: 1rem;">Folgende veränderte Werte wurden zur Reibungsminderung berechnet:</p>
+                                <div id="proposal-params-list" class="proposal-params-list">
+                                    <!-- Badges will be generated here -->
+                                </div>
+                                <button class="btn btn-accent" id="apply-opt-btn" onclick="applySuggestedParameters()" style="margin-top: 0.5rem;">
+                                    Apply & Run Next Optimization Round
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Console Console -->
+                <section class="panel glass-panel console-panel">
+                    <h2>Live Execution Console</h2>
+                    <div id="console-output" class="console-output">
+                        <span class="system-log">[SYSTEM] Vectornaut 2.0 shell initialized. Ready for command.</span>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=2.4.1"></script>
+</body>
+</html>
