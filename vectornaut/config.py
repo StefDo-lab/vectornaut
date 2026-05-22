@@ -109,4 +109,8 @@ class SimulatorOutput(BaseModel):
     primary_metric_value: float = Field(description="Derived performance metric from the primary solver")
     reference_metric_value: float = Field(description="Derived performance metric from the reference solver")
     custom_plot_url: Optional[str] = Field(description="Relative URL to the dynamically generated plot image", default=None)
+    validation_passed: Optional[bool] = Field(description="True if automated validation tests passed", default=None)
+    validation_report: Optional[str] = Field(description="Markdown report of the automated validation runs", default=None)
+    validation_tests: Optional[List[Dict[str, Any]]] = Field(description="Details of each run validation test", default=None)
+
 

@@ -551,6 +551,10 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
                 coord_str = str(pts[i])
         md.append(f"| {coord_str} | {p_val:.4f} | {r_val:.4f} | {diff:.4f} |")
         
+    if simulator.get("validation_report"):
+        md.append("\n## 6. Automatische Validierung (AI-Generated Tests)")
+        md.append(simulator.get("validation_report"))
+        
     return "\n".join(md)
 
 # Mount static folder for frontend UI (will be served at root "/")

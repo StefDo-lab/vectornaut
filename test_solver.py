@@ -27,7 +27,8 @@ def test_fluid_dynamics():
             "u(1) = free_stream_velocity"
         ],
         independent_variables=["y"],
-        dependent_variables=["u"]
+        dependent_variables=["u"],
+        svg_schematic="<svg></svg>"
     )
     
     auditor_out = AuditorOutput(
@@ -87,7 +88,8 @@ def test_thermodynamics():
             "T(1) = T_cold"
         ],
         independent_variables=["x"],
-        dependent_variables=["T"]
+        dependent_variables=["T"],
+        svg_schematic="<svg></svg>"
     )
     
     auditor_out = AuditorOutput(
@@ -137,7 +139,8 @@ def test_electromagnetics():
             "V(1) = V_1"
         ],
         independent_variables=["y"],
-        dependent_variables=["V"]
+        dependent_variables=["V"],
+        svg_schematic="<svg></svg>"
     )
     
     auditor_out = AuditorOutput(

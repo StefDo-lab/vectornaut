@@ -654,6 +654,53 @@ def dispatch_and_solve(
             plot_png_path=plot_local_path
         )
         
+        # Run test script validation on the fly
+        validation_passed = None
+        validation_report = None
+        validation_tests = None
+        
+        try:
+            from .test_generator import TestScriptGenerator
+            test_gen = TestScriptGenerator()
+            # Reconstruct params_json_path from solver_path
+            solver_path = res.get("script_path")
+            params_json_path = solver_path.replace("solver_", "params_").replace(".py", ".json")
+            
+            print(f"[*] Running automated validation on generated script: {solver_path}")
+            test_res = test_gen.generate_and_execute_tests(
+                miner_output=miner_output,
+                auditor_output=auditor_output,
+                solver_script_path=solver_path,
+                params_json_path=params_json_path
+            )
+            
+            validation_passed = test_res.get("success", False)
+            validation_tests = test_res.get("test_results", [])
+            
+            # Format a simple markdown report of the validation runs
+            report_lines = []
+            report_lines.append(f"### Status der Testausführung: {'✅ ERFOLGREICH' if validation_passed else '❌ FEHLGESCHLAGEN'}")
+            report_lines.append(f"- **Testskript:** `{os.path.basename(test_res.get('test_script_path', ''))}`")
+            report_lines.append(f"- **Ergebnisse:** `{os.path.basename(test_res.get('test_output_path', ''))}`")
+            report_lines.append(f"- **Ausgeführte Tests:** {test_res.get('total_run', 0)}")
+            report_lines.append(f"- **Fehlgeschlagene Tests:** {test_res.get('total_failures', 0)}")
+            report_lines.append(f"- **Test-Fehler (Errors):** {test_res.get('total_errors', 0)}\n")
+            
+            report_lines.append("| Testfall | Status | Details |")
+            report_lines.append("| --- | --- | --- |")
+            for t in validation_tests:
+                status_emoji = "✅ Passed" if t.get("passed") else "❌ Failed"
+                message = t.get("message", "").replace("\n", " ").strip()
+                report_lines.append(f"| `{t.get('name')}` | {status_emoji} | {message} |")
+                
+            validation_report = "\n".join(report_lines)
+            print(f"[+] Automated validation complete. Passed: {validation_passed}")
+        except Exception as test_err:
+            print(f"[-] Automated validation crashed: {test_err}")
+            validation_passed = False
+            validation_report = f"### Status der Testausführung: ❌ CRASHED\n\nFehler bei der Testgenerierung/-ausführung: `{str(test_err)}`"
+            validation_tests = [{"name": "validation_runner", "passed": False, "message": str(test_err)}]
+        
         return SimulatorOutput(
             solver_method="dynamic_script",
             epochs_trained=0,
@@ -666,8 +713,12 @@ def dispatch_and_solve(
             solution_reference=res.get("solution_reference", []),
             primary_metric_value=res.get("primary_metric_value", 0.0),
             reference_metric_value=res.get("reference_metric_value", 0.0),
-            custom_plot_url=f"/plots/{plot_filename}"
+            custom_plot_url=f"/plots/{plot_filename}",
+            validation_passed=validation_passed,
+            validation_report=validation_report,
+            validation_tests=validation_tests
         )
+
 
     # 1. Extract inputs
     gov_eq = miner_output.governing_equation
