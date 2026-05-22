@@ -3,6 +3,9 @@ import urllib.error
 import json
 import sys
 
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 def run_tests():
     print("=== Testing /api/run with override_parameters ===")
     url_run = "http://127.0.0.1:8080/api/run"

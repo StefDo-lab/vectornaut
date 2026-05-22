@@ -3,6 +3,9 @@ import urllib.error
 import json
 import sys
 
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 def test_live():
     url_chat = "http://127.0.0.1:8080/api/chat"
     headers = {"Content-Type": "application/json"}

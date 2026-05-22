@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from google import genai
 from pydantic import BaseModel, Field
@@ -42,6 +42,7 @@ class MinerOutput(BaseModel):
     boundary_conditions: List[str] = Field(description="List of symbolic boundary conditions, e.g., ['u(0) = lambda * du_dy(0)', 'u(1) = u_free']")
     independent_variables: List[str] = Field(description="Independent variables (coordinates) for the system, e.g., ['y'] or ['x']")
     dependent_variables: List[str] = Field(description="Dependent variables (fields) for the system, e.g., ['u'] or ['T']")
+    svg_schematic: str = Field(description="Self-contained responsive 2D SVG markup illustrating the micro/nanostructure of the proposed material, scaled dynamically according to the parameter values. Uses dark-mode aligned accent colors (neon purple, neon cyan, dark fills) and technical labels.")
 
     @property
     def proposed_parameters(self) -> Dict[str, float]:
@@ -107,4 +108,5 @@ class SimulatorOutput(BaseModel):
     solution_reference: List[float] = Field(description="Reference solver field values at sample points")
     primary_metric_value: float = Field(description="Derived performance metric from the primary solver")
     reference_metric_value: float = Field(description="Derived performance metric from the reference solver")
+    custom_plot_url: Optional[str] = Field(description="Relative URL to the dynamically generated plot image", default=None)
 

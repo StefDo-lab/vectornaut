@@ -143,6 +143,10 @@
                                 <span class="label" id="derived-coefficient-label">Derived Simulation Coefficient</span>
                                 <p id="derived-coefficient" class="val-highlight">-</p>
                             </div>
+                            <div id="schematic-card" class="info-card span-2 hidden">
+                                <span class="label">Microstructure Schematic Blueprint</span>
+                                <div id="schematic-container"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -217,6 +221,12 @@
                                         <div id="heatmap-tooltip" style="position: absolute; display: none; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 4px; font-family: inherit; font-size: 12px; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100;"></div>
                                     </div>
                                     <div id="heatmap-legend" style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; color: var(--text-muted);"></div>
+                                </div>
+                                <div class="chart-container" id="container-custom-plot" style="display: none; grid-column: span 2; text-align: center;">
+                                    <h4 id="custom-plot-title">Dynamically Generated Solution Plot</h4>
+                                    <div class="plot-wrapper" style="margin: 0 auto; max-width: 800px;">
+                                        <img id="custom-plot-img" src="" alt="Custom Solution Plot" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -305,6 +315,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=2.4.1"></script>
+    <script src="app.js?v=2.4.1" charset="UTF-8"></script>
 </body>
 </html>

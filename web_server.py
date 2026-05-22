@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import uvicorn
@@ -5,6 +6,7 @@ import json
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -14,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from vectornaut.miner import Miner
 from vectornaut.auditor import Auditor
 from vectornaut.solver_dispatcher import dispatch_and_solve
-from vectornaut.config import get_client
+from vectornaut.config import get_client, MinerOutput
 from google.genai import types
 
 # Load environment vars
@@ -30,6 +32,7 @@ class RunRequest(BaseModel):
     epochs: int = 200
     is_mock: bool = False
     override_parameters: Optional[Dict[str, float]] = None
+    previous_miner_output: Optional[MinerOutput] = None
 
 @app.post("/api/run")
 async def run_discovery_loop(req: RunRequest):
@@ -42,11 +45,15 @@ async def run_discovery_loop(req: RunRequest):
             effective_mock = True
 
         # 1. Miner Stage
-        miner = Miner()
-        if effective_mock:
-            miner_output = miner.mock_mine_design(req.query)
+        if req.previous_miner_output:
+            miner_output = req.previous_miner_output
+            print(f"[*] Reusing cached concept: {miner_output.design_name}")
         else:
-            miner_output = miner.mine_design(req.query)
+            miner = Miner()
+            if effective_mock:
+                miner_output = miner.mock_mine_design(req.query)
+            else:
+                miner_output = miner.mine_design(req.query)
 
         # Apply parameter overrides if provided
         if req.override_parameters:
@@ -57,9 +64,9 @@ async def run_discovery_loop(req: RunRequest):
         # 2. Auditor Stage
         auditor = Auditor()
         if effective_mock:
-            auditor_output = auditor.mock_audit_design(miner_output)
+            auditor_output = auditor.mock_audit_design(miner_output, override_parameters=req.override_parameters, user_query=req.query)
         else:
-            auditor_output = auditor.audit_design(miner_output)
+            auditor_output = auditor.audit_design(miner_output, override_parameters=req.override_parameters, user_query=req.query)
 
         # 3. Simulator Stage (Solver Dispatcher)
         sim_output = dispatch_and_solve(
@@ -115,7 +122,7 @@ async def run_discovery_loop(req: RunRequest):
         except Exception as archive_err:
             print(f"[*] Archiving failed: {archive_err}")
 
-        return response_data
+        return JSONResponse(content=response_data, media_type="application/json; charset=utf-8")
 
     except Exception as e:
         import traceback
@@ -173,6 +180,10 @@ WICHTIGE STRUKTURIERUNGS- UND FORMATIERUNGS-ANWEISUNGEN (Vermeidung von Textwüs
 4. PARAMETER-OPTIMIERUNG:
    - Wenn der Benutzer eine Optimierung wünscht, schlage verbesserte Werte für die Parameter vor, die sich innerhalb der geprüften min/max Bounds befinden. Trage diese geänderten Parameter in das Feld 'suggested_params' des Antwort-Schemas ein.
    - Wenn du keine Parameteränderungen vorschlägst, lasse das Feld 'suggested_params' leer.
+
+5. SPRACHLICHE KORREKTHEIT UND UMLAUTE:
+   - Verwende im Text unbedingt die korrekten deutschen Umlaute (ä, ö, ü) und das Eszett (ß).
+   - Ersetze Umlaute NIEMALS durch Sonderzeichen oder Symbole wie das Dollar-Zeichen ($) (schreibe z. B. immer "Erklärung" statt "Erkl$rung", "ermöglicht" statt "erm$glicht", "über" statt "$ber", "großer" statt "gro$er").
 """
 
 @app.post("/api/chat")
@@ -381,7 +392,7 @@ async def chat_with_assistant(req: ChatRequest):
                 )
                 suggested_params = {}
             
-            return {"reply": reply, "suggested_params": suggested_params}
+            return JSONResponse(content={"reply": reply, "suggested_params": suggested_params}, media_type="application/json; charset=utf-8")
 
         else:
             client = get_client()
@@ -422,10 +433,10 @@ async def chat_with_assistant(req: ChatRequest):
             # Clean double escaped newlines
             reply_text = reply_text.replace("\\n", "\n")
             
-            return {
+            return JSONResponse(content={
                 "reply": reply_text,
                 "suggested_params": suggested_dict
-            }
+            }, media_type="application/json; charset=utf-8")
 
     except Exception as e:
         import traceback

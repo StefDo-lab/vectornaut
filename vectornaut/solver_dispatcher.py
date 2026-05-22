@@ -635,6 +635,40 @@ def dispatch_and_solve(
     Main entry point. Dispatches the governing equation and boundary conditions
     to the correct solvers. Performs fallback if needed.
     """
+    if auditor_output.solver_method.lower() == 'dynamic_script':
+        from .script_generator import ScriptGenerator
+        generator = ScriptGenerator()
+        design_name = miner_output.design_name or "unknown_design"
+        slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        plot_relative_dir = os.path.join("static", "plots")
+        os.makedirs(plot_relative_dir, exist_ok=True)
+        plot_filename = f"plot_{slug}_{timestamp}.png"
+        plot_local_path = os.path.join(plot_relative_dir, plot_filename)
+        
+        res = generator.generate_and_execute(
+            miner_output=miner_output,
+            auditor_output=auditor_output,
+            epochs=epochs,
+            plot_png_path=plot_local_path
+        )
+        
+        return SimulatorOutput(
+            solver_method="dynamic_script",
+            epochs_trained=0,
+            final_loss=res.get("relative_error", 0.0),
+            loss_history=[],
+            performance_gain_pct=res.get("performance_gain_pct", 0.0),
+            relative_error=res.get("relative_error", 0.0),
+            sample_points=res.get("sample_points", []),
+            solution_primary=res.get("solution_primary", []),
+            solution_reference=res.get("solution_reference", []),
+            primary_metric_value=res.get("primary_metric_value", 0.0),
+            reference_metric_value=res.get("reference_metric_value", 0.0),
+            custom_plot_url=f"/plots/{plot_filename}"
+        )
+
     # 1. Extract inputs
     gov_eq = miner_output.governing_equation
     bcs = miner_output.boundary_conditions

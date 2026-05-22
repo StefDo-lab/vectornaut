@@ -3,6 +3,7 @@ let isMock = false;
 let lossChart = null;
 let velocityChart = null;
 let lastRunData = null;
+let keepChatHistory = false;
 
 // Initialize elements
 document.addEventListener("DOMContentLoaded", () => {
@@ -65,6 +66,8 @@ async function runDiscoveryLoop(overrideParams = null) {
         return;
     }
 
+    keepChatHistory = overrideParams !== null;
+
     // UI resets
     runBtn.disabled = true;
     runBtn.querySelector(".btn-text").innerText = "Processing...";
@@ -78,13 +81,28 @@ async function runDiscoveryLoop(overrideParams = null) {
     }
     writeLog(`[SYSTEM] Requesting ${epochs} epochs for PINN-lite solver...`);
 
-    // Step 1: Miner Active
-    setStepState("step-miner", "active", "Exploring semantic spaces...");
+    // Set step states during backend fetch
+    if (overrideParams) {
+        setStepState("step-miner", "completed", "Cached concept used");
+        const divider1 = document.querySelector("#step-miner + .step-divider");
+        if (divider1) divider1.classList.add("completed");
+        
+        setStepState("step-auditor", "completed", "Parameters verified!");
+        const divider2 = document.querySelector("#step-auditor + .step-divider");
+        if (divider2) divider2.classList.add("completed");
+        
+        setStepState("step-simulator", "active", "Recalculating simulation...");
+    } else {
+        setStepState("step-miner", "active", "Exploring semantic spaces...");
+    }
 
     try {
         const bodyPayload = { query, epochs, is_mock: isMock };
         if (overrideParams) {
             bodyPayload.override_parameters = overrideParams;
+            if (lastRunData && lastRunData.miner) {
+                bodyPayload.previous_miner_output = lastRunData.miner;
+            }
         }
         
         const response = await fetch("/api/run", {
@@ -104,39 +122,73 @@ async function runDiscoveryLoop(overrideParams = null) {
         
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-        // Orchestrate simulated delays to make the agent pipeline interactive to watch
-        // Miner Complete -> Auditor Start
-        await delay(1500);
-        setStepState("step-miner", "completed", "Concept discovered!");
-        writeLog(`[MINER] Concept discovered: "${data.miner.design_name}"`, "success-log");
-        writeLog(`[MINER] Inspiration: ${data.miner.inspiration_source}`);
-        writeLog(`[MINER] Domain: ${data.miner.domain}`);
-        writeLog(`[MINER] Proposed parameters extracted: ${data.miner.parameters.length} variables.`);
-        
-        setStepState("step-auditor", "active", "Sanity checking variables...");
-        
-        // Auditor Complete -> Simulator Start
-        await delay(1500);
-        setStepState("step-auditor", "completed", "Parameters verified!");
-        writeLog(`[AUDITOR] Audit completed successfully: ${data.auditor.audit_passed ? 'PASSED' : 'FAILED'}`, "success-log");
-        writeLog(`[AUDITOR] Notes: "${data.auditor.audit_notes}"`);
-        writeLog(`[AUDITOR] Solver selected: ${data.auditor.solver_method.toUpperCase()}`);
-        writeLog(`[AUDITOR] Derived coefficient = ${data.auditor.simulation_coefficient.toFixed(6)}`);
-        
-        setStepState("step-simulator", "active", data.simulator.solver_method === "pinn" ? "Training PINN neural network..." : `Solving via ${data.simulator.solver_method} solver...`);
-        writeLog(`[SIMULATOR] Launching physics-solver dispatcher...`);
-        writeLog(`[SIMULATOR] Solving equation: ${data.miner.governing_equation}`);
-        
-        // Simulator Complete -> Render Results
-        await delay(1800);
-        setStepState("step-simulator", "completed", "Simulation complete!");
-        if (data.simulator.solver_method === "pinn") {
-            writeLog(`[SIMULATOR] PyTorch PINN converged. Final Loss: ${data.simulator.final_loss.toExponential(4)}`, "success-log");
+        if (overrideParams) {
+            // Write logs instantly
+            writeLog(`[MINER] Using cached concept: "${data.miner.design_name}"`, "success-log");
+            writeLog(`[MINER] Inspiration: ${data.miner.inspiration_source}`);
+            writeLog(`[MINER] Domain: ${data.miner.domain}`);
+            writeLog(`[MINER] Parameters retained and updated.`);
+            
+            writeLog(`[AUDITOR] Audit completed successfully: ${data.auditor.audit_passed ? 'PASSED' : 'FAILED'}`, "success-log");
+            writeLog(`[AUDITOR] Notes: "${data.auditor.audit_notes}"`);
+            writeLog(`[AUDITOR] Solver selected: ${data.auditor.solver_method.toUpperCase()}`);
+            writeLog(`[AUDITOR] Derived coefficient = ${data.auditor.simulation_coefficient.toFixed(6)}`);
+            
+            writeLog(`[SIMULATOR] Launching physics-solver dispatcher...`);
+            writeLog(`[SIMULATOR] Solving equation: ${data.miner.governing_equation}`);
+            
+            // Brief visual transition
+            await delay(300);
+            
+            setStepState("step-simulator", "completed", "Simulation complete!");
+            if (data.simulator.solver_method === "pinn") {
+                writeLog(`[SIMULATOR] PyTorch PINN converged. Final Loss: ${data.simulator.final_loss.toExponential(4)}`, "success-log");
+            } else {
+                writeLog(`[SIMULATOR] Solver evaluated successfully. Relative error: ${data.simulator.relative_error.toExponential(4)}`, "success-log");
+            }
+            writeLog(`[SIMULATOR] ${data.auditor.ui_metadata.performance_gain.label}: ${data.simulator.performance_gain_pct.toFixed(2)}%`, "success-log");
+            writeLog(`[SYSTEM] Compilation of run report completed successfully!`, "info-log");
         } else {
-            writeLog(`[SIMULATOR] Solver evaluated successfully. Relative error: ${data.simulator.relative_error.toExponential(4)}`, "success-log");
+            // Normal flow with simulated delays
+            // Miner Complete -> Auditor Start
+            await delay(1500);
+            setStepState("step-miner", "completed", "Concept discovered!");
+            const divider1 = document.querySelector("#step-miner + .step-divider");
+            if (divider1) divider1.classList.add("completed");
+            
+            writeLog(`[MINER] Concept discovered: "${data.miner.design_name}"`, "success-log");
+            writeLog(`[MINER] Inspiration: ${data.miner.inspiration_source}`);
+            writeLog(`[MINER] Domain: ${data.miner.domain}`);
+            writeLog(`[MINER] Proposed parameters extracted: ${data.miner.parameters.length} variables.`);
+            
+            setStepState("step-auditor", "active", "Sanity checking variables...");
+            
+            // Auditor Complete -> Simulator Start
+            await delay(1500);
+            setStepState("step-auditor", "completed", "Parameters verified!");
+            const divider2 = document.querySelector("#step-auditor + .step-divider");
+            if (divider2) divider2.classList.add("completed");
+            
+            writeLog(`[AUDITOR] Audit completed successfully: ${data.auditor.audit_passed ? 'PASSED' : 'FAILED'}`, "success-log");
+            writeLog(`[AUDITOR] Notes: "${data.auditor.audit_notes}"`);
+            writeLog(`[AUDITOR] Solver selected: ${data.auditor.solver_method.toUpperCase()}`);
+            writeLog(`[AUDITOR] Derived coefficient = ${data.auditor.simulation_coefficient.toFixed(6)}`);
+            
+            setStepState("step-simulator", "active", data.simulator.solver_method === "pinn" ? "Training PINN neural network..." : `Solving via ${data.simulator.solver_method} solver...`);
+            writeLog(`[SIMULATOR] Launching physics-solver dispatcher...`);
+            writeLog(`[SIMULATOR] Solving equation: ${data.miner.governing_equation}`);
+            
+            // Simulator Complete -> Render Results
+            await delay(1800);
+            setStepState("step-simulator", "completed", "Simulation complete!");
+            if (data.simulator.solver_method === "pinn") {
+                writeLog(`[SIMULATOR] PyTorch PINN converged. Final Loss: ${data.simulator.final_loss.toExponential(4)}`, "success-log");
+            } else {
+                writeLog(`[SIMULATOR] Solver evaluated successfully. Relative error: ${data.simulator.relative_error.toExponential(4)}`, "success-log");
+            }
+            writeLog(`[SIMULATOR] ${data.auditor.ui_metadata.performance_gain.label}: ${data.simulator.performance_gain_pct.toFixed(2)}%`, "success-log");
+            writeLog(`[SYSTEM] Compilation of run report completed successfully!`, "info-log");
         }
-        writeLog(`[SIMULATOR] ${data.auditor.ui_metadata.performance_gain.label}: ${data.simulator.performance_gain_pct.toFixed(2)}%`, "success-log");
-        writeLog(`[SYSTEM] Compilation of run report completed successfully!`, "info-log");
         
         renderResults(data);
         
@@ -160,6 +212,8 @@ function resetStepper() {
         el.className = "step";
         el.querySelector(".step-status").innerText = "Idle";
     });
+    const dividers = document.querySelectorAll(".step-divider");
+    dividers.forEach(div => div.classList.remove("completed"));
 }
 
 function setStepState(stepId, state, statusText) {
@@ -240,6 +294,19 @@ function renderResults(data) {
     const simCoeff = getSafeNumber(auditorObj.simulation_coefficient);
     document.getElementById("derived-coefficient").innerText = simCoeff !== null ? simCoeff.toFixed(6) : "-";
     document.getElementById("derived-coefficient-label").innerText = `Derived Coefficient (for ${uiMeta.domain_name})`;
+
+    // Render SVG Schematic if present
+    const schematicCard = document.getElementById("schematic-card");
+    const schematicContainer = document.getElementById("schematic-container");
+    if (schematicCard && schematicContainer) {
+        if (minerObj.svg_schematic) {
+            schematicContainer.innerHTML = minerObj.svg_schematic;
+            schematicCard.classList.remove("hidden");
+        } else {
+            schematicContainer.innerHTML = "";
+            schematicCard.classList.add("hidden");
+        }
+    }
     
     // Parameters tab
     const tbody = document.getElementById("params-table-body");
@@ -307,33 +374,53 @@ function renderResults(data) {
     const isPinn = sim.solver_method === "pinn";
     const lossHistory = sim.loss_history || [];
     const chartsGrid = document.querySelector(".charts-grid");
-    
-    if (isPinn && lossHistory.length > 0) {
-        document.getElementById("card-pinn-loss").style.display = "block";
-        document.getElementById("container-loss-chart").style.display = "block";
-        document.getElementById("metric-loss").innerText = finalLossVal !== null ? finalLossVal.toExponential(4) : "-";
-        if (chartsGrid) chartsGrid.classList.remove("single-chart");
-    } else {
-        document.getElementById("card-pinn-loss").style.display = "none";
-        document.getElementById("container-loss-chart").style.display = "none";
-        if (chartsGrid) chartsGrid.classList.add("single-chart");
-    }
-
-    // Dynamic plot title
-    const depVarLabel = uiMeta.dependent_var?.label || "Field";
-    document.getElementById("field-chart-title").innerText = `${depVarLabel} Field (Primary vs Reference)`;
-
-    // Toggle 1D vs 2D visualization containers
-    const is2D = sim.sample_points && sim.sample_points.length > 0 && Array.isArray(sim.sample_points[0]);
+    const customPlotContainer = document.getElementById("container-custom-plot");
+    const customPlotImg = document.getElementById("custom-plot-img");
     const fieldChartContainer = document.getElementById("container-field-chart");
     const heatmapContainer = document.getElementById("container-heatmap");
-    
-    if (is2D) {
+
+    if (sim.custom_plot_url) {
+        if (customPlotContainer) customPlotContainer.style.display = "block";
+        if (customPlotImg) {
+            // Append a cache-buster timestamp to ensure the browser reloads the newly generated image
+            customPlotImg.src = `${sim.custom_plot_url}?t=${new Date().getTime()}`;
+        }
+        
+        document.getElementById("card-pinn-loss").style.display = "none";
+        document.getElementById("container-loss-chart").style.display = "none";
         if (fieldChartContainer) fieldChartContainer.style.display = "none";
-        if (heatmapContainer) heatmapContainer.style.display = "block";
-    } else {
-        if (fieldChartContainer) fieldChartContainer.style.display = "block";
         if (heatmapContainer) heatmapContainer.style.display = "none";
+        if (chartsGrid) chartsGrid.classList.add("single-chart");
+    } else {
+        if (customPlotContainer) customPlotContainer.style.display = "none";
+
+        if (isPinn && lossHistory.length > 0) {
+            document.getElementById("card-pinn-loss").style.display = "block";
+            document.getElementById("container-loss-chart").style.display = "block";
+            document.getElementById("metric-loss").innerText = finalLossVal !== null ? finalLossVal.toExponential(4) : "-";
+            if (chartsGrid) chartsGrid.classList.remove("single-chart");
+        } else {
+            document.getElementById("card-pinn-loss").style.display = "none";
+            document.getElementById("container-loss-chart").style.display = "none";
+            if (chartsGrid) chartsGrid.classList.add("single-chart");
+        }
+
+        // Dynamic plot title
+        const depVarLabel = uiMeta.dependent_var?.label || "Field";
+        const titleEl = document.getElementById("field-chart-title");
+        if (titleEl) {
+            titleEl.innerText = `${depVarLabel} Field (Primary vs Reference)`;
+        }
+
+        // Toggle 1D vs 2D visualization containers
+        const is2D = sim.sample_points && sim.sample_points.length > 0 && Array.isArray(sim.sample_points[0]);
+        if (is2D) {
+            if (fieldChartContainer) fieldChartContainer.style.display = "none";
+            if (heatmapContainer) heatmapContainer.style.display = "block";
+        } else {
+            if (fieldChartContainer) fieldChartContainer.style.display = "block";
+            if (heatmapContainer) heatmapContainer.style.display = "none";
+        }
     }
 
     // Build Charts (wrapped in try-catch so it won't break the page if Chart.js is offline)
@@ -363,9 +450,11 @@ function renderResults(data) {
         const assistantWrapper = document.getElementById("assistant-wrapper");
         if (assistantEmpty) assistantEmpty.classList.add("hidden");
         if (assistantWrapper) assistantWrapper.classList.remove("hidden");
-        
-        resetChat();
+        if (!keepChatHistory) {
+            resetChat();
+        }
         updateAssistantTab(data);
+        keepChatHistory = false;
     } catch (assistantErr) {
         console.error("Failed to update Bionic Assistant tab:", assistantErr);
     }

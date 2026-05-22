@@ -1,0 +1,6 @@
+# Workspace Rules for AI Assistant
+
+Whenever starting a new chat session or workspace interaction in this project:
+1. **Auto-Load Project Status**: You must immediately read the file `PROJECT_STATUS.md` in the workspace root to get up to speed with the project goals, architecture, current status, and next steps.
+2. **Keep it Updated**: Update `PROJECT_STATUS.md` whenever you complete a major task, implement a new feature, or adjust the project roadmap.
+3. **Encoding & Language**: Preserve German umlauts in user communications and console logging. Use UTF-8 encoding for all files.

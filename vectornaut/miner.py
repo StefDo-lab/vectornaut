@@ -39,6 +39,12 @@ class Miner:
              Make sure it matches the governing equation and BCs.
         4. dependent_variables: A list containing the single dependent variable, e.g., ['u'] or ['T'] or ['V'].
              Make sure it matches the governing equation and BCs.
+        5. svg_schematic:
+           - A clean, self-contained SVG code snippet (using <svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">) illustrating the proposed microstructure.
+           - Do NOT wrap this field in markdown code blocks inside the JSON; it must be a raw string. All inner double quotes must be properly escaped if necessary.
+           - Draw a clean 2D cross-section or diagram showing the geometry of the proposed microstructure (e.g., V-shaped riblets, micro-posts, honeycomb pores, fiber grids) scaled visually to match your proposed parameter values.
+           - The style must fit a premium dark-themed dashboard. Use a dark background (fill="#0f172a") with rounded corners (rx="8" ry="8") or transparent, and draw using neon purple (#7b2cbf), neon cyan (#00f5d4), glowing white, and subtle grays.
+           - Add technical annotations like dimension lines, arrows, and parameter labels (e.g. 's' or 'spacing' for spacing, 'h' or 'height' for height, etc.) to show how the proposed parameters map to the geometry. Make it look like a high-tech scientific blueprint.
         """
 
         response = self.client.models.generate_content(
@@ -108,7 +114,41 @@ class Miner:
                     "u(1) = ski_velocity"
                 ],
                 independent_variables=["y"],
-                dependent_variables=["u"]
+                dependent_variables=["u"],
+                svg_schematic='''<svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="200" rx="8" ry="8" fill="#0f172a" />
+  <path d="M 0,50 L 400,50 M 0,100 L 400,100 M 0,150 L 400,150 M 100,0 L 100,200 M 200,0 L 200,200 M 300,0 L 300,200" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4" />
+  <rect x="0" y="160" width="400" height="40" fill="#1e1b4b" stroke="#7b2cbf" stroke-width="2" />
+  <rect x="50" y="110" width="20" height="50" fill="#7b2cbf" opacity="0.8" />
+  <circle cx="60" cy="110" r="12" fill="#7b2cbf" />
+  <rect x="150" y="110" width="20" height="50" fill="#7b2cbf" opacity="0.8" />
+  <circle cx="160" cy="110" r="12" fill="#7b2cbf" />
+  <rect x="250" y="110" width="20" height="50" fill="#7b2cbf" opacity="0.8" />
+  <circle cx="260" cy="110" r="12" fill="#7b2cbf" />
+  <rect x="350" y="110" width="20" height="50" fill="#7b2cbf" opacity="0.8" />
+  <circle cx="360" cy="110" r="12" fill="#7b2cbf" />
+  <rect x="72" y="110" width="66" height="50" fill="rgba(123, 44, 191, 0.15)" />
+  <rect x="172" y="110" width="66" height="50" fill="rgba(123, 44, 191, 0.15)" />
+  <rect x="272" y="110" width="66" height="50" fill="rgba(123, 44, 191, 0.15)" />
+  <text x="105" y="140" fill="#7b2cbf" font-size="10" font-family="monospace" text-anchor="middle" opacity="0.6">Air Plastron</text>
+  <text x="205" y="140" fill="#7b2cbf" font-size="10" font-family="monospace" text-anchor="middle" opacity="0.6">Air Plastron</text>
+  <text x="305" y="140" fill="#7b2cbf" font-size="10" font-family="monospace" text-anchor="middle" opacity="0.6">Air Plastron</text>
+  <path d="M 0,98 Q 60,105 100,98 T 200,98 T 300,98 T 400,98" fill="none" stroke="#00f5d4" stroke-width="3" />
+  <rect x="0" y="40" width="400" height="58" fill="rgba(0, 245, 212, 0.08)" />
+  <text x="20" y="65" fill="#00f5d4" font-size="12" font-family="sans-serif" font-weight="bold">Water Flow (Meltwater)</text>
+  <line x1="160" y1="80" x2="260" y2="80" stroke="#f1f3f9" stroke-width="1" />
+  <polygon points="160,80 165,77 165,83" fill="#f1f3f9" />
+  <polygon points="260,80 255,77 255,83" fill="#f1f3f9" />
+  <text x="210" y="75" fill="#f1f3f9" font-size="11" font-family="monospace" text-anchor="middle">s (spacing)</text>
+  <line x1="28" y1="110" x2="28" y2="160" stroke="#f1f3f9" stroke-width="1" />
+  <polygon points="28,110 25,115 31,115" fill="#f1f3f9" />
+  <polygon points="28,160 25,155 31,155" fill="#f1f3f9" />
+  <text x="20" y="138" fill="#f1f3f9" font-size="11" font-family="monospace" text-anchor="end">h (height)</text>
+  <path d="M 0,98 L 400,98" stroke="#00f5d4" stroke-dasharray="2 2" />
+  <line x1="385" y1="98" x2="385" y2="120" stroke="#00f5d4" stroke-width="1" />
+  <polygon points="385,98 382,103 388,103" fill="#00f5d4" />
+  <text x="378" y="115" fill="#00f5d4" font-size="11" font-family="monospace" text-anchor="end">λ (slip length)</text>
+</svg>'''
             )
 
         return MinerOutput(
@@ -159,5 +199,27 @@ class Miner:
                 "u(1) = free_stream_velocity"
             ],
             independent_variables=["y"],
-            dependent_variables=["u"]
+            dependent_variables=["u"],
+            svg_schematic='''<svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="200" rx="8" ry="8" fill="#0f172a" />
+  <path d="M 0,50 L 400,50 M 0,100 L 400,100 M 0,150 L 400,150 M 100,0 L 100,200 M 200,0 L 200,200 M 300,0 L 300,200" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4" />
+  <path d="M 0,160 L 20,160 L 40,110 L 60,160 L 100,160 L 120,110 L 140,160 L 180,160 L 200,110 L 220,160 L 260,160 L 280,110 L 300,160 L 340,160 L 360,110 L 380,160 L 400,160 L 400,200 L 0,200 Z" fill="#1e1b4b" stroke="#7b2cbf" stroke-width="2" />
+  <rect x="0" y="30" width="400" height="80" fill="rgba(0, 245, 212, 0.05)" />
+  <path d="M 0,110 C 40,100 120,100 120,110 C 120,100 200,100 200,110 C 200,100 280,100 280,110 C 280,100 360,100 360,110" fill="none" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3 3" />
+  <circle cx="120" cy="95" r="10" fill="none" stroke="#00f5d4" stroke-width="1.5" stroke-dasharray="2 2" />
+  <path d="M 127,95 A 7,7 0 1,1 120,88" fill="none" stroke="#00f5d4" stroke-width="1.5" />
+  <circle cx="280" cy="95" r="10" fill="none" stroke="#00f5d4" stroke-width="1.5" stroke-dasharray="2 2" />
+  <path d="M 287,95 A 7,7 0 1,1 280,88" fill="none" stroke="#00f5d4" stroke-width="1.5" />
+  <text x="200" y="55" fill="#00f5d4" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">Laminar Flow / Vortex Lifting</text>
+  <text x="120" y="80" fill="#00f5d4" font-size="9" font-family="sans-serif" text-anchor="middle" opacity="0.8">Lifted Vortex</text>
+  <text x="280" y="80" fill="#00f5d4" font-size="9" font-family="sans-serif" text-anchor="middle" opacity="0.8">Lifted Vortex</text>
+  <line x1="120" y1="125" x2="280" y2="125" stroke="#f1f3f9" stroke-width="1" />
+  <polygon points="120,125 125,122 125,128" fill="#f1f3f9" />
+  <polygon points="280,125 275,122 275,128" fill="#f1f3f9" />
+  <text x="200" y="140" fill="#f1f3f9" font-size="11" font-family="monospace" text-anchor="middle">s (spacing)</text>
+  <line x1="90" y1="110" x2="90" y2="160" stroke="#f1f3f9" stroke-width="1" />
+  <polygon points="90,110 87,115 93,115" fill="#f1f3f9" />
+  <polygon points="90,160 87,155 93,155" fill="#f1f3f9" />
+  <text x="82" y="140" fill="#f1f3f9" font-size="11" font-family="monospace" text-anchor="end">h (height)</text>
+</svg>'''
         )

@@ -13,7 +13,7 @@ class Auditor:
     def __init__(self, client: genai.Client = None):
         self.client = client or get_client()
 
-    def audit_design(self, miner_output: MinerOutput) -> AuditorOutput:
+    def audit_design(self, miner_output: MinerOutput, override_parameters: dict = None, user_query: str = None) -> AuditorOutput:
         """
         Audits proposed parameters against physical constraints.
         Enforces thinking_level="high" for deep physical reasoning.
@@ -23,6 +23,7 @@ class Auditor:
         Here is the proposal from the Miner stage:
         
         Design Name: {miner_output.design_name}
+        Original User Query: {user_query or "None"}
         Inspiration Source: {miner_output.inspiration_source}
         Domain: {miner_output.domain}
         Physical Mechanism: {miner_output.physical_mechanism}
@@ -43,7 +44,8 @@ class Auditor:
         5. Select the best solver_method out of:
            - 'analytical': If the equation is linear and has a simple, closed-form solution.
            - 'scipy': For standard 1D ODE BVPs that might have minor nonlinearities but are fast to solve. (Do NOT select 'scipy' if the system has multiple independent variables/2D coordinates).
-           - 'pinn': If the user explicitly wants PINN training, or for complex/inverse PDE situations, or for any 2D PDE systems.
+           - 'pinn': If the user wants standard neural network solver, or for typical 2D PDE systems.
+           - 'dynamic_script': If the system is transient (time-dependent), multi-domain, highly non-linear, if the equations are non-standard, or if the user explicitly requested a custom script solver/simulation.
         6. Define the ui_metadata schema for dynamic rendering. It MUST follow this structure:
            {{
              "domain_name": "Scientific Domain Name",
@@ -72,6 +74,12 @@ class Auditor:
 
         # Programmatic safety guardrails applied on top of LLM outputs:
         sanitized_params = audited.audited_parameters_dict.copy()
+        
+        # Explicitly apply user overrides if provided
+        if override_parameters:
+            for k, v in override_parameters.items():
+                sanitized_params[k] = v
+
         suggested_bounds = miner_output.suggested_bounds
         for param, val in sanitized_params.items():
             if param in suggested_bounds:
@@ -98,7 +106,23 @@ class Auditor:
             v = extract_param(sanitized_params, ["free_stream_velocity", "design_flow_velocity", "velocity", "U_ski"], 1.5)
             mu = extract_param(sanitized_params, ["viscosity", "kinematic_viscosity"], 0.001)
 
-            if "riblet_height" in sanitized_params or "riblet_spacing" in sanitized_params:
+            # Check if slip length is explicitly overridden
+            slip_keys = ["slip_length", "slippage_coefficient", "lambda", "simulation_coefficient"]
+            overridden_slip = None
+            if override_parameters:
+                for k in slip_keys:
+                    if k in override_parameters:
+                        overridden_slip = override_parameters[k]
+                        break
+
+            if overridden_slip is not None:
+                recalculated_coeff = overridden_slip
+                if "riblet_spacing" in sanitized_params or "spacing" in sanitized_params:
+                    s = extract_param(sanitized_params, ["riblet_spacing", "spacing"], 0.03)
+                    if s < 0.005:
+                        char_height = 10.0 * s
+                        recalculated_coeff = recalculated_coeff / char_height
+            elif "riblet_height" in sanitized_params or "riblet_spacing" in sanitized_params:
                 h = extract_param(sanitized_params, ["riblet_height", "height"], 0.015)
                 s = extract_param(sanitized_params, ["riblet_spacing", "spacing"], 0.03)
                 # Recalculate lambda (dimensional)
@@ -167,21 +191,31 @@ class Auditor:
                 else:
                     final_ui_meta[k] = v
 
+        solver_method = audited.solver_method or "pinn"
+        if user_query and any(k in user_query.lower() for k in ["script", "skript", "dynamic solver", "custom solver"]):
+            solver_method = "dynamic_script"
+
         return AuditorOutput(
             audit_passed=True,
             audit_notes=audited.audit_notes + " (Programmatic safety checks applied.)",
             audited_parameters=audited_params_list,
             dimensionless_numbers=dimensionless_list,
             simulation_coefficient=recalculated_coeff,
-            solver_method=audited.solver_method or "pinn",
+            solver_method=solver_method,
             ui_metadata=final_ui_meta
         )
 
-    def mock_audit_design(self, miner_output: MinerOutput) -> AuditorOutput:
+    def mock_audit_design(self, miner_output: MinerOutput, override_parameters: dict = None, user_query: str = None) -> AuditorOutput:
         """
         Returns a mock AuditorOutput for testing without active API credentials.
         """
         params = miner_output.proposed_parameters.copy()
+        
+        # Explicitly apply user overrides if provided
+        if override_parameters:
+            for k, v in override_parameters.items():
+                params[k] = v
+
         v = extract_param(params, ["free_stream_velocity", "design_flow_velocity", "velocity", "U_ski"], 1.5)
         mu = extract_param(params, ["viscosity", "kinematic_viscosity"], 0.001)
 
@@ -190,7 +224,23 @@ class Auditor:
         else:
             re = (1000.0 * v * 1.0) / mu
 
-        if "riblet_height" in params or "riblet_spacing" in params:
+        # Check if slip length is explicitly overridden
+        slip_keys = ["slip_length", "slippage_coefficient", "lambda", "simulation_coefficient"]
+        overridden_slip = None
+        if override_parameters:
+            for k in slip_keys:
+                if k in override_parameters:
+                    overridden_slip = override_parameters[k]
+                    break
+
+        if overridden_slip is not None:
+            coeff = overridden_slip
+            if "riblet_spacing" in params or "spacing" in params:
+                s = extract_param(params, ["riblet_spacing", "spacing"], 0.03)
+                if s < 0.005:
+                    char_height = 10.0 * s
+                    coeff = coeff / char_height
+        elif "riblet_height" in params or "riblet_spacing" in params:
             h = extract_param(params, ["riblet_height", "height"], 0.015)
             s = extract_param(params, ["riblet_spacing", "spacing"], 0.03)
             coeff = 0.2 * s * (1.0 - math.exp(-2.0 * h / s))
@@ -207,13 +257,17 @@ class Auditor:
             DimensionlessNumber(name="ReynoldsNumber", value=re)
         ]
 
+        solver_method = "pinn"
+        if user_query and any(k in user_query.lower() for k in ["script", "skript", "dynamic solver", "custom solver"]):
+            solver_method = "dynamic_script"
+
         return AuditorOutput(
             audit_passed=True,
             audit_notes="Mock audit: proposed parameters are within safe operational bounds. Analytical dimensionless numbers and boundary conditions validated.",
             audited_parameters=audited_params_list,
             dimensionless_numbers=dimensionless_list,
             simulation_coefficient=coeff,
-            solver_method="pinn",
+            solver_method=solver_method,
             ui_metadata={
                 "domain_name": "Fluid Dynamics",
                 "independent_var": { "label": "Channel Height", "unit": "m" },
