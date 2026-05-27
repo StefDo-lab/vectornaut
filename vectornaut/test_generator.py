@@ -8,6 +8,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from google.genai import types
 from .config import get_client, MinerOutput, AuditorOutput
+from .storage import data_path
 
 class GeneratedTestScriptResponse(BaseModel):
     explanation: str = Field(description="Kurze Erklärung der gewählten Validierungstests und physikalischen Invarianten.")
@@ -32,9 +33,10 @@ class TestScriptGenerator:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Pfade festlegen
-        os.makedirs("generated_tests", exist_ok=True)
-        test_script_path = os.path.abspath(os.path.join("generated_tests", f"test_solver_{slug}_{timestamp}.py"))
-        test_output_path = os.path.abspath(os.path.join("generated_tests", f"results_test_{slug}_{timestamp}.json"))
+        generated_tests_dir = data_path("generated_tests")
+        os.makedirs(generated_tests_dir, exist_ok=True)
+        test_script_path = os.path.abspath(os.path.join(generated_tests_dir, f"test_solver_{slug}_{timestamp}.py"))
+        test_output_path = os.path.abspath(os.path.join(generated_tests_dir, f"results_test_{slug}_{timestamp}.json"))
         
         # Aktuelle Parameter des Auditors ermitteln
         audited_params = auditor_output.audited_parameters_dict.copy()
@@ -151,12 +153,17 @@ class TestScriptGenerator:
             
             # Ausführen des Testskripts
             print(f"[*] Executing generated test script at: {test_script_path}")
-            result = subprocess.run(
-                [sys.executable, test_script_path, "--solver", solver_script_path, "--params", params_json_path, "--output", test_output_path],
-                capture_output=True,
-                encoding="utf-8",
-                env={**os.environ, "PYTHONUTF8": "1"}
-            )
+            try:
+                result = subprocess.run(
+                    [sys.executable, test_script_path, "--solver", solver_script_path, "--params", params_json_path, "--output", test_output_path],
+                    capture_output=True,
+                    encoding="utf-8",
+                    env={**os.environ, "PYTHONUTF8": "1"},
+                    timeout=int(os.environ.get("VECTORNAUT_SCRIPT_TIMEOUT_SECONDS", "60")),
+                )
+            except subprocess.TimeoutExpired as timeout_err:
+                error_msg = f"Generated test script timed out after {timeout_err.timeout} seconds."
+                result = None
             
             # Überprüfen ob das Testskript selbst fehlerfrei durchgelaufen ist (unabhängig davon ob Tests fehlschlagen)
             # Das Testskript sollte exit code 0 haben, auch wenn Tests fehlschlagen, da unittest.main(exit=False) verwendet wird,
@@ -173,7 +180,8 @@ class TestScriptGenerator:
                     error_msg = f"Failed to read test results JSON: {str(read_err)}"
                     print(f"[-] Failed to read test output JSON: {read_err}")
             else:
-                error_msg = result.stderr or result.stdout or "Test script did not produce output JSON"
+                if result is not None:
+                    error_msg = result.stderr or result.stdout or "Test script did not produce output JSON"
                 print(f"[-] Test script crashed or failed to write JSON on iteration {correction_iteration + 1}!")
                 print(f"[-] Error: {error_msg}")
             

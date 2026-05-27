@@ -8,6 +8,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from google.genai import types
 from .config import get_client, MinerOutput, AuditorOutput
+from .storage import data_path
 
 class GeneratedScriptResponse(BaseModel):
     explanation: str = Field(description="Kurze Erklärung der gewählten numerischen Lösungsmethode für das Skript.")
@@ -32,8 +33,9 @@ class ScriptGenerator:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Pfade festlegen
-        os.makedirs("generated_scripts", exist_ok=True)
-        script_path = os.path.abspath(os.path.join("generated_scripts", f"solver_{slug}_{timestamp}.py"))
+        generated_dir = data_path("generated_scripts")
+        os.makedirs(generated_dir, exist_ok=True)
+        script_path = os.path.abspath(os.path.join(generated_dir, f"solver_{slug}_{timestamp}.py"))
         
         # Falls kein Pfad für den Plot übergeben wurde, erstelle einen Standardpfad im static/plots Ordner
         if not plot_png_path:
@@ -43,8 +45,8 @@ class ScriptGenerator:
             plot_png_path = os.path.abspath(plot_png_path)
             os.makedirs(os.path.dirname(plot_png_path), exist_ok=True)
 
-        params_json_path = os.path.abspath(os.path.join("generated_scripts", f"params_{slug}_{timestamp}.json"))
-        output_json_path = os.path.abspath(os.path.join("generated_scripts", f"results_{slug}_{timestamp}.json"))
+        params_json_path = os.path.abspath(os.path.join(generated_dir, f"params_{slug}_{timestamp}.json"))
+        output_json_path = os.path.abspath(os.path.join(generated_dir, f"results_{slug}_{timestamp}.json"))
         
         # Aktuelle Parameter des Auditors speichern
         audited_params = auditor_output.audited_parameters_dict.copy()
@@ -144,14 +146,19 @@ class ScriptGenerator:
             
             # Ausführen des Skripts
             print(f"[*] Executing generated script at: {script_path}")
-            result = subprocess.run(
-                [sys.executable, script_path, "--params", params_json_path, "--output", output_json_path, "--plot", plot_png_path],
-                capture_output=True,
-                encoding="utf-8",
-                env={**os.environ, "PYTHONUTF8": "1"}
-            )
+            try:
+                result = subprocess.run(
+                    [sys.executable, script_path, "--params", params_json_path, "--output", output_json_path, "--plot", plot_png_path],
+                    capture_output=True,
+                    encoding="utf-8",
+                    env={**os.environ, "PYTHONUTF8": "1"},
+                    timeout=int(os.environ.get("VECTORNAUT_SCRIPT_TIMEOUT_SECONDS", "60")),
+                )
+            except subprocess.TimeoutExpired as timeout_err:
+                error_msg = f"Generated script timed out after {timeout_err.timeout} seconds."
+                result = None
             
-            if result.returncode == 0:
+            if result is not None and result.returncode == 0:
                 print(f"[+] Script execution succeeded on iteration {correction_iteration + 1}!")
                 # Lese Ergebnisse ein
                 try:
@@ -164,7 +171,8 @@ class ScriptGenerator:
                     print(f"[-] Failed to read output JSON: {read_err}")
                     error_msg = f"Failed to read results JSON: {str(read_err)}"
             else:
-                error_msg = result.stderr or result.stdout or "Unknown execution error"
+                if result is not None:
+                    error_msg = result.stderr or result.stdout or "Unknown execution error"
                 print(f"[-] Script crashed on iteration {correction_iteration + 1}!")
                 print(f"[-] Error: {error_msg}")
             

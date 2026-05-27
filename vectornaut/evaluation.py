@@ -6,8 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-
-EVAL_RUNS_DIR = "eval_runs"
+from vectornaut.storage import eval_runs_dir, history_dir
 
 
 def make_eval_run_id() -> str:
@@ -236,9 +235,9 @@ def build_eval_trace(
 
 
 def persist_eval_record(record: Dict[str, Any]) -> str:
-    os.makedirs(EVAL_RUNS_DIR, exist_ok=True)
+    os.makedirs(eval_runs_dir(), exist_ok=True)
     run_id = record["run_id"]
-    path = os.path.abspath(os.path.join(EVAL_RUNS_DIR, f"{run_id}.json"))
+    path = os.path.abspath(os.path.join(eval_runs_dir(), f"{run_id}.json"))
     record["storage_path"] = path
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(record, fh, indent=2, ensure_ascii=False)
@@ -247,7 +246,7 @@ def persist_eval_record(record: Dict[str, Any]) -> str:
 
 def load_eval_record(run_id: str) -> Dict[str, Any]:
     safe_id = os.path.basename(run_id).replace(".json", "")
-    path = os.path.join(EVAL_RUNS_DIR, f"{safe_id}.json")
+    path = os.path.join(eval_runs_dir(), f"{safe_id}.json")
     if not os.path.exists(path):
         raise FileNotFoundError(f"Eval run not found: {run_id}")
     with open(path, "r", encoding="utf-8") as fh:
@@ -255,12 +254,12 @@ def load_eval_record(run_id: str) -> Dict[str, Any]:
 
 
 def list_eval_records(limit: int = 50) -> List[Dict[str, Any]]:
-    if not os.path.exists(EVAL_RUNS_DIR):
+    if not os.path.exists(eval_runs_dir()):
         return []
 
     files = [
-        os.path.join(EVAL_RUNS_DIR, name)
-        for name in os.listdir(EVAL_RUNS_DIR)
+        os.path.join(eval_runs_dir(), name)
+        for name in os.listdir(eval_runs_dir())
         if name.endswith(".json")
     ]
     files.sort(key=lambda path: os.path.getmtime(path), reverse=True)
@@ -290,7 +289,7 @@ def list_eval_records(limit: int = 50) -> List[Dict[str, Any]]:
 
 def load_history_record(history_file: str) -> Dict[str, Any]:
     safe_name = os.path.basename(history_file)
-    path = os.path.join("history", safe_name)
+    path = os.path.join(history_dir(), safe_name)
     if not os.path.exists(path):
         raise FileNotFoundError(f"History file not found: {history_file}")
     with open(path, "r", encoding="utf-8") as fh:

@@ -15,6 +15,7 @@ from vectornaut.api.chat_routes import router as chat_router
 from vectornaut.api.eval_routes import router as eval_router
 from vectornaut.api.history_routes import router as history_router
 from vectornaut.api.run_routes import router as run_router
+from vectornaut.api.system_routes import router as system_router
 
 # Load environment vars
 if load_dotenv:
@@ -28,6 +29,7 @@ app.include_router(run_router)
 app.include_router(chat_router)
 app.include_router(eval_router)
 app.include_router(history_router)
+app.include_router(system_router)
 
 # Mount static folder for frontend UI (will be served at root "/")
 static_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

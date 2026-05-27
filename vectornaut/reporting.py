@@ -5,11 +5,13 @@ import re
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+from vectornaut.storage import history_dir, index_history_run, reports_dir
+
 
 def archive_run_data(response_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
     try:
-        os.makedirs("history", exist_ok=True)
-        os.makedirs("reports", exist_ok=True)
+        os.makedirs(history_dir(), exist_ok=True)
+        os.makedirs(reports_dir(), exist_ok=True)
 
         design_name = response_data.get("miner", {}).get("design_name") or "unknown_design"
         slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
@@ -19,15 +21,17 @@ def archive_run_data(response_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
         response_data["report_md"] = md_content
 
         md_filename = f"report_{timestamp}_{slug}.md"
-        md_path = os.path.join("reports", md_filename)
+        md_path = os.path.join(reports_dir(), md_filename)
         with open(md_path, "w", encoding="utf-8") as mf:
             mf.write(md_content)
 
         json_filename = f"run_{timestamp}_{slug}.json"
-        json_path = os.path.join("history", json_filename)
+        json_path = os.path.join(history_dir(), json_filename)
         with open(json_path, "w", encoding="utf-8") as jf:
             json.dump(response_data, jf, indent=4, ensure_ascii=False)
 
+        run_id = os.path.basename(json_path).replace(".json", "")
+        index_history_run(run_id, json_path, md_path, response_data)
         print(f"[*] Archived run data to {json_path} and {md_path}")
         return {"history_path": json_path, "report_path": md_path}
     except Exception as archive_err:

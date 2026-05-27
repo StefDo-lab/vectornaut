@@ -18,6 +18,10 @@ generated_scripts/
 generated_tests/
 eval_runs/
 static/plots/
+vectornaut.sqlite3
+run_report.json
+myelin_response.json
+step_*.txt
 
 # Server logs
 *.log

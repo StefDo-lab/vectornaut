@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel
 
+from vectornaut.runtime_guards import run_limits, validate_simulator_output
+
 
 class _PipelineValue:
     def __init__(self, **values: Any):
@@ -93,6 +95,7 @@ class PipelineRunner:
         effective_mock = req.is_mock
         if not api_key and not effective_mock:
             effective_mock = True
+        safe_epochs, max_opt_rounds = run_limits(req.epochs, req.max_optimization_rounds)
 
         failed_concepts = []
         miner_output = None
@@ -101,7 +104,6 @@ class PipelineRunner:
         optimization_history = []
 
         max_concept_attempts = 3
-        max_opt_rounds = req.max_optimization_rounds or 3
         concept_failed = False
         concept_attempt = 1
 
@@ -160,9 +162,10 @@ class PipelineRunner:
                     sim_output = self._solve(
                         miner_output=miner_output,
                         auditor_output=auditor_output,
-                        epochs=req.epochs,
+                        epochs=safe_epochs,
                         effective_mock=effective_mock,
                     )
+                    validate_simulator_output(sim_output)
                 except Exception as solve_err:
                     print(f"[-] Solver failed to solve equations: {solve_err}")
                     failed_concepts.append({
@@ -238,7 +241,7 @@ class PipelineRunner:
         return {
             "success": True,
             "query": req.query,
-            "epochs": req.epochs,
+            "epochs": safe_epochs,
             "is_mock": effective_mock,
             "miner": miner_output.model_dump(),
             "auditor": {

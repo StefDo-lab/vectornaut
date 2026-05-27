@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import json
 import os
 from datetime import datetime
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+
+from vectornaut.storage import history_dir, list_indexed_history, load_json_file
 
 
 router = APIRouter(prefix="/api/history", tags=["history"])
@@ -17,7 +18,7 @@ def _safe_history_id(run_id: str) -> str:
 
 def _history_file_for_id(run_id: str) -> str:
     safe_id = _safe_history_id(run_id)
-    return os.path.join("history", f"{safe_id}.json")
+    return os.path.join(history_dir(), f"{safe_id}.json")
 
 
 def _summarize_history_run(path: str) -> Dict[str, Any]:
@@ -44,12 +45,16 @@ def _summarize_history_run(path: str) -> Dict[str, Any]:
 @router.get("")
 async def list_history(limit: int = 30):
     try:
-        if not os.path.exists("history"):
+        indexed_runs = list_indexed_history(limit=limit)
+        if indexed_runs:
+            return JSONResponse(content={"runs": indexed_runs}, media_type="application/json; charset=utf-8")
+
+        if not os.path.exists(history_dir()):
             return JSONResponse(content={"runs": []}, media_type="application/json; charset=utf-8")
 
         files = [
-            os.path.join("history", name)
-            for name in os.listdir("history")
+            os.path.join(history_dir(), name)
+            for name in os.listdir(history_dir())
             if name.endswith(".json")
         ]
         files.sort(key=lambda path: os.path.getmtime(path), reverse=True)
@@ -77,8 +82,7 @@ async def get_history_run(run_id: str):
         path = _history_file_for_id(run_id)
         if not os.path.exists(path):
             raise HTTPException(status_code=404, detail=f"History run not found: {run_id}")
-        with open(path, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
+        data = load_json_file(path)
         return JSONResponse(content=data, media_type="application/json; charset=utf-8")
     except HTTPException:
         raise
