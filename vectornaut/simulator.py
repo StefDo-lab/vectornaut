@@ -115,14 +115,15 @@ def run_simulation(
     relative_err = float(np.sum(abs_diff) / np.sum(ref_norm + 1e-8))
     
     return SimulatorOutput(
+        solver_method="pinn",
         epochs_trained=epochs,
         final_loss=loss_history[-1],
         loss_history=loss_history,
-        wall_shear_stress_pinn=wall_shear_pinn,
-        wall_shear_stress_analytical=wall_shear_analytical,
         performance_gain_pct=performance_gain,
         relative_error=relative_err,
-        sample_points_y=y_test_np.tolist(),
-        sample_points_u_pinn=u_pinn_np.tolist(),
-        sample_points_u_analytical=u_analytical_np.tolist()
+        sample_points=y_test_np.tolist(),
+        solution_primary=u_pinn_np.tolist(),
+        solution_reference=u_analytical_np.tolist(),
+        primary_metric_value=wall_shear_pinn,
+        reference_metric_value=wall_shear_analytical
     )

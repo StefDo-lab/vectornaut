@@ -81,11 +81,15 @@ def main():
     print("[*] Querying Gemini to extract biomimetic analogues...")
     
     try:
+        from vectornaut.formulator import ModelFormulator
         miner = Miner()
+        formulator = ModelFormulator()
         if is_mock:
-            miner_output = miner.mock_mine_design(args.query)
+            concept = miner.mock_mine_design(args.query)
+            miner_output = formulator.mock_formulate_model(args.query, concept)
         else:
-            miner_output = miner.mine_design(args.query)
+            concept = miner.mine_design(args.query)
+            miner_output = formulator.formulate_model(args.query, concept)
             
         print(f"[+] Design Concept: {miner_output.design_name}")
         print(f"[+] Inspiration Source: {miner_output.inspiration_source}")
@@ -153,8 +157,8 @@ def main():
         
         print(f"[+] Training completed successfully.")
         print(f"[+] Final loss: {sim_output.final_loss:.6e}")
-        print(f"[+] Autograd-derived wall shear stress (PINN): {sim_output.wall_shear_stress_pinn:.6f}")
-        print(f"[+] Analytical wall shear stress (Exact):    {sim_output.wall_shear_stress_analytical:.6f}")
+        print(f"[+] Autograd-derived wall shear stress (PINN): {sim_output.primary_metric_value:.6f}")
+        print(f"[+] Analytical wall shear stress (Exact):    {sim_output.reference_metric_value:.6f}")
         print(f"[+] Relative solver L2 error:               {sim_output.relative_error:.6f}")
         
         print("\n" + "-"*50)
@@ -170,9 +174,9 @@ def main():
         # Output 5 representative points for readability
         idxs = [0, 4, 9, 14, 19]
         for idx in idxs:
-            y = sim_output.sample_points_y[idx]
-            u_p = sim_output.sample_points_u_pinn[idx]
-            u_a = sim_output.sample_points_u_analytical[idx]
+            y = sim_output.sample_points[idx]
+            u_p = sim_output.solution_primary[idx]
+            u_a = sim_output.solution_reference[idx]
             diff = abs(u_p - u_a)
             print(f"    {y:<10.3f} | {u_p:<12.6f} | {u_a:<12.6f} | {diff:<12.6f}")
             

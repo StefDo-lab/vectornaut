@@ -2,6 +2,10 @@ import urllib.request
 import json
 import sys
 
+# Configure stdout to use utf-8 to prevent charmap errors on Windows terminals
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 def verify():
     url_chat = "http://127.0.0.1:8080/api/chat"
     headers = {"Content-Type": "application/json"}
@@ -37,8 +41,8 @@ def verify():
                 print("SUCCESS: No dollar signs found in response.")
                 
             # Check for other replacement characters
-            if "" in reply:
-                print("WARNING: Replacement character  found in response!")
+            if "\uFFFD" in reply:
+                print("WARNING: Replacement character \uFFFD found in response!")
                 
     except Exception as e:
         print(f"Error calling local server: {e}")
