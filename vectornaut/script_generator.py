@@ -107,8 +107,11 @@ class ScriptGenerator:
              "reference_metric_value": float (Hauptkennzahl für das Referenzsystem)
            }}
            
-        Schreibe sauberen, robusten Python 3.13 Code. Fange mögliche Division-by-Zero Fehler ab.
-        """
+        5. DATEI-KODIERUNG:
+            Alle Lese- und Schreiboperationen auf Dateien (wie das Einlesen von --params und Schreiben von --output) MÜSSEN explizit mit `encoding="utf-8"` geöffnet werden (z.B. open(..., 'w', encoding='utf-8') oder open(..., 'r', encoding='utf-8')). Das ist zwingend erforderlich, um Codierungsfehler auf Windows-Systemen zu vermeiden.
+            
+         Schreibe sauberen, robusten Python 3.13 Code. Fange mögliche Division-by-Zero Fehler ab.
+         """
 
         correction_iteration = 0
         max_iterations = 3
@@ -144,7 +147,8 @@ class ScriptGenerator:
             result = subprocess.run(
                 [sys.executable, script_path, "--params", params_json_path, "--output", output_json_path, "--plot", plot_png_path],
                 capture_output=True,
-                text=True
+                encoding="utf-8",
+                env={**os.environ, "PYTHONUTF8": "1"}
             )
             
             if result.returncode == 0:

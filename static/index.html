@@ -72,6 +72,18 @@
                     <span class="btn-text">Run Discovery Loop</span>
                     <span class="btn-glow"></span>
                 </button>
+
+                <div class="history-panel">
+                    <div class="history-header">
+                        <label for="history-select">Previous Runs</label>
+                        <button class="btn-icon" title="Refresh previous runs" onclick="loadHistoryList()">↻</button>
+                    </div>
+                    <select id="history-select">
+                        <option value="">No saved runs loaded</option>
+                    </select>
+                    <button id="load-history-btn" class="btn btn-secondary" onclick="loadSelectedHistoryRun()">Load Selected Run</button>
+                    <p id="history-status" class="history-status">Saved runs are loaded from local history files.</p>
+                </div>
             </section>
 
             <!-- Right Panel: Pipeline Progress & Results -->
@@ -237,7 +249,13 @@
                         <div class="empty-state">
                             <p>No results yet. Run the discovery loop to generate data.</p>
                         </div>
-                        <div class="report-actions hidden" id="report-actions-container" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                        <div class="report-actions hidden" id="report-actions-container" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-accent" onclick="downloadPDFReport()" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; width: auto; border-radius: 8px; cursor: pointer; font-family: var(--font-heading); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                📄 Download PDF Report
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadMarkdownReport()" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); cursor: pointer; font-family: var(--font-heading); font-weight: 600;">
+                                ⬇️ Download Markdown (.md)
+                            </button>
                             <button class="btn btn-secondary" onclick="downloadRawReport()" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); cursor: pointer; font-family: var(--font-heading); font-weight: 600;">
                                 Download Raw JSON
                             </button>
@@ -315,6 +333,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="app.js?v=2.4.1" charset="UTF-8"></script>
 </body>
 </html>

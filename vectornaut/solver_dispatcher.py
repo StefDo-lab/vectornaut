@@ -88,6 +88,64 @@ def parse_equation_and_bcs(
         
     return pde_rhs, bcs_list, x, y_func, sym_dict
 
+def auto_detect_and_inject_missing_params(
+    gov_eq_str: str,
+    bcs_list: List[str],
+    independent_vars: List[str],
+    dependent_vars: List[str],
+    params: Dict[str, float]
+) -> Dict[str, float]:
+    """
+    Parses equations and BCs for parameter symbols that are missing from params,
+    and injects them with sensible defaults.
+    """
+    updated_params = params.copy()
+    
+    # Collect all words in gov_eq and bcs
+    all_text = gov_eq_str + " " + " ".join(bcs_list)
+    words = re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", all_text)
+    
+    # Keywords to ignore
+    ignored = {
+        "sin", "cos", "tan", "exp", "log", "sqrt", "pi", "diff", "abs",
+        "sinh", "cosh", "tanh", "asin", "acos", "atan", "Heaviside",
+        "true", "false", "nan", "inf", "u", "v", "w", "x", "y", "z", "t"
+    }
+    for iv in independent_vars:
+        ignored.add(iv)
+    for dv in dependent_vars:
+        ignored.add(dv)
+        ignored.add(f"d{dv}")
+        ignored.add(f"d2{dv}")
+        
+    for w in words:
+        if w.lower() in ignored or w in ignored:
+            continue
+        if re.match(r"^d2?[a-zA-Z_]_d[a-zA-Z_]2?$", w):
+            continue
+        if w in updated_params:
+            continue
+            
+        default_val = 1.0
+        if "temp" in w.lower() or "t_" in w.lower():
+            if "cold" in w.lower() or "ambient" in w.lower():
+                default_val = 273.0
+            else:
+                default_val = 373.0
+        elif "pressure" in w.lower():
+            default_val = 101325.0
+        elif "spacing" in w.lower() or "thickness" in w.lower() or "length" in w.lower() or "width" in w.lower() or "height" in w.lower() or "pitch" in w.lower() or "diameter" in w.lower():
+            default_val = 0.01
+        elif "velocity" in w.lower() or "speed" in w.lower():
+            default_val = 1.0
+        elif "density" in w.lower():
+            default_val = 1000.0
+            
+        print(f"[*] AUTO-INJECT: Detected missing parameter '{w}' in equations/BCs. Injecting default value: {default_val}")
+        updated_params[w] = default_val
+        
+    return updated_params
+
 def get_domain_bounds(bcs_list: List[str], params: Dict[str, float] = None) -> Tuple[float, float]:
     """
     Extracts the min and max domain coordinates evaluated in boundary conditions.
@@ -104,7 +162,9 @@ def get_domain_bounds(bcs_list: List[str], params: Dict[str, float] = None) -> T
         for m in matches:
             bc_points.append(float(m))
     if len(bc_points) >= 2:
-        return min(bc_points), max(bc_points)
+        d_min, d_max = min(bc_points), max(bc_points)
+        if abs(d_max - d_min) > 1e-6:
+            return d_min, d_max
     return 0.0, 1.0
 
 def solve_analytical(
@@ -730,6 +790,19 @@ def dispatch_and_solve(
     params['slippage_coefficient'] = auditor_output.simulation_coefficient
     params['lambda'] = auditor_output.simulation_coefficient
     params['slip_length'] = auditor_output.simulation_coefficient
+
+    # Auto-detect and inject missing parameters used in equations or BCs
+    params = auto_detect_and_inject_missing_params(
+        gov_eq_str=gov_eq,
+        bcs_list=bcs,
+        independent_vars=miner_output.independent_variables,
+        dependent_vars=miner_output.dependent_variables,
+        params=params
+    )
+    # Update back to audited_parameters_dict so that they are saved in history and synthesis
+    for k, v in params.items():
+        if k not in auditor_output.audited_parameters_dict:
+            auditor_output.audited_parameters_dict[k] = v
 
     is_2d = len(miner_output.independent_variables) == 2
     if is_2d:

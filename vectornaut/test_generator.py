@@ -112,6 +112,9 @@ class TestScriptGenerator:
                  - Wenn die thermische Leitfähigkeit des bionischen Materials gesenkt wird, sollte der Wärmestrom sinken (Isolationswirkung steigt).
                * Wähle die Invarianten passend für: "{miner_output.domain}"!
 
+        3. DATEI-KODIERUNG:
+           Alle Lese- und Schreiboperationen auf Dateien (wie das Einlesen von --params und Schreiben von --output) MÜSSEN explizit mit `encoding="utf-8"` geöffnet werden (z.B. open(..., 'w', encoding='utf-8') oder open(..., 'r', encoding='utf-8')). Das ist zwingend erforderlich, um Codierungsfehler auf Windows-Systemen zu vermeiden.
+
         Verwende für die Subprocess-Aufrufe `sys.executable` als Python-Interpreter, um Kompatibilität zu gewährleisten. Erstelle temporäre JSON- und PNG-Dateien für die Testdurchläufe und lösche sie nach jedem Testlauf (im `tearDown` oder per try-finally).
         Schreibe sauberen, robusten Python 3.13 Code.
         """
@@ -151,7 +154,8 @@ class TestScriptGenerator:
             result = subprocess.run(
                 [sys.executable, test_script_path, "--solver", solver_script_path, "--params", params_json_path, "--output", test_output_path],
                 capture_output=True,
-                text=True
+                encoding="utf-8",
+                env={**os.environ, "PYTHONUTF8": "1"}
             )
             
             # Überprüfen ob das Testskript selbst fehlerfrei durchgelaufen ist (unabhängig davon ob Tests fehlschlagen)

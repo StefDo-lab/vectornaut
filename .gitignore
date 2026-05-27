@@ -16,8 +16,9 @@ reports/
 saved_models/
 generated_scripts/
 generated_tests/
+eval_runs/
 static/plots/
 
 # Server logs
 *.log
-
+*.err

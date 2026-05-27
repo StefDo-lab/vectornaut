@@ -8,6 +8,7 @@ let keepChatHistory = false;
 // Initialize elements
 document.addEventListener("DOMContentLoaded", () => {
     applySampleQuery();
+    loadHistoryList();
 });
 
 function applySampleQuery() {
@@ -31,6 +32,93 @@ function setMode(mockVal) {
         btnMock.classList.remove("active");
         btnLive.classList.add("active");
         writeLog("[SYSTEM] Switched to LIVE API mode. Gemini-3.5-flash will perform bionic mining and audits.", "info-log");
+    }
+}
+
+function formatHistoryRunLabel(run) {
+    const date = run.created_at ? new Date(run.created_at) : null;
+    const dateLabel = date && !isNaN(date) ? date.toLocaleString([], {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+    }) : "saved";
+    const gain = typeof run.performance_gain_pct === "number" ? ` · ${run.performance_gain_pct.toFixed(1)}%` : "";
+    const solver = run.solver_method ? ` · ${String(run.solver_method).toUpperCase()}` : "";
+    return `${dateLabel} · ${run.design_name || "Unknown Design"}${solver}${gain}`;
+}
+
+async function loadHistoryList() {
+    const select = document.getElementById("history-select");
+    const status = document.getElementById("history-status");
+    if (!select) return;
+
+    try {
+        if (status) status.innerText = "Loading saved runs...";
+        const response = await fetch("/api/history?limit=40");
+        if (!response.ok) {
+            throw new Error("Could not load saved runs.");
+        }
+
+        const data = await response.json();
+        const runs = data.runs || [];
+        select.innerHTML = "";
+
+        if (!runs.length) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.innerText = "No saved runs found";
+            select.appendChild(option);
+            if (status) status.innerText = "No saved runs found yet.";
+            return;
+        }
+
+        for (const run of runs) {
+            const option = document.createElement("option");
+            option.value = run.id;
+            option.innerText = formatHistoryRunLabel(run);
+            option.title = run.query || run.id;
+            select.appendChild(option);
+        }
+
+        if (status) status.innerText = `${runs.length} saved run${runs.length === 1 ? "" : "s"} available.`;
+    } catch (err) {
+        console.error("Failed to load history:", err);
+        select.innerHTML = `<option value="">History unavailable</option>`;
+        if (status) status.innerText = err.message;
+    }
+}
+
+async function loadSelectedHistoryRun() {
+    const select = document.getElementById("history-select");
+    const status = document.getElementById("history-status");
+    if (!select || !select.value) {
+        if (status) status.innerText = "Select a saved run first.";
+        return;
+    }
+
+    try {
+        if (status) status.innerText = "Loading saved run...";
+        const response = await fetch(`/api/history/${encodeURIComponent(select.value)}`);
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Could not load selected run.");
+        }
+
+        const data = await response.json();
+        keepChatHistory = false;
+        resetStepper();
+        setStepState("step-miner", "completed", "Loaded from history");
+        setStepState("step-auditor", "completed", "Loaded from history");
+        setStepState("step-simulator", "completed", "Loaded from history");
+        document.querySelectorAll(".step-divider").forEach(div => div.classList.add("completed"));
+        renderResults(data);
+        writeLog(`[HISTORY] Loaded saved run: ${data.miner?.design_name || data.miner_stage?.design_name || select.value}`, "info-log");
+        if (status) status.innerText = "Saved run loaded into dashboard.";
+    } catch (err) {
+        console.error("Failed to load selected history run:", err);
+        writeLog(`[ERROR] Failed to load saved run: ${err.message}`, "error-log");
+        if (status) status.innerText = err.message;
     }
 }
 
@@ -80,6 +168,9 @@ async function runDiscoveryLoop(overrideParams = null) {
         writeLog(`[SYSTEM] Injecting parameter overrides: ${JSON.stringify(overrideParams)}`, "info-log");
     }
     writeLog(`[SYSTEM] Requesting ${epochs} epochs for PINN-lite solver...`);
+    if (!isMock) {
+        writeLog(`[SYSTEM] HINWEIS: Die Pipeline läuft jetzt im Closed-Loop (Miner ➜ Formulator ➜ Auditor ➜ Simulator ➜ Optimizer ➜ ggf. Re-Mining). Der Server führt mehrere Durchgänge autonom im Hintergrund aus. Bitte habe 1-2 Minuten Geduld...`, "info-log");
+    }
 
     // Set step states during backend fetch
     if (overrideParams) {
@@ -191,6 +282,7 @@ async function runDiscoveryLoop(overrideParams = null) {
         }
         
         renderResults(data);
+        loadHistoryList();
         
         runBtn.disabled = false;
         runBtn.querySelector(".btn-text").innerText = "Run Discovery Loop";
@@ -761,6 +853,90 @@ function toggleRawReport() {
             rawReport.classList.add("hidden");
         }
     }
+}
+
+function downloadMarkdownReport() {
+    if (!lastRunData || !lastRunData.report_md) {
+        alert("No markdown report data available to download!");
+        return;
+    }
+    const designName = lastRunData.miner?.design_name || "discovery_report";
+    const slug = designName.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
+    const blob = new Blob([lastRunData.report_md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vectornaut_report_${slug}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function downloadPDFReport() {
+    if (!lastRunData || !lastRunData.report_md) {
+        alert("No report data available to export to PDF!");
+        return;
+    }
+    
+    const element = document.getElementById('markdown-report');
+    const designName = lastRunData.miner?.design_name || "Discovery_Report";
+    const slug = designName.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
+    
+    // Configurations for html2pdf.js
+    const opt = {
+        margin:       15,
+        filename:     `vectornaut_report_${slug}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { 
+            scale: 2, 
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    // Temporarily apply clean styling to the report container for high contrast print/PDF
+    // We clone the element so we don't mess up the UI dashboard display
+    const printArea = element.cloneNode(true);
+    printArea.style.color = "#0f172a";
+    printArea.style.background = "#ffffff";
+    printArea.style.padding = "25px";
+    printArea.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    printArea.style.fontSize = "14px";
+    printArea.style.lineHeight = "1.6";
+    
+    // In print, the dark theme background of the SVG container needs to be clean or white
+    const svgContainers = printArea.querySelectorAll('.report-svg-container');
+    svgContainers.forEach(container => {
+        container.style.background = '#f8fafc';
+        container.style.border = '1px solid #e2e8f0';
+        container.style.color = '#000000';
+    });
+    
+    // Render markdown code blocks nicely
+    const codeBlocks = printArea.querySelectorAll('pre, code');
+    codeBlocks.forEach(block => {
+        block.style.background = '#f1f5f9';
+        block.style.color = '#0f172a';
+    });
+    
+    // Adjust image scaling for plots in the PDF
+    const images = printArea.querySelectorAll('img');
+    images.forEach(img => {
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.borderRadius = '8px';
+    });
+
+    writeLog(`[SYSTEM] Generating PDF report... Please wait.`, "info-log");
+    
+    html2pdf().set(opt).from(printArea).save().then(() => {
+        writeLog(`[SYSTEM] PDF report generated and downloaded successfully!`, "success-log");
+    }).catch(err => {
+        console.error("PDF generation failed:", err);
+        alert("Could not generate PDF: " + err.message);
+    });
 }
 
 // Bionic Assistant Chat State

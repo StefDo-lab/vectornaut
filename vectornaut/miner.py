@@ -1,53 +1,64 @@
-from google import genai
-from google.genai import types
-from .config import get_client, MinerOutput, ParameterProposal
+from .config import get_client, MinerConceptOutput, ParameterProposal
 
 class Miner:
-    def __init__(self, client: genai.Client = None):
-        self.client = client or get_client()
+    def __init__(self, client=None):
+        self.client = client
 
-    def mine_design(self, query: str) -> MinerOutput:
+    def mine_design(self, query: str, failed_concepts: list = None) -> MinerConceptOutput:
         """
         Explores bionics/materials spaces and outputs structured design targets.
         Uses gemini-3.5-flash with thinking_level="medium".
+        Supports re-mining feedback.
         """
+        import json
+        from google.genai import types
+        
+        failed_prompt_part = ""
+        if failed_concepts:
+            failed_prompt_part = f"""
+        ### GESCHEITERTE ENTWÜRFE (WICHTIG):
+        Die folgenden bionischen Entwürfe wurden bereits getestet und haben die Audits oder Simulationen NICHT bestanden:
+        {json.dumps(failed_concepts, indent=2, ensure_ascii=False)}
+        
+        Deine Aufgabe:
+        Schlage ein VOLLKOMMEN NEUES bionisches Konzept vor, das sich grundlegend von den gescheiterten Entwürfen unterscheidet und deren Schwachstellen (z. B. struktureller Kollaps unter Last, unzureichende thermische Leistung, Materialversagen etc.) gezielt behebt!
+        Erkläre in der Beschreibung des physikalischen Mechanismus, warum dieses neue Konzept robuster oder besser geeignet ist.
+        """
+
         prompt = f"""
         Explore the semantic and physical space of biomimetic material design for the following request:
         "{query}"
 
-        Analyze natural systems (e.g., plants, animals, structures, physics) that solve this physical problem.
-        Identify a specific natural inspiration source, describe the underlying physical mechanism, and extract concrete physical parameters that can be modeled.
-        Propose key parameters (such as height, spacing, viscosity, velocity, conductivity, density, etc.) with suggested initial values and reasonable physical bounds [min, max] that can be audited.
+        To discover truly innovative, non-obvious concepts and avoid repeating standard textbook examples (like Lotus effect for wetting, shark skin for drag, or collembola for membranes), perform a SYSTEMATIC SEMANTIC CROSS-DOMAIN MAPPING:
 
-        In addition, formulate a 1D or 2D second-order differential equation (BVP or PDE) that models this system:
-        - Decide if the system is best modeled in 1D (a single coordinate like y, e.g., velocity across a channel) or 2D (spatial coordinates x and y over a cross-section, e.g., temperature profile in a plate or electrostatic field in a 2D coaxial geometry). Choose 2D if the query explicitly mentions 2D, or if the physical setup inherently requires two independent dimensions.
+        1. SEMANTIC FEATURE EXTRACTION:
+           Identify the core physical phenomena, constraints, and boundary interactions associated with the request (e.g. for ski base: boundary slip, phase change, high shear stress, friction-generated liquid film, capillary forces, wear resistance).
+        2. CROSS-DOMAIN BRIDGE SEARCH:
+           Search for parallel physical systems in distant, non-obvious domains (e.g. geology, aerospace, marine biology, soft matter physics, botany, cell membranes) where these exact physical phenomena play a vital role. Look for areas like:
+           - Tectonic sliding or glacial movement (shear-induced lubrication)
+           - Plant mucilage or carnivorous plant surfaces (nepenthes peristome slip)
+           - Specialized animal organs (fish skin, joint lubrication, desert beetle dew harvesting)
+           - Non-biological physical analogs (superlubricity in 2D materials, gas-lubricated bearings)
+        3. CONCEPT SYNTHESIS & TRANSLATION:
+           Propose a novel, high-performance biomimetic or physically-inspired concept that translates the mechanism of one of these distant domains to solve the original request.
+           Be creative! Avoid standard designs unless they are heavily adapted.
+           Explain clearly how your selected cross-domain analog applies to the request and what physical advantages it provides.
+
+        Identify a specific natural or physical inspiration source, describe the underlying physical mechanism, and extract concrete physical parameters that can be modeled.
+        Propose key parameters (such as height, spacing, viscosity, velocity, conductivity, density, etc.) with suggested initial values and reasonable physical bounds [min, max] that can be audited.
         
-        1. governing_equation:
-           - For 1D: A second-order ODE in the format 'd2[dep]_d[ind]2 = RHS', where [dep] is the dependent variable (e.g., u, T, V) and [ind] is the independent variable (e.g., y, x).
-             Example: 'd2u_dy2 = -pressure_gradient / viscosity'
-           - For 2D: A second-order PDE in the format 'd2[dep]_d[ind1]2 + d2[dep]_d[ind2]2 = RHS', where [dep] is the dependent variable (e.g., T, V) and [ind1], [ind2] are the two independent variables (e.g., x, y).
-             Example for 2D heat conduction: 'd2T_dx2 + d2T_dy2 = 0'
-             Example for 2D Poisson electrostatics: 'd2V_dx2 + d2V_dy2 = -charge_density / permittivity'
-             Ensure all symbols in RHS are defined in your proposed parameters.
-        2. boundary_conditions: A list of symbolic boundary equations at the boundaries.
-           - For 1D: exactly two boundary conditions at 0 and 1. Example: ['T(0) = T_hot', 'T(1) = T_cold']
-           - For 2D: boundary conditions at the edges of the unit domain [0, 1] x [0, 1]. Provide boundary conditions for the four edges: x=0, x=1, y=0, y=1.
-             Example: ['T(0, y) = T_hot', 'T(1, y) = T_cold', 'dT_dy(x, 0) = 0', 'dT_dy(x, 1) = 0'] (which represent hot/cold walls and insulated bottom/top).
-        3. independent_variables: A list containing the independent variables:
-           - For 1D: a single element, e.g., ['y'] or ['x'].
-           - For 2D: two elements, e.g., ['x', 'y'].
-             Make sure it matches the governing equation and BCs.
-        4. dependent_variables: A list containing the single dependent variable, e.g., ['u'] or ['T'] or ['V'].
-             Make sure it matches the governing equation and BCs.
-        5. svg_schematic:
-           - A clean, self-contained SVG code snippet (using <svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">) illustrating the proposed microstructure.
-           - Do NOT wrap this field in markdown code blocks inside the JSON; it must be a raw string. All inner double quotes must be properly escaped if necessary.
-           - Draw a clean 2D cross-section or diagram showing the geometry of the proposed microstructure (e.g., V-shaped riblets, micro-posts, honeycomb pores, fiber grids) scaled visually to match your proposed parameter values.
-           - The style must fit a premium dark-themed dashboard. Use a dark background (fill="#0f172a") with rounded corners (rx="8" ry="8") or transparent, and draw using neon purple (#7b2cbf), neon cyan (#00f5d4), glowing white, and subtle grays.
-           - Add technical annotations like dimension lines, arrows, and parameter labels (e.g. 's' or 'spacing' for spacing, 'h' or 'height' for height, etc.) to show how the proposed parameters map to the geometry. Make it look like a high-tech scientific blueprint.
+        {failed_prompt_part}
+
+        svg_schematic:
+        - A clean, self-contained SVG code snippet (using <svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">) illustrating the proposed microstructure.
+        - Do NOT wrap this field in markdown code blocks inside the JSON; it must be a raw string. All inner double quotes must be properly escaped if necessary.
+        - Draw a clean 2D cross-section or diagram showing the geometry of the proposed microstructure (e.g., V-shaped riblets, micro-posts, honeycomb pores, fiber grids) scaled visually to match your proposed parameter values.
+        - The style must fit a premium dark-themed dashboard. Use a dark background (fill="#0f172a") with rounded corners (rx="8" ry="8") or transparent, and draw using neon purple (#7b2cbf), neon cyan (#00f5d4), glowing white, and subtle grays.
+        - Add technical annotations like dimension lines, arrows, and parameter labels (e.g. 's' or 'spacing' for spacing, 'h' or 'height' for height, etc.) to show how the proposed parameters map to the geometry. Make it look like a high-tech scientific blueprint.
         """
 
-        response = self.client.models.generate_content(
+        client = self.client or get_client()
+        response = client.models.generate_content(
             model="gemini-3.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -55,19 +66,21 @@ class Miner:
                     thinking_level="medium"
                 ),
                 response_mime_type="application/json",
-                response_schema=MinerOutput,
+                response_schema=MinerConceptOutput,
             )
         )
         return response.parsed
 
-    def mock_mine_design(self, query: str) -> MinerOutput:
+    def mock_mine_design(self, query: str) -> MinerConceptOutput:
         """
-        Returns a mock MinerOutput for testing without active API credentials.
+        Returns a mock MinerConceptOutput for testing without active API credentials.
         """
         q_lower = query.lower()
+        is_fail = "fail" in q_lower or "instabil" in q_lower
+        
         if any(keyword in q_lower for keyword in ["plastron", "ski", "collembola"]):
-            return MinerOutput(
-                design_name="PlastronGlide Hydrophobic Ski Base",
+            return MinerConceptOutput(
+                design_name="PlastronGlide Fail-Prone Ski Base" if is_fail else "PlastronGlide Hydrophobic Ski Base",
                 inspiration_source="Collembola cuticle (springtail)",
                 domain="Fluid Dynamics",
                 physical_mechanism="The hierarchical micro- and nanostructures of the Collembola cuticle trap a persistent layer of air (plastron) when in contact with water. This plastron layer changes the boundary condition at the liquid-solid interface from no-slip to shear-free (slip), significantly reducing viscous drag in the meltwater film under the ski.",
@@ -108,13 +121,6 @@ class Miner:
                         justification="Relative velocity of the ski base with respect to the snow surface."
                     )
                 ],
-                governing_equation="d2u_dy2 = pressure_gradient * film_thickness^2 / viscosity",
-                boundary_conditions=[
-                    "u(0) = (slip_length / film_thickness) * du_dy(0)",
-                    "u(1) = ski_velocity"
-                ],
-                independent_variables=["y"],
-                dependent_variables=["u"],
                 svg_schematic='''<svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <rect width="400" height="200" rx="8" ry="8" fill="#0f172a" />
   <path d="M 0,50 L 400,50 M 0,100 L 400,100 M 0,150 L 400,150 M 100,0 L 100,200 M 200,0 L 200,200 M 300,0 L 300,200" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4" />
@@ -150,9 +156,9 @@ class Miner:
   <text x="378" y="115" fill="#00f5d4" font-size="11" font-family="monospace" text-anchor="end">λ (slip length)</text>
 </svg>'''
             )
-
-        return MinerOutput(
-            design_name="Shark-Skin Inspired Riblet Foil",
+        
+        return MinerConceptOutput(
+            design_name="Shark-Skin Fail-Prone Foil" if is_fail else "Shark-Skin Inspired Riblet Foil",
             inspiration_source="Galeocerdo cuvier (Tiger Shark)",
             domain="Fluid Dynamics",
             physical_mechanism="Micro-grooves aligned with flow direction reduce viscous drag by lifting turbulent vortices off the wall.",
@@ -193,13 +199,6 @@ class Miner:
                     justification="Simulates external pressure driven flow."
                 )
             ],
-            governing_equation="d2u_dy2 = -pressure_gradient / viscosity",
-            boundary_conditions=[
-                "u(0) = slippage_coefficient * du_dy(0)",
-                "u(1) = free_stream_velocity"
-            ],
-            independent_variables=["y"],
-            dependent_variables=["u"],
             svg_schematic='''<svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <rect width="400" height="200" rx="8" ry="8" fill="#0f172a" />
   <path d="M 0,50 L 400,50 M 0,100 L 400,100 M 0,150 L 400,150 M 100,0 L 100,200 M 200,0 L 200,200 M 300,0 L 300,200" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4" />

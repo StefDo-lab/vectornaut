@@ -1,6 +1,4 @@
 import math
-from google import genai
-from google.genai import types
 from .config import get_client, MinerOutput, AuditorOutput, AuditedParameter, DimensionlessNumber
 
 def extract_param(params_dict, keys, default):
@@ -10,14 +8,16 @@ def extract_param(params_dict, keys, default):
     return default
 
 class Auditor:
-    def __init__(self, client: genai.Client = None):
-        self.client = client or get_client()
+    def __init__(self, client=None):
+        self.client = client
 
     def audit_design(self, miner_output: MinerOutput, override_parameters: dict = None, user_query: str = None) -> AuditorOutput:
         """
         Audits proposed parameters against physical constraints.
         Enforces thinking_level="high" for deep physical reasoning.
         """
+        from google.genai import types
+
         prompt = f"""
         You are a senior physical auditor verifying design specifications for a biomimetic material.
         Here is the proposal from the Miner stage:
@@ -56,10 +56,17 @@ class Auditor:
              "performance_gain": {{ "label": "Label of performance gain metric (e.g., Drag Reduction Efficiency)" }}
            }}
 
-        Output the results structured strictly according to the AuditorOutput schema.
-        """
+         6. Perform a structural and material stress check:
+            - Identify likely operational stresses and load conditions from the user query (e.g. pressure, compression, bending, friction, shear, thermal load).
+            - Estimate the material limits (e.g. yield strength, maximum temperature) of the bionic material.
+            - If the proposed parameters would cause a structural collapse (e.g. if microstructures are too thin and tall under high pressure, or if temperatures exceed material limits), explain this failure in 'audit_notes'.
+            - If these parameters are physically dangerous and cannot be resolved, set 'audit_passed' to False, otherwise True.
 
-        response = self.client.models.generate_content(
+         Output the results structured strictly according to the AuditorOutput schema.
+         """
+
+        client = self.client or get_client()
+        response = client.models.generate_content(
             model="gemini-3.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -196,7 +203,7 @@ class Auditor:
             solver_method = "dynamic_script"
 
         return AuditorOutput(
-            audit_passed=True,
+            audit_passed=audited.audit_passed,
             audit_notes=audited.audit_notes + " (Programmatic safety checks applied.)",
             audited_parameters=audited_params_list,
             dimensionless_numbers=dimensionless_list,

@@ -1,129 +1,84 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import os
 import sys
-import uvicorn
 import json
+import re
+import time
+from datetime import datetime
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 
 # Ensure correct pathing
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from vectornaut.miner import Miner
-from vectornaut.auditor import Auditor
-from vectornaut.solver_dispatcher import dispatch_and_solve
 from vectornaut.config import get_client, MinerOutput
-from google.genai import types
+from vectornaut.evaluation import (
+    build_eval_trace,
+    evaluate_run_output,
+    list_eval_records,
+    load_eval_record,
+    load_history_record,
+    make_eval_run_id,
+    persist_eval_record,
+    utcish_now,
+)
+from vectornaut.api.history_routes import router as history_router
+from vectornaut.pipeline import PipelineRunRequest, run_pipeline
 
 # Load environment vars
-load_dotenv()
+if load_dotenv:
+    load_dotenv()
 
 app = FastAPI(
     title="Vectornaut Omni API",
     description="Backend API services orchestrating Miner, Auditor, and Dynamic Solver stages."
 )
+app.include_router(history_router)
 
-class RunRequest(BaseModel):
+class RunRequest(PipelineRunRequest):
+    previous_miner_output: Optional[MinerOutput] = None
+
+class EvalRunRequest(BaseModel):
+    name: Optional[str] = None
     query: str
-    epochs: int = 200
-    is_mock: bool = False
+    epochs: int = 80
+    is_mock: bool = True
     override_parameters: Optional[Dict[str, float]] = None
     previous_miner_output: Optional[MinerOutput] = None
+    max_optimization_rounds: int = 2
+    criteria: Dict[str, Any] = Field(default_factory=dict)
+    tags: List[str] = Field(default_factory=list)
+
+class EvalBatchRequest(BaseModel):
+    cases: List[EvalRunRequest]
+    stop_on_failure: bool = False
+
+class EvalJudgeRequest(BaseModel):
+    run: Dict[str, Any]
+    criteria: Dict[str, Any] = Field(default_factory=dict)
+
+class DebugReplayRequest(BaseModel):
+    history_file: Optional[str] = None
+    eval_run_id: Optional[str] = None
+    run: Optional[Dict[str, Any]] = None
+    rerun: bool = False
+    criteria: Dict[str, Any] = Field(default_factory=dict)
+    epochs: Optional[int] = None
+    is_mock: Optional[bool] = None
 
 @app.post("/api/run")
 async def run_discovery_loop(req: RunRequest):
     try:
-        # Check API key configuration if not mocking
-        api_key = os.environ.get("GEMINI_API_KEY")
-        effective_mock = req.is_mock
-        if not api_key and not effective_mock:
-            # Fallback to mock mode if key is missing
-            effective_mock = True
-
-        # 1. Miner Stage
-        if req.previous_miner_output:
-            miner_output = req.previous_miner_output
-            print(f"[*] Reusing cached concept: {miner_output.design_name}")
-        else:
-            miner = Miner()
-            if effective_mock:
-                miner_output = miner.mock_mine_design(req.query)
-            else:
-                miner_output = miner.mine_design(req.query)
-
-        # Apply parameter overrides if provided
-        if req.override_parameters:
-            for p in miner_output.parameters:
-                if p.name in req.override_parameters:
-                    p.value = req.override_parameters[p.name]
-
-        # 2. Auditor Stage
-        auditor = Auditor()
-        if effective_mock:
-            auditor_output = auditor.mock_audit_design(miner_output, override_parameters=req.override_parameters, user_query=req.query)
-        else:
-            auditor_output = auditor.audit_design(miner_output, override_parameters=req.override_parameters, user_query=req.query)
-
-        # 3. Simulator Stage (Solver Dispatcher)
-        sim_output = dispatch_and_solve(
-            miner_output=miner_output,
-            auditor_output=auditor_output,
-            epochs=req.epochs
-        )
-
-        # Compile response
-        response_data = {
-            "success": True,
-            "is_mock": effective_mock,
-            "miner": miner_output.model_dump(),
-            "auditor": {
-                **auditor_output.model_dump(),
-                "audited_parameters_dict": auditor_output.audited_parameters_dict,
-                "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
-            },
-            "simulator": sim_output.model_dump()
-        }
-
-        # Auto-archive JSON and Markdown reports
-        try:
-            import json
-            import re
-            from datetime import datetime
-            
-            # Ensure folders exist
-            os.makedirs("history", exist_ok=True)
-            os.makedirs("reports", exist_ok=True)
-            
-            # Slugify design name
-            design_name = miner_output.design_name or "unknown_design"
-            slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            
-            # Save Markdown report
-            md_content = generate_markdown_report_content(response_data, timestamp)
-            response_data["report_md"] = md_content
-            
-            md_filename = f"report_{timestamp}_{slug}.md"
-            md_path = os.path.join("reports", md_filename)
-            with open(md_path, "w", encoding="utf-8") as mf:
-                mf.write(md_content)
-                
-            # Save JSON history (now including the report_md for completeness)
-            json_filename = f"run_{timestamp}_{slug}.json"
-            json_path = os.path.join("history", json_filename)
-            with open(json_path, "w", encoding="utf-8") as jf:
-                json.dump(response_data, jf, indent=4, ensure_ascii=False)
-                
-            print(f"[*] Archived run data to {json_path} and {md_path}")
-        except Exception as archive_err:
-            print(f"[*] Archiving failed: {archive_err}")
-
+        response_data = run_pipeline(req)
+        archive_run_data(response_data)
         return JSONResponse(content=response_data, media_type="application/json; charset=utf-8")
-
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -395,6 +350,8 @@ async def chat_with_assistant(req: ChatRequest):
             return JSONResponse(content={"reply": reply, "suggested_params": suggested_params}, media_type="application/json; charset=utf-8")
 
         else:
+            from google.genai import types
+
             client = get_client()
             
             history_str = ""
@@ -443,10 +400,207 @@ async def chat_with_assistant(req: ChatRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+async def _execute_eval_run(req: EvalRunRequest) -> Dict[str, Any]:
+    run_id = make_eval_run_id()
+    started_at = utcish_now()
+    start_perf = time.perf_counter()
+    output_data: Optional[Dict[str, Any]] = None
+    status = "ok"
+    error_message: Optional[str] = None
+
+    run_request = PipelineRunRequest(
+        query=req.query,
+        epochs=req.epochs,
+        is_mock=req.is_mock,
+        override_parameters=req.override_parameters,
+        previous_miner_output=req.previous_miner_output,
+        max_optimization_rounds=req.max_optimization_rounds,
+    )
+
+    try:
+        output_data = run_pipeline(run_request)
+        archive_run_data(output_data)
+    except Exception as exc:
+        status = "failed"
+        error_message = str(exc)
+
+    duration_ms = int((time.perf_counter() - start_perf) * 1000)
+    finished_at = utcish_now()
+    request_data = req.model_dump()
+    trace = build_eval_trace(
+        run_id=run_id,
+        request_data=request_data,
+        run_data=output_data,
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_ms=duration_ms,
+        status=status,
+        error=error_message,
+    )
+    evaluation = evaluate_run_output(output_data or {}, req.criteria)
+    if status == "failed":
+        evaluation["passed"] = False
+
+    record = {
+        "run_id": run_id,
+        "name": req.name,
+        "tags": req.tags,
+        "status": status,
+        "trace": trace,
+        "evaluation": evaluation,
+        "output": output_data,
+        "error": error_message,
+    }
+    record["storage_path"] = persist_eval_record(record)
+    return record
+
+@app.post("/api/eval/run")
+async def eval_run(req: EvalRunRequest):
+    record = await _execute_eval_run(req)
+    return JSONResponse(content=record, media_type="application/json; charset=utf-8")
+
+@app.post("/api/eval/batch")
+async def eval_batch(req: EvalBatchRequest):
+    records = []
+    for case in req.cases:
+        record = await _execute_eval_run(case)
+        records.append(record)
+        if req.stop_on_failure and not record.get("evaluation", {}).get("passed", False):
+            break
+
+    passed_count = sum(1 for record in records if record.get("evaluation", {}).get("passed", False))
+    response = {
+        "success": passed_count == len(records) and len(records) == len(req.cases),
+        "requested": len(req.cases),
+        "executed": len(records),
+        "passed": passed_count,
+        "failed": len(records) - passed_count,
+        "records": records,
+    }
+    return JSONResponse(content=response, media_type="application/json; charset=utf-8")
+
+@app.post("/api/eval/judge")
+async def eval_judge(req: EvalJudgeRequest):
+    evaluation = evaluate_run_output(req.run, req.criteria)
+    return JSONResponse(content=evaluation, media_type="application/json; charset=utf-8")
+
+@app.get("/api/eval/runs")
+async def list_eval_runs(limit: int = 50):
+    records = list_eval_records(limit=limit)
+    return JSONResponse(content={"runs": records}, media_type="application/json; charset=utf-8")
+
+@app.get("/api/eval/runs/{run_id}")
+async def get_eval_run(run_id: str):
+    try:
+        record = load_eval_record(run_id)
+        return JSONResponse(content=record, media_type="application/json; charset=utf-8")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+@app.post("/api/debug/replay")
+async def debug_replay(req: DebugReplayRequest):
+    try:
+        source_data: Optional[Dict[str, Any]] = None
+        source_label = "inline"
+
+        if req.run is not None:
+            source_data = req.run
+        elif req.eval_run_id:
+            record = load_eval_record(req.eval_run_id)
+            source_label = req.eval_run_id
+            source_data = record.get("output")
+            if source_data is None:
+                source_data = record
+        elif req.history_file:
+            source_label = req.history_file
+            source_data = load_history_record(req.history_file)
+        else:
+            raise HTTPException(status_code=400, detail="Provide one of: run, eval_run_id, or history_file.")
+
+        if not req.rerun:
+            evaluation = evaluate_run_output(source_data or {}, req.criteria)
+            replay_run_id = make_eval_run_id()
+            replay_record = {
+                "run_id": replay_run_id,
+                "name": f"replay:{source_label}",
+                "status": "replayed",
+                "trace": build_eval_trace(
+                    run_id=replay_run_id,
+                    request_data={"source": source_label, "rerun": False},
+                    run_data=source_data,
+                    started_at=utcish_now(),
+                    finished_at=utcish_now(),
+                    duration_ms=0,
+                    status="replayed",
+                ),
+                "evaluation": evaluation,
+                "output": source_data,
+                "error": None,
+            }
+            replay_record["storage_path"] = persist_eval_record(replay_record)
+            return JSONResponse(content=replay_record, media_type="application/json; charset=utf-8")
+
+        query = None
+        if source_data:
+            query = source_data.get("query")
+        if not query and req.eval_run_id:
+            record = load_eval_record(req.eval_run_id)
+            query = get_nested_request_query(record)
+        if not query:
+            raise HTTPException(status_code=400, detail="Cannot rerun this record because it does not contain the original query.")
+
+        eval_req = EvalRunRequest(
+            name=f"rerun:{source_label}",
+            query=query,
+            epochs=req.epochs or int(source_data.get("epochs", 80) if source_data else 80),
+            is_mock=req.is_mock if req.is_mock is not None else bool(source_data.get("is_mock", True) if source_data else True),
+            criteria=req.criteria,
+            tags=["debug-replay"],
+        )
+        record = await _execute_eval_run(eval_req)
+        return JSONResponse(content=record, media_type="application/json; charset=utf-8")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+def get_nested_request_query(record: Dict[str, Any]) -> Optional[str]:
+    trace = record.get("trace", {})
+    request = trace.get("request", {}) if isinstance(trace, dict) else {}
+    query = request.get("query") if isinstance(request, dict) else None
+    return query if isinstance(query, str) and query.strip() else None
+
+def archive_run_data(response_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    try:
+        os.makedirs("history", exist_ok=True)
+        os.makedirs("reports", exist_ok=True)
+
+        design_name = response_data.get("miner", {}).get("design_name") or "unknown_design"
+        slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        md_content = generate_markdown_report_content(response_data, timestamp)
+        response_data["report_md"] = md_content
+
+        md_filename = f"report_{timestamp}_{slug}.md"
+        md_path = os.path.join("reports", md_filename)
+        with open(md_path, "w", encoding="utf-8") as mf:
+            mf.write(md_content)
+
+        json_filename = f"run_{timestamp}_{slug}.json"
+        json_path = os.path.join("history", json_filename)
+        with open(json_path, "w", encoding="utf-8") as jf:
+            json.dump(response_data, jf, indent=4, ensure_ascii=False)
+
+        print(f"[*] Archived run data to {json_path} and {md_path}")
+        return {"history_path": json_path, "report_path": md_path}
+    except Exception as archive_err:
+        print(f"[*] Archiving failed: {archive_err}")
+        return None
+
 def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     miner = data.get("miner", {})
     auditor = data.get("auditor", {})
     simulator = data.get("simulator", {})
+    synthesis = data.get("synthesis", {})
     
     from datetime import datetime
     try:
@@ -463,10 +617,27 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     md.append(f"# Bionisches Design-Protokoll: {miner.get('design_name', 'Unbenanntes Design')}")
     md.append(f"*Erstellt am: {readable_time} (Vectornaut Engine)*\n")
     
+    # Executive Summary & Pros/Cons at the top
+    if synthesis.get("executive_summary"):
+        md.append("## Executive Summary")
+        md.append(synthesis.get("executive_summary"))
+        md.append("")
+        
+    if synthesis.get("pros_and_cons"):
+        md.append("## Vor- & Nachteile (Gegenüberstellung)")
+        md.append(synthesis.get("pros_and_cons"))
+        md.append("")
+    
     md.append("## 1. Konzept & Bionische Inspiration")
     md.append(f"- **Natürliches Vorbild:** {miner.get('inspiration_source', 'N/A')}")
     md.append(f"- **Physikalisches System (Domäne):** {miner.get('domain', 'N/A')}")
     md.append(f"- **Bionischer Mechanismus:**\n  > {miner.get('physical_mechanism', 'N/A')}\n")
+    
+    # Embed the SVG Construction Schematic
+    svg_schematic = miner.get("svg_schematic")
+    if svg_schematic:
+        md.append("### Schematische Konstruktionszeichnung")
+        md.append(f'<div class="report-svg-container" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin: 15px 0; max-width: 600px;">{svg_schematic}</div>\n')
     
     md.append("## 2. Mathematische Formulierung")
     is_2d = len(miner.get("independent_variables", [])) == 2
@@ -525,6 +696,12 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     if simulator.get("solver_method") == "pinn":
         md.append(f"- **PINN Trainingsepochen:** {simulator.get('epochs_trained', 0)}")
         md.append(f"- **PINN End-Loss (MSE):** `{simulator.get('final_loss', 0.0):.4e}`")
+        
+    custom_plot = simulator.get("custom_plot_url")
+    if custom_plot:
+        md.append("\n### Simulationsdiagramm (Feldverteilung)")
+        # Relative image URL for clean rendering in browser and pdf exports
+        md.append(f'![Simulations-Plot]({custom_plot})')
     
     md.append("\n### Berechnete Stützpunkte und Feldwerte")
     loc_header = "Ort (x, y)" if is_2d else "Ort (x)"
@@ -554,6 +731,43 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     if simulator.get("validation_report"):
         md.append("\n## 6. Automatische Validierung (AI-Generated Tests)")
         md.append(simulator.get("validation_report"))
+
+    # Append Section 7: Optimization History if present
+    opt_hist = data.get("optimization_history", [])
+    if opt_hist:
+        md.append("\n## 7. Autonome Optimierungshistorie (Closed-Loop)")
+        md.append("Das System hat die Parameter in mehreren Simulations- und Validierungsschleifen autonom angepasst:\n")
+        md.append("| Runde | Parameter-Set | Koeffizient | Effizienz (Gain) | Validierung | Feedback des Optimierers |")
+        md.append("| --- | --- | --- | --- | --- | --- |")
+        for run in opt_hist:
+            r_num = run.get("round", 1)
+            params_str = ", ".join([f"`{k}`: {v}" for k, v in run.get("parameters", {}).items()])
+            coeff_val = run.get("simulation_coefficient", 0.0)
+            sim_res = run.get("simulator", {})
+            gain = sim_res.get("performance_gain_pct", 0.0)
+            val_status = "✅ PASS" if sim_res.get("validation_passed") else "❌ FAIL" if sim_res.get("validation_passed") is not None else "N/A"
+            reasoning = run.get("optimizer_reasoning", "Konvergenz erreicht oder Limit erreicht.").replace("\n", " ").strip()
+            md.append(f"| {r_num} | {params_str} | `{coeff_val:.6f}` | **{gain:.2f}%** | {val_status} | {reasoning} |")
+
+    # Append Section 8: Commercial & Engineering Synthesis
+    synthesis = data.get("synthesis", {})
+    if synthesis:
+        md.append("\n## 8. Kommerzielle & Praktische Synthese")
+        md.append("Hier ist die ingenieurwissenschaftliche und wirtschaftliche Bewertung für die Umsetzung dieses Entwurfs:")
+        md.append(f"\n### Mechanische Belastbarkeit & Sicherheitsgrenzen\n{synthesis.get('mechanical_limits')}")
+        md.append(f"\n### Empfohlene Fertigungsmethoden & Skalierung\n{synthesis.get('manufacturing_methods')}")
+        md.append(f"\n### Kostenschätzung (Prototyping & Produktion)\n{synthesis.get('cost_estimation')}")
+        md.append(f"\n### Vorgeschlagene Validierungsexperimente\n{synthesis.get('validation_experiments')}")
+        md.append(f"\n### Mögliche Partner & Industriebranchen\n{synthesis.get('industry_partners')}")
+
+    # Append Section 9: Failed Concepts (Re-Mining History) if present
+    failed_c = data.get("failed_concepts", [])
+    if failed_c:
+        md.append("\n## 9. Verlauf gescheiterter Konzepte (Re-Mining)")
+        md.append("Die folgenden bionischen Ansätze wurden während der Pipeline evaluiert, aber aufgrund mangelnder Stabilität oder Plausibilität verworfen:")
+        for idx, fc in enumerate(failed_c, 1):
+            md.append(f"\n* **Ansatz {idx}: {fc.get('design_name')}** ({fc.get('inspiration_source')})")
+            md.append(f"  * *Grund für das Scheitern:* {fc.get('reason')}")
         
     return "\n".join(md)
 
@@ -563,5 +777,7 @@ os.makedirs(static_path, exist_ok=True)
 app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
 
 if __name__ == "__main__":
+    import uvicorn
+
     print("[*] Launching Vectornaut 2.0 Web Server on http://0.0.0.0:8080 ...")
     uvicorn.run("web_server:app", host="0.0.0.0", port=8080, reload=False)

@@ -1,17 +1,22 @@
 import os
 from typing import Any, Dict, List, Optional
-from dotenv import load_dotenv
-from google import genai
 from pydantic import BaseModel, Field
 
-# Load environment variables from .env if present
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 
-def get_client() -> genai.Client:
+if load_dotenv:
+    load_dotenv()
+
+def get_client():
     """
     Initializes and returns the unified google-genai Client.
     Uses AI Studio (GEMINI_API_KEY) by default, or Vertex AI if configured.
     """
+    from google import genai
+
     use_vertex = os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "false").lower() == "true"
     if use_vertex:
         project = os.environ.get("GOOGLE_CLOUD_PROJECT")
@@ -31,6 +36,32 @@ class ParameterProposal(BaseModel):
     min_bound: float = Field(description="Minimum physically plausible bound")
     max_bound: float = Field(description="Maximum physically plausible bound")
     justification: str = Field(description="Explanation for the value and bounds based on bionic inspiration")
+
+class MinerConceptOutput(BaseModel):
+    design_name: str = Field(description="Name of the biomimetic design concept")
+    inspiration_source: str = Field(description="The biological or natural organism/phenomenon that inspires the design")
+    domain: str = Field(description="The scientific domain, e.g., Fluid Dynamics, Thermodynamics, Electromagnetics")
+    physical_mechanism: str = Field(description="Explanation of the physical mechanism being mimicked")
+    parameters: List[ParameterProposal] = Field(description="List of proposed physical parameters")
+    svg_schematic: str = Field(description="Self-contained responsive 2D SVG markup illustrating the micro/nanostructure of the proposed material, scaled dynamically according to the parameter values. Uses dark-mode aligned accent colors (neon purple, neon cyan, dark fills) and technical labels.")
+
+    @property
+    def proposed_parameters(self) -> Dict[str, float]:
+        return {p.name: p.value for p in self.parameters}
+
+    @property
+    def suggested_bounds(self) -> Dict[str, List[float]]:
+        return {p.name: [p.min_bound, p.max_bound] for p in self.parameters}
+
+    @property
+    def parameter_justifications(self) -> Dict[str, str]:
+        return {p.name: p.justification for p in self.parameters}
+
+class ModelFormulation(BaseModel):
+    governing_equation: str = Field(description="Symbolic ordinary/partial differential equation, e.g., 'd2u_dy2 = -c_pg' or 'd2T_dx2 = 0'")
+    boundary_conditions: List[str] = Field(description="List of symbolic boundary conditions, e.g., ['u(0) = lambda * du_dy(0)', 'u(1) = u_free']")
+    independent_variables: List[str] = Field(description="Independent variables (coordinates) for the system, e.g., ['y'] or ['x']")
+    dependent_variables: List[str] = Field(description="Dependent variables (fields) for the system, e.g., ['u'] or ['T']")
 
 class MinerOutput(BaseModel):
     design_name: str = Field(description="Name of the biomimetic design concept")
@@ -112,5 +143,3 @@ class SimulatorOutput(BaseModel):
     validation_passed: Optional[bool] = Field(description="True if automated validation tests passed", default=None)
     validation_report: Optional[str] = Field(description="Markdown report of the automated validation runs", default=None)
     validation_tests: Optional[List[Dict[str, Any]]] = Field(description="Details of each run validation test", default=None)
-
-
