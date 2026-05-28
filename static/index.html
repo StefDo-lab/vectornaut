@@ -1,160 +1,196 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vectornaut 2.0 - Autonomous Material Design</title>
-    <!-- Google Fonts -->
+    <title>Vectornaut 2.0 - Research Workbench</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Marked.js CDN for markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=2.4.2">
+    <link rel="stylesheet" href="style.css?v=2.5.0">
 </head>
 <body>
     <div class="gradient-bg"></div>
-    
-    <div class="container">
-        <!-- Header -->
+
+    <div class="container app-shell">
         <header class="header animate-fade-in">
             <div class="logo-group">
                 <span class="logo-glow"></span>
                 <h1 class="logo-text">Vectornaut <span class="version">2.0</span></h1>
             </div>
-            <p class="subtitle">Bionische Konzeptsuche mit Modellierung, Simulation, Validierung und technischem Bericht</p>
+            <p class="subtitle">Technische Fallakten aus Konzeptsuche, Modellierung, Simulation und Validierung</p>
         </header>
 
-        <!-- Main Layout -->
-        <div class="main-grid">
-            
-            <!-- Left Panel: Controls -->
-            <section class="panel glass-panel animate-slide-in-left">
-                <h2>Steuerung</h2>
-
-                <div class="form-group">
-                    <label for="query-input">Entwicklungsauftrag</label>
-                    <textarea id="query-input" rows="7" placeholder="Beschreibe das technische Ziel, die Randbedingungen und die gewünschte Wirkung. Beispiel: Entwickle eine flexible Schlauchinnenwand, die Druck- und Abriebfestigkeit erhält und gleichzeitig Reibungsverluste in Wasser reduziert."></textarea>
-                    <div class="sample-chip-group" aria-label="Beispielaufträge">
-                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('friction')">Reibung reduzieren</button>
-                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('thermal')">Wärme isolieren</button>
-                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('membrane')">Membran filtern</button>
-                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('impact')">Stoßenergie absorbieren</button>
-                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('selfcleaning')">Selbstreinigung</button>
+        <div class="main-grid workbench-grid">
+            <aside class="workbench-sidebar animate-slide-in-left">
+                <section class="panel control-panel">
+                    <div class="panel-heading">
+                        <span class="eyebrow">Auftrag</span>
+                        <h2>Neuen Run starten</h2>
                     </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group flex-1">
-                        <label for="epochs-input">PINN Epochs: <span id="epochs-val">200</span></label>
-                        <input type="range" id="epochs-input" min="50" max="1000" step="10" value="200" oninput="document.getElementById('epochs-val').innerText = this.value">
+                    <div class="form-group">
+                        <label for="query-input">Entwicklungsauftrag</label>
+                        <textarea id="query-input" rows="8" placeholder="Beschreibe Ziel, Randbedingungen und gewünschte Wirkung. Beispiel: Entwickle eine flexible Schlauchinnenwand, die Druck- und Abriebfestigkeit erhält und gleichzeitig Reibungsverluste in Wasser reduziert."></textarea>
+                        <div class="sample-chip-group" aria-label="Beispielaufträge">
+                            <button type="button" class="sample-chip" onclick="insertSamplePrompt('friction')">Reibung reduzieren</button>
+                            <button type="button" class="sample-chip" onclick="insertSamplePrompt('thermal')">Wärme isolieren</button>
+                            <button type="button" class="sample-chip" onclick="insertSamplePrompt('membrane')">Membran filtern</button>
+                            <button type="button" class="sample-chip" onclick="insertSamplePrompt('impact')">Stoßenergie absorbieren</button>
+                            <button type="button" class="sample-chip" onclick="insertSamplePrompt('selfcleaning')">Selbstreinigung</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Ausführungsmodus</label>
-                    <div class="toggle-container">
-                        <button id="mode-live" class="toggle-btn active" onclick="setMode(false)">
-                            <span class="indicator-dot green"></span> Live API (Gemini)
-                        </button>
-                        <button id="mode-mock" class="toggle-btn" onclick="setMode(true)">
-                            <span class="indicator-dot purple"></span> Offline Mock
-                        </button>
-                    </div>
-                </div>
+                    <details class="settings-disclosure" open>
+                        <summary>Run-Einstellungen</summary>
+                        <div class="form-row">
+                            <div class="form-group flex-1">
+                                <label for="epochs-input">PINN Epochs: <span id="epochs-val">200</span></label>
+                                <input type="range" id="epochs-input" min="50" max="1000" step="10" value="200" oninput="document.getElementById('epochs-val').innerText = this.value">
+                            </div>
+                        </div>
 
-                <button id="run-btn" class="btn btn-primary" onclick="runDiscoveryLoop()">
-                    <span class="btn-text">Analyse starten</span>
-                    <span class="btn-glow"></span>
-                </button>
+                        <div class="form-group">
+                            <label>Ausführungsmodus</label>
+                            <div class="toggle-container">
+                                <button id="mode-live" class="toggle-btn active" onclick="setMode(false)">
+                                    <span class="indicator-dot green"></span> Live API
+                                </button>
+                                <button id="mode-mock" class="toggle-btn" onclick="setMode(true)">
+                                    <span class="indicator-dot purple"></span> Offline Mock
+                                </button>
+                            </div>
+                        </div>
+                    </details>
 
-                <div class="history-panel">
+                    <button id="run-btn" class="btn btn-primary" onclick="runDiscoveryLoop()">
+                        <span class="btn-text">Analyse starten</span>
+                        <span class="btn-glow"></span>
+                    </button>
+                </section>
+
+                <section class="panel history-panel">
                     <div class="history-header">
-                        <label for="history-select">Frühere Läufe</label>
-                        <button class="btn-icon" title="Frühere Läufe aktualisieren" onclick="loadHistoryList()">↻</button>
+                        <div>
+                            <span class="eyebrow">Archiv</span>
+                            <label for="history-select">Frühere Läufe</label>
+                        </div>
+                        <button class="btn-icon" title="Frühere Läufe aktualisieren" onclick="loadHistoryList()">&#8635;</button>
                     </div>
                     <select id="history-select">
                         <option value="">Keine gespeicherten Läufe geladen</option>
                     </select>
                     <button id="load-history-btn" class="btn btn-secondary" onclick="loadSelectedHistoryRun()">Ausgewählten Lauf laden</button>
                     <p id="history-status" class="history-status">Gespeicherte Läufe werden aus der lokalen Historie geladen.</p>
-                </div>
-            </section>
+                </section>
+            </aside>
 
-            <!-- Right Panel: Pipeline Progress & Results -->
-            <div class="results-container flex-column">
-                
-                <!-- Pipeline Stepper -->
-                <section class="panel glass-panel animate-slide-in-right">
-                    <h2>Pipeline-Status</h2>
-                    <div class="pipeline-stepper">
+            <main class="record-panel flex-column animate-slide-in-right">
+                <section class="panel status-panel">
+                    <div class="panel-heading row-heading">
+                        <div>
+                            <span class="eyebrow">Pipeline</span>
+                            <h2>Run-Status</h2>
+                        </div>
+                        <button class="btn btn-compact btn-secondary" onclick="toggleConsole()">Konsole</button>
+                    </div>
+                    <div class="pipeline-stepper compact-stepper">
                         <div id="step-miner" class="step">
                             <div class="step-icon">1</div>
                             <div class="step-details">
-                                <h3>Stage 1: Miner</h3>
+                                <h3>Konzept</h3>
+                                <p class="step-status">Idle</p>
+                            </div>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div id="step-formulator" class="step">
+                            <div class="step-icon">2</div>
+                            <div class="step-details">
+                                <h3>Modell</h3>
                                 <p class="step-status">Idle</p>
                             </div>
                         </div>
                         <div class="step-divider"></div>
                         <div id="step-auditor" class="step">
-                            <div class="step-icon">2</div>
+                            <div class="step-icon">3</div>
                             <div class="step-details">
-                                <h3>Stage 2: Auditor</h3>
+                                <h3>Audit</h3>
                                 <p class="step-status">Idle</p>
                             </div>
                         </div>
                         <div class="step-divider"></div>
                         <div id="step-simulator" class="step">
-                            <div class="step-icon">3</div>
+                            <div class="step-icon">4</div>
                             <div class="step-details">
-                                <h3>Stage 3: Simulator</h3>
+                                <h3>Simulation</h3>
+                                <p class="step-status">Idle</p>
+                            </div>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div id="step-validator" class="step">
+                            <div class="step-icon">5</div>
+                            <div class="step-details">
+                                <h3>Validierung</h3>
+                                <p class="step-status">Idle</p>
+                            </div>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div id="step-report" class="step">
+                            <div class="step-icon">6</div>
+                            <div class="step-details">
+                                <h3>Bericht</h3>
                                 <p class="step-status">Idle</p>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Results Output Tabs -->
-                <section class="panel glass-panel flex-1 min-h-400">
-                    <div class="tab-header">
-                        <button class="tab-link active" onclick="openTab(event, 'tab-overview')">Overview</button>
-                        <button class="tab-link" onclick="openTab(event, 'tab-params')">Parameters</button>
-                        <button class="tab-link" onclick="openTab(event, 'tab-simulation')">Physics Simulation</button>
-                        <button class="tab-link" onclick="openTab(event, 'tab-report')">Discovery Report</button>
-                        <button class="tab-link" onclick="openTab(event, 'tab-assistant')">Bionic Assistant</button>
+                <section class="panel record-card flex-1 min-h-400">
+                    <div class="record-header">
+                        <div>
+                            <span class="eyebrow">Ergebnisakte</span>
+                            <h2>Aktueller technischer Report</h2>
+                        </div>
+                        <div class="record-status-chip" id="record-status-chip">Kein aktiver Run</div>
                     </div>
 
-                    <!-- Tab content: Overview -->
+                    <div class="tab-header">
+                        <button class="tab-link active" onclick="openTab(event, 'tab-overview')">Kurzakte</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-report')">Report</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-simulation')">Simulation</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-params')">Parameter</button>
+                    </div>
+
                     <div id="tab-overview" class="tab-content active">
                         <div class="empty-state">
-                            <p>No results yet. Run the discovery loop to generate data.</p>
+                            <p>Noch kein Ergebnis. Starte einen Run oder lade eine gespeicherte Fallakte.</p>
                         </div>
                         <div class="overview-grid hidden">
-                            <div class="info-card span-2">
-                                <span class="label">Design Concept Name</span>
+                            <div class="info-card span-2 hero-info-card">
+                                <span class="label">Konzept</span>
                                 <h3 id="concept-name" class="concept-title">-</h3>
                             </div>
                             <div class="info-card">
-                                <span class="label">Inspiration Source</span>
+                                <span class="label">Inspiration</span>
                                 <p id="inspiration-source" class="val-highlight">-</p>
                             </div>
                             <div class="info-card">
-                                <span class="label">Physical Domain</span>
+                                <span class="label">Physikalische Domäne</span>
                                 <p id="physical-domain">-</p>
                             </div>
                             <div class="info-card span-2">
-                                <span class="label">Physical Mechanism & Concept Description</span>
+                                <span class="label">Mechanismus und Konzeptbeschreibung</span>
                                 <p id="physical-mechanism" class="desc-text">-</p>
                             </div>
                             <div class="info-card">
-                                <span class="label" id="derived-coefficient-label">Derived Simulation Coefficient</span>
+                                <span class="label" id="derived-coefficient-label">Simulationskoeffizient</span>
                                 <p id="derived-coefficient" class="val-highlight">-</p>
                             </div>
                             <div id="validation-card" class="info-card validation-card validation-unknown">
                                 <div class="validation-card-header">
-                                    <span class="label">Validation</span>
+                                    <span class="label">Validator</span>
                                     <span id="validation-status-badge" class="validation-badge">-</span>
                                 </div>
                                 <div class="validation-score-row">
@@ -165,46 +201,29 @@
                                 <ul id="validation-warnings" class="validation-warnings"></ul>
                             </div>
                             <div id="schematic-card" class="info-card span-2 hidden">
-                                <span class="label">Microstructure Schematic Blueprint</span>
+                                <span class="label">Schematische Darstellung</span>
                                 <div id="schematic-container"></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Tab content: Parameters -->
-                    <div id="tab-params" class="tab-content">
+                    <div id="tab-report" class="tab-content">
                         <div class="empty-state">
-                            <p>No results yet. Run the discovery loop to generate data.</p>
+                            <p>Noch kein Report verfügbar.</p>
                         </div>
-                        <div class="table-container hidden">
-                            <table class="params-table">
-                                <thead>
-                                    <tr>
-                                        <th>Parameter Name</th>
-                                        <th>Mined Value</th>
-                                        <th>Audited Value</th>
-                                        <th>Suggested Bounds</th>
-                                        <th>Justification</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="params-table-body">
-                                    <!-- Dynamic rows -->
-                                </tbody>
-                            </table>
-
-                            <div class="dimensionless-group">
-                                <h3>Computed Dimensionless Numbers</h3>
-                                <div id="dimensionless-container" class="cards-grid">
-                                    <!-- Dynamic cards -->
-                                </div>
-                            </div>
+                        <div class="report-actions hidden" id="report-actions-container">
+                            <button class="btn btn-accent" onclick="downloadPDFReport()">PDF exportieren</button>
+                            <button class="btn btn-secondary" onclick="downloadMarkdownReport()">Markdown exportieren</button>
+                            <button class="btn btn-secondary" onclick="downloadRawReport()">JSON exportieren</button>
+                            <button class="btn btn-secondary" onclick="toggleRawReport()">Developer JSON</button>
                         </div>
+                        <div id="markdown-report" class="markdown-body hidden"></div>
+                        <pre id="raw-json-report" class="code-block hidden"></pre>
                     </div>
 
-                    <!-- Tab content: Simulation -->
                     <div id="tab-simulation" class="tab-content">
                         <div class="empty-state">
-                            <p>No results yet. Run the discovery loop to generate data.</p>
+                            <p>Noch keine Simulation verfügbar.</p>
                         </div>
                         <div class="simulation-view hidden">
                             <div class="metrics-row">
@@ -213,136 +232,147 @@
                                     <h4 id="metric-loss">-</h4>
                                 </div>
                                 <div class="metric-card glow-blue">
-                                    <span class="label" id="metric-gain-label">Drag Reduction Efficiency</span>
+                                    <span class="label" id="metric-gain-label">Performance Gain</span>
                                     <h4 id="metric-drag-reduction">-</h4>
                                 </div>
                                 <div class="metric-card">
-                                    <span class="label" id="metric-primary-label">PINN Wall Shear Stress</span>
+                                    <span class="label" id="metric-primary-label">Primary Metric</span>
                                     <h4 id="metric-wss-pinn">-</h4>
                                 </div>
                                 <div class="metric-card">
-                                    <span class="label" id="metric-ref-label">Analytical Wall Shear Stress</span>
+                                    <span class="label" id="metric-ref-label">Reference Metric</span>
                                     <h4 id="metric-wss-analytical">-</h4>
                                 </div>
                             </div>
-                            
+
                             <div class="charts-grid">
                                 <div class="chart-container" id="container-loss-chart">
                                     <h4>PINN Loss Convergence History</h4>
                                     <canvas id="lossChart"></canvas>
                                 </div>
                                 <div class="chart-container" id="container-field-chart">
-                                    <h4 id="field-chart-title">Flow Velocity Field (PINN vs Analytical)</h4>
+                                    <h4 id="field-chart-title">Field Comparison</h4>
                                     <canvas id="velocityChart"></canvas>
                                 </div>
-                                <div class="chart-container" id="container-heatmap" style="display: none;">
-                                    <h4 id="heatmap-chart-title">2D Solution Heatmap (Interactive)</h4>
-                                    <div class="heatmap-wrapper" style="position: relative; display: inline-block; width: 100%; max-width: 400px; margin: 0 auto;">
-                                        <canvas id="heatmapCanvas" width="400" height="400" style="border-radius: 8px; background: #0f172a; cursor: crosshair; display: block; width: 100%; height: auto; aspect-ratio: 1/1;"></canvas>
-                                        <div id="heatmap-tooltip" style="position: absolute; display: none; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 4px; font-family: inherit; font-size: 12px; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100;"></div>
+                                <div class="chart-container" id="container-heatmap">
+                                    <h4 id="heatmap-chart-title">2D Solution Heatmap</h4>
+                                    <div class="heatmap-wrapper">
+                                        <canvas id="heatmapCanvas" width="400" height="400"></canvas>
+                                        <div id="heatmap-tooltip"></div>
                                     </div>
-                                    <div id="heatmap-legend" style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; color: var(--text-muted);"></div>
+                                    <div id="heatmap-legend"></div>
                                 </div>
-                                <div class="chart-container" id="container-custom-plot" style="display: none; grid-column: span 2; text-align: center;">
-                                    <h4 id="custom-plot-title">Dynamically Generated Solution Plot</h4>
-                                    <div class="plot-wrapper" style="margin: 0 auto; max-width: 800px;">
-                                        <img id="custom-plot-img" src="" alt="Custom Solution Plot" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+                                <div class="chart-container" id="container-custom-plot">
+                                    <h4 id="custom-plot-title">Generated Solution Plot</h4>
+                                    <div class="plot-wrapper">
+                                        <img id="custom-plot-img" src="" alt="Custom Solution Plot">
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Tab content: Report -->
-                    <div id="tab-report" class="tab-content">
+                    <div id="tab-params" class="tab-content">
                         <div class="empty-state">
-                            <p>No results yet. Run the discovery loop to generate data.</p>
+                            <p>Noch keine Parameter verfügbar.</p>
                         </div>
-                        <div class="report-actions hidden" id="report-actions-container" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button class="btn btn-accent" onclick="downloadPDFReport()" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; width: auto; border-radius: 8px; cursor: pointer; font-family: var(--font-heading); font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                                📄 Download PDF Report
-                            </button>
-                            <button class="btn btn-secondary" onclick="downloadMarkdownReport()" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); cursor: pointer; font-family: var(--font-heading); font-weight: 600;">
-                                ⬇️ Download Markdown (.md)
-                            </button>
-                            <button class="btn btn-secondary" onclick="downloadRawReport()" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); cursor: pointer; font-family: var(--font-heading); font-weight: 600;">
-                                Download Raw JSON
-                            </button>
-                            <button class="btn btn-secondary" onclick="toggleRawReport()" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); cursor: pointer; font-family: var(--font-heading); font-weight: 600;">
-                                Toggle Developer JSON
-                            </button>
-                        </div>
-                        <div id="markdown-report" class="markdown-body hidden"></div>
-                        <pre id="raw-json-report" class="code-block hidden" style="display: none;"></pre>
-                    </div>
+                        <div class="table-container hidden">
+                            <table class="params-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Mining</th>
+                                        <th>Audit</th>
+                                        <th>Bounds</th>
+                                        <th>Begründung</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="params-table-body"></tbody>
+                            </table>
 
-                    <!-- Tab content: Bionic Assistant -->
-                    <div id="tab-assistant" class="tab-content">
-                        <div class="empty-state" id="assistant-empty-state">
-                            <p>No simulation run active. Run a discovery loop to initialize the Bionic Assistant.</p>
-                        </div>
-                        
-                        <div class="assistant-wrapper hidden" id="assistant-wrapper">
-                            <!-- Findings Summary card -->
-                            <div class="info-card glow-blue" style="margin-bottom: 1.25rem;">
-                                <span class="label">Bionic Executive Summary</span>
-                                <h3 id="findings-summary-title" style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--success-color); border: none; padding: 0; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">Analyzing results...</h3>
-                                <p id="findings-summary-desc" class="desc-text" style="margin-bottom: 0.75rem;">Loading simulation findings...</p>
-                                <div id="findings-stats-grid" class="findings-stats-grid"></div>
-                            </div>
-
-                            <!-- Suggested Questions -->
-                            <div style="margin-bottom: 1.25rem;">
-                                <span class="label">Suggested Questions</span>
-                                <div class="suggested-questions" id="suggested-questions" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;">
-                                    <!-- Populated dynamically or statically -->
-                                </div>
-                            </div>
-
-                            <!-- Chat interface container -->
-                            <div class="assistant-container">
-                                <div class="chat-history" id="chat-history">
-                                    <div class="chat-message system-message">
-                                        <p>Hallo! Ich bin dein Bionischer Design-Assistent. Ich habe Zugriff auf alle Parameter und Testergebnisse deines aktuellen Entwurfs. Wie kann ich dir heute helfen?</p>
-                                    </div>
-                                </div>
-                                <div class="chat-input-row">
-                                    <textarea id="chat-input" rows="3" placeholder="Frage mich zum Beispiel nach der Herstellung oder schreibe 'Optimieren'..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"></textarea>
-                                    <button class="btn btn-primary" id="chat-send-btn" onclick="sendChatMessage()">Senden</button>
-                                </div>
-                            </div>
-
-                            <!-- Optimization proposal card -->
-                            <div id="optimization-proposal" class="optimization-proposal hidden">
-                                <h3>
-                                    <span class="indicator-dot green" style="box-shadow: 0 0 6px var(--success-color);"></span>
-                                    Vorgeschlagene Parameter-Optimierungen
-                                </h3>
-                                <p class="desc-text" id="opt-explanation" style="margin-bottom: 1rem;">Folgende veränderte Werte wurden zur Reibungsminderung berechnet:</p>
-                                <div id="proposal-params-list" class="proposal-params-list">
-                                    <!-- Badges will be generated here -->
-                                </div>
-                                <button class="btn btn-accent" id="apply-opt-btn" onclick="applySuggestedParameters()" style="margin-top: 0.5rem;">
-                                    Apply & Run Next Optimization Round
-                                </button>
+                            <div class="dimensionless-group">
+                                <h3>Dimensionless Numbers</h3>
+                                <div id="dimensionless-container" class="cards-grid"></div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Console Console -->
-                <section class="panel glass-panel console-panel">
-                    <h2>Live Execution Console</h2>
+                <section class="panel console-panel collapsed" id="console-panel">
+                    <div class="panel-heading row-heading">
+                        <h2>Ausführungskonsole</h2>
+                        <button class="btn-icon" title="Konsole ein- oder ausklappen" onclick="toggleConsole()">&#8964;</button>
+                    </div>
                     <div id="console-output" class="console-output">
                         <span class="system-log">[SYSTEM] Vectornaut 2.0 shell initialized. Ready for command.</span>
                     </div>
                 </section>
+            </main>
 
-            </div>
+            <aside class="action-panel animate-slide-in-right">
+                <section class="panel next-action-card" id="next-action-card">
+                    <span class="eyebrow">Weiterarbeit</span>
+                    <h2 id="next-action-title">Nächste Aktion</h2>
+                    <p id="next-action-detail" class="desc-text">Starte oder lade einen Run. Danach bewertet Vectornaut, ob du das Ergebnis übernehmen, prüfen oder erneut simulieren solltest.</p>
+                    <div class="action-button-stack">
+                        <button class="btn btn-secondary" onclick="openResultTab('tab-report')">Report öffnen</button>
+                        <button class="btn btn-secondary" onclick="askAssistant('Was ist die wichtigste Unsicherheit in diesem Run?')">Unsicherheit prüfen</button>
+                        <button class="btn btn-secondary" onclick="askAssistant('Welche Parameter sollte ich als nächstes testen?')">Parameter testen</button>
+                        <button class="btn btn-accent" onclick="useSuggestedAction()">Empfehlung ausführen</button>
+                    </div>
+                </section>
+
+                <section class="panel assistant-side-panel">
+                    <div class="panel-heading">
+                        <span class="eyebrow">Run Assistant</span>
+                        <h2>Fragen zum aktuellen Ergebnis</h2>
+                    </div>
+
+                    <div class="empty-state compact-empty" id="assistant-empty-state">
+                        <p>Noch kein aktiver Run.</p>
+                    </div>
+
+                    <div class="assistant-wrapper hidden" id="assistant-wrapper">
+                        <div class="info-card findings-summary-card">
+                            <span class="label">Kurzfazit</span>
+                            <h3 id="findings-summary-title">Analyseergebnis</h3>
+                            <p id="findings-summary-desc" class="desc-text">Loading simulation findings...</p>
+                            <div id="findings-stats-grid" class="findings-stats-grid"></div>
+                        </div>
+
+                        <div class="suggested-question-block">
+                            <span class="label">Direkt fragen</span>
+                            <div class="suggested-questions" id="suggested-questions"></div>
+                        </div>
+
+                        <div class="assistant-container">
+                            <div class="chat-history" id="chat-history">
+                                <div class="chat-message system-message">
+                                    <p>Hallo. Ich habe Zugriff auf den aktuellen Run und kann Modell, Parameter, Simulation und Validator einordnen.</p>
+                                </div>
+                            </div>
+                            <div class="chat-input-row">
+                                <textarea id="chat-input" rows="3" placeholder="Frage zum aktuellen Run..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"></textarea>
+                                <button class="btn btn-primary" id="chat-send-btn" onclick="sendChatMessage()">Senden</button>
+                            </div>
+                        </div>
+
+                        <div id="optimization-proposal" class="optimization-proposal hidden">
+                            <h3>
+                                <span class="indicator-dot green"></span>
+                                Vorgeschlagene Parameter-Optimierungen
+                            </h3>
+                            <p class="desc-text" id="opt-explanation">Folgende veränderte Werte wurden berechnet:</p>
+                            <div id="proposal-params-list" class="proposal-params-list"></div>
+                            <button class="btn btn-accent" id="apply-opt-btn" onclick="applySuggestedParameters()">Optimierungslauf starten</button>
+                        </div>
+                    </div>
+                </section>
+            </aside>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="app.js?v=2.4.2" charset="UTF-8"></script>
+    <script src="app.js?v=2.5.0" charset="UTF-8"></script>
 </body>
 </html>

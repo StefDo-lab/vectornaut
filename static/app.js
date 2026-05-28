@@ -116,10 +116,7 @@ async function loadSelectedHistoryRun() {
         const data = await response.json();
         keepChatHistory = false;
         resetStepper();
-        setStepState("step-miner", "completed", "Loaded from history");
-        setStepState("step-auditor", "completed", "Loaded from history");
-        setStepState("step-simulator", "completed", "Loaded from history");
-        document.querySelectorAll(".step-divider").forEach(div => div.classList.add("completed"));
+        completeAllSteps("Loaded from history");
         renderResults(data);
         writeLog(`[HISTORY] Gespeicherter Lauf geladen: ${data.miner?.design_name || data.miner_stage?.design_name || select.value}`, "info-log");
         if (status) status.innerText = "Gespeicherter Lauf wurde ins Dashboard geladen.";
@@ -148,8 +145,15 @@ function openTab(evt, tabId) {
     for (let link of links) {
         link.classList.remove("active");
     }
-    document.getElementById(tabId).classList.add("active");
-    evt.currentTarget.classList.add("active");
+    const target = document.getElementById(tabId);
+    if (target) target.classList.add("active");
+
+    const activeLink = evt?.currentTarget || document.querySelector(`.tab-link[onclick*="${tabId}"]`);
+    if (activeLink) activeLink.classList.add("active");
+}
+
+function openResultTab(tabId) {
+    openTab(null, tabId);
 }
 
 async function runDiscoveryLoop(overrideParams = null) {
@@ -183,13 +187,8 @@ async function runDiscoveryLoop(overrideParams = null) {
     // Set step states during backend fetch
     if (overrideParams) {
         setStepState("step-miner", "completed", "Cached concept used");
-        const divider1 = document.querySelector("#step-miner + .step-divider");
-        if (divider1) divider1.classList.add("completed");
-        
+        setStepState("step-formulator", "completed", "Model retained");
         setStepState("step-auditor", "completed", "Parameters verified!");
-        const divider2 = document.querySelector("#step-auditor + .step-divider");
-        if (divider2) divider2.classList.add("completed");
-        
         setStepState("step-simulator", "active", "Recalculating simulation...");
     } else {
         setStepState("step-miner", "active", "Exploring semantic spaces...");
@@ -240,6 +239,8 @@ async function runDiscoveryLoop(overrideParams = null) {
             await delay(300);
             
             setStepState("step-simulator", "completed", "Simulation complete!");
+            setStepState("step-validator", getValidationTone(data.validation?.status) === "fail" ? "error" : "completed", data.validation?.status ? data.validation.status.toUpperCase() : "Checked");
+            setStepState("step-report", "completed", "Report ready");
             if (data.simulator.solver_method === "pinn") {
                 writeLog(`[SIMULATOR] PyTorch PINN converged. Final Loss: ${data.simulator.final_loss.toExponential(4)}`, "success-log");
             } else {
@@ -252,8 +253,7 @@ async function runDiscoveryLoop(overrideParams = null) {
             // Miner Complete -> Auditor Start
             await delay(1500);
             setStepState("step-miner", "completed", "Concept discovered!");
-            const divider1 = document.querySelector("#step-miner + .step-divider");
-            if (divider1) divider1.classList.add("completed");
+            setStepState("step-formulator", "completed", "Equation framed");
             
             writeLog(`[MINER] Concept discovered: "${data.miner.design_name}"`, "success-log");
             writeLog(`[MINER] Inspiration: ${data.miner.inspiration_source}`);
@@ -265,8 +265,6 @@ async function runDiscoveryLoop(overrideParams = null) {
             // Auditor Complete -> Simulator Start
             await delay(1500);
             setStepState("step-auditor", "completed", "Parameters verified!");
-            const divider2 = document.querySelector("#step-auditor + .step-divider");
-            if (divider2) divider2.classList.add("completed");
             
             writeLog(`[AUDITOR] Audit completed successfully: ${data.auditor.audit_passed ? 'PASSED' : 'FAILED'}`, "success-log");
             writeLog(`[AUDITOR] Notes: "${data.auditor.audit_notes}"`);
@@ -280,6 +278,8 @@ async function runDiscoveryLoop(overrideParams = null) {
             // Simulator Complete -> Render Results
             await delay(1800);
             setStepState("step-simulator", "completed", "Simulation complete!");
+            setStepState("step-validator", getValidationTone(data.validation?.status) === "fail" ? "error" : "completed", data.validation?.status ? data.validation.status.toUpperCase() : "Checked");
+            setStepState("step-report", "completed", "Report ready");
             if (data.simulator.solver_method === "pinn") {
                 writeLog(`[SIMULATOR] PyTorch PINN converged. Final Loss: ${data.simulator.final_loss.toExponential(4)}`, "success-log");
             } else {
@@ -298,17 +298,21 @@ async function runDiscoveryLoop(overrideParams = null) {
     } catch (e) {
         writeLog(`[ERROR] Pipeline failed: ${e.message}`, "error-log");
         setStepState("step-miner", "error", "Failed");
+        setStepState("step-formulator", "error", "Failed");
         setStepState("step-auditor", "error", "Failed");
         setStepState("step-simulator", "error", "Failed");
+        setStepState("step-validator", "error", "Failed");
+        setStepState("step-report", "error", "Failed");
         runBtn.disabled = false;
         runBtn.querySelector(".btn-text").innerText = "Analyse starten";
     }
 }
 
 function resetStepper() {
-    const steps = ["step-miner", "step-auditor", "step-simulator"];
+    const steps = ["step-miner", "step-formulator", "step-auditor", "step-simulator", "step-validator", "step-report"];
     steps.forEach(id => {
         const el = document.getElementById(id);
+        if (!el) return;
         el.className = "step";
         el.querySelector(".step-status").innerText = "Idle";
     });
@@ -318,17 +322,26 @@ function resetStepper() {
 
 function setStepState(stepId, state, statusText) {
     const el = document.getElementById(stepId);
+    if (!el) return;
     el.className = `step ${state}`;
     el.querySelector(".step-status").innerText = statusText;
 }
 
+function completeAllSteps(statusText = "Complete") {
+    ["step-miner", "step-formulator", "step-auditor", "step-simulator", "step-validator", "step-report"].forEach(id => {
+        setStepState(id, "completed", statusText);
+    });
+}
+
 function clearResults() {
     document.querySelectorAll(".empty-state").forEach(el => el.classList.remove("hidden"));
-    document.querySelectorAll(".overview-grid, .table-container, .simulation-view, #raw-json-report, #markdown-report, #report-actions-container").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".overview-grid, .table-container, .simulation-view, #raw-json-report, #markdown-report, #report-actions-container, #assistant-wrapper").forEach(el => el.classList.add("hidden"));
     const rawReport = document.getElementById("raw-json-report");
     if (rawReport) {
         rawReport.style.display = "none";
     }
+    updateRecordStatus(null);
+    renderNextAction(null);
 }
 
 function getValidationTone(status) {
@@ -378,6 +391,94 @@ function renderValidationSummary(validation) {
         const li = document.createElement("li");
         li.innerText = "Keine Validator-Warnungen.";
         warningsEl.appendChild(li);
+    }
+}
+
+function updateRecordStatus(data) {
+    const chip = document.getElementById("record-status-chip");
+    if (!chip) return;
+
+    if (!data) {
+        chip.innerText = "Kein aktiver Run";
+        chip.className = "record-status-chip";
+        return;
+    }
+
+    const minerObj = data.miner || data.miner_stage || {};
+    const status = String(data.validation?.status || "unknown").toUpperCase();
+    const solver = data.simulator?.solver_method || data.auditor?.solver_method || "solver";
+    chip.innerText = `${status} | ${String(solver).toUpperCase()} | ${minerObj.design_name || "Run geladen"}`;
+    chip.className = `record-status-chip validation-${getValidationTone(data.validation?.status)}`;
+}
+
+function renderNextAction(data) {
+    const titleEl = document.getElementById("next-action-title");
+    const detailEl = document.getElementById("next-action-detail");
+    if (!titleEl || !detailEl) return;
+
+    if (!data) {
+        titleEl.innerText = "Nächste Aktion";
+        detailEl.innerText = "Starte oder lade einen Run. Danach bewertet Vectornaut, ob du das Ergebnis übernehmen, prüfen oder erneut simulieren solltest.";
+        return;
+    }
+
+    const validation = data.validation || {};
+    const action = validation.recommended_action || "inspect";
+    const status = String(validation.status || "unknown").toUpperCase();
+    const warnings = validation.warnings || [];
+
+    const actionCopy = {
+        accept: {
+            title: "Ergebnis übernehmen",
+            detail: `Validator ${status}: Das Ergebnis ist plausibel genug für die nächste Auswertung. Öffne den Report oder exportiere die Fallakte.`
+        },
+        inspect: {
+            title: "Warnungen prüfen",
+            detail: warnings[0] || `Validator ${status}: Prüfe Annahmen, Randbedingungen und Kennzahlen, bevor du daraus Produktentscheidungen ableitest.`
+        },
+        rerun_solver: {
+            title: "Solver-Vergleich starten",
+            detail: warnings[0] || "Der Validator empfiehlt, das Ergebnis mit einem alternativen Solver oder angepassten Parametern zu prüfen."
+        },
+        remine: {
+            title: "Neues Konzept suchen",
+            detail: warnings[0] || "Der Validator hält das aktuelle Ergebnis für zu schwach. Starte eine neue Konzeptsuche mit engeren Randbedingungen."
+        }
+    };
+
+    const selected = actionCopy[action] || actionCopy.inspect;
+    titleEl.innerText = selected.title;
+    detailEl.innerText = selected.detail;
+}
+
+function toggleConsole() {
+    const panel = document.getElementById("console-panel");
+    if (panel) panel.classList.toggle("collapsed");
+}
+
+function askAssistant(question) {
+    if (!lastRunData) {
+        writeLog("[SYSTEM] Kein aktiver Run für den Assistant vorhanden.", "warning-log");
+        return;
+    }
+    sendChatMessage(question);
+}
+
+function useSuggestedAction() {
+    if (!lastRunData) {
+        writeLog("[SYSTEM] Keine Empfehlung verfügbar, weil kein Run geladen ist.", "warning-log");
+        return;
+    }
+
+    const action = lastRunData.validation?.recommended_action || "inspect";
+    if (action === "accept") {
+        openResultTab("tab-report");
+    } else if (action === "rerun_solver") {
+        askAssistant("Der Validator empfiehlt einen Solver-Vergleich. Welche konkrete Solver- oder Parameter-Variante soll ich als nächstes testen?");
+    } else if (action === "remine") {
+        askAssistant("Der Validator empfiehlt Re-Mining. Wie sollte ich den Entwicklungsauftrag präzisieren, damit die nächste Konzeptsuche besser wird?");
+    } else {
+        askAssistant("Bitte erkläre die Validator-Warnungen und schlage die nächste technische Prüfung vor.");
     }
 }
 
@@ -458,6 +559,8 @@ function renderResults(data) {
     document.getElementById("derived-coefficient").innerText = simCoeff !== null ? simCoeff.toFixed(6) : "-";
     document.getElementById("derived-coefficient-label").innerText = `Derived Coefficient (for ${uiMeta.domain_name})`;
     renderValidationSummary(data.validation);
+    updateRecordStatus(data);
+    renderNextAction(data);
 
     // Render SVG Schematic if present
     const schematicCard = document.getElementById("schematic-card");
