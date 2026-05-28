@@ -44,10 +44,17 @@ def _is_numeric_sequence(values: Any) -> bool:
 
 
 def _coordinate_distance(a: Any, b: float) -> Optional[float]:
+    coordinate = _coordinate_value(a)
+    if coordinate is None:
+        return None
+    return abs(coordinate - b)
+
+
+def _coordinate_value(a: Any) -> Optional[float]:
     if _is_finite_number(a):
-        return abs(float(a) - b)
+        return float(a)
     if isinstance(a, Sequence) and not isinstance(a, (str, bytes)) and a and _is_finite_number(a[0]):
-        return abs(float(a[0]) - b)
+        return float(a[0])
     return None
 
 
@@ -72,6 +79,56 @@ def _parse_simple_dirichlet_bc(boundary_condition: str, dependent_var: str) -> O
     if not match:
         return None
     return float(match.group(1)), float(match.group(2))
+
+
+def _parse_simple_neumann_bc(boundary_condition: str, dependent_var: str, independent_var: str) -> Optional[tuple[float, float]]:
+    number = r"([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)"
+    patterns = [
+        rf"^\s*{re.escape(dependent_var)}\s*'\s*\(\s*{number}\s*\)\s*=\s*{number}\s*$",
+        rf"^\s*d{re.escape(dependent_var)}_d{re.escape(independent_var)}\s*\(\s*{number}\s*\)\s*=\s*{number}\s*$",
+    ]
+    for pattern in patterns:
+        match = re.match(pattern, boundary_condition)
+        if match:
+            return float(match.group(1)), float(match.group(2))
+    return None
+
+
+def _estimate_derivative(sample_points: List[Any], solution: List[float], target: float) -> Optional[float]:
+    pairs = []
+    for point, value in zip(sample_points, solution):
+        coordinate = _coordinate_value(point)
+        if coordinate is not None and _is_finite_number(value):
+            pairs.append((coordinate, float(value)))
+    pairs = sorted(set(pairs), key=lambda item: item[0])
+    if len(pairs) < 2:
+        return None
+
+    left = None
+    right = None
+    for pair in pairs:
+        if pair[0] <= target:
+            left = pair
+        if pair[0] >= target and right is None:
+            right = pair
+
+    if left is None:
+        left, right = pairs[0], pairs[1]
+    elif right is None:
+        left, right = pairs[-2], pairs[-1]
+    elif left == right:
+        idx = pairs.index(left)
+        if idx == 0:
+            left, right = pairs[0], pairs[1]
+        elif idx == len(pairs) - 1:
+            left, right = pairs[-2], pairs[-1]
+        else:
+            left, right = pairs[idx - 1], pairs[idx + 1]
+
+    dx = right[0] - left[0]
+    if abs(dx) < 1e-12:
+        return None
+    return (right[1] - left[1]) / dx
 
 
 def _score_status(checks: List[ValidationCheck]) -> tuple[str, str, float, str]:
@@ -228,6 +285,8 @@ def validate_run_output(
     if aligned and primary_finite:
         dependent_vars = miner.get("dependent_variables") or []
         dependent_var = dependent_vars[0] if dependent_vars else "u"
+        independent_vars = miner.get("independent_variables") or []
+        independent_var = independent_vars[0] if independent_vars else "x"
         simple_bcs = [
             parsed for parsed in (
                 _parse_simple_dirichlet_bc(str(bc), dependent_var)
@@ -255,6 +314,31 @@ def validate_run_output(
         else:
             warnings.append("No simple Dirichlet boundary conditions could be validated deterministically.")
             add("physics_boundary_conditions_supported", True, "No simple boundary condition check was applicable.", severity="info", score=0.75)
+
+        simple_derivative_bcs = [
+            parsed for parsed in (
+                _parse_simple_neumann_bc(str(bc), dependent_var, independent_var)
+                for bc in miner.get("boundary_conditions", []) or []
+            )
+            if parsed is not None
+        ]
+        if simple_derivative_bcs:
+            derivative_tolerance = float(criteria.get("derivative_boundary_tolerance", criteria.get("boundary_tolerance", 0.1)))
+            derivative_residuals = []
+            for location, expected in simple_derivative_bcs:
+                observed = _estimate_derivative(sample_points, primary, location)
+                if observed is None:
+                    derivative_residuals.append(float("inf"))
+                else:
+                    derivative_residuals.append(abs(observed - expected))
+            max_derivative_residual = max(derivative_residuals) if derivative_residuals else 0.0
+            add(
+                "physics_derivative_boundary_conditions",
+                math.isfinite(max_derivative_residual) and max_derivative_residual <= derivative_tolerance,
+                f"max simple derivative residual={max_derivative_residual:.4g}, tolerance<={derivative_tolerance}.",
+                severity="warning",
+                score=0.45,
+            )
 
     if auditor.get("audit_passed") is not None:
         add(

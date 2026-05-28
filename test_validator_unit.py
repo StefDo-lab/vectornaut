@@ -56,6 +56,33 @@ class ValidatorUnitTest(unittest.TestCase):
         failed = {check.name for check in result.checks if not check.passed}
         self.assertIn("schema_aligned_solution_arrays", failed)
 
+    def test_validator_checks_simple_derivative_boundary_conditions(self):
+        run = valid_run()
+        run["miner"]["boundary_conditions"] = ["u(0) = 0", "u'(0) = 1"]
+        run["simulator"]["sample_points"] = [0.0, 0.5, 1.0]
+        run["simulator"]["solution_primary"] = [0.0, 0.5, 1.0]
+        run["simulator"]["solution_reference"] = [0.0, 0.5, 1.0]
+
+        result = validate_run_data(run, {"derivative_boundary_tolerance": 0.05})
+
+        self.assertEqual(result.status, "pass")
+        passed = {check.name for check in result.checks if check.passed}
+        self.assertIn("physics_derivative_boundary_conditions", passed)
+
+    def test_validator_warns_on_bad_derivative_boundary_conditions(self):
+        run = valid_run()
+        run["miner"]["boundary_conditions"] = ["u(0) = 0", "du_dy(0) = 2"]
+        run["miner"]["independent_variables"] = ["y"]
+        run["simulator"]["sample_points"] = [0.0, 0.5, 1.0]
+        run["simulator"]["solution_primary"] = [0.0, 0.5, 1.0]
+        run["simulator"]["solution_reference"] = [0.0, 0.5, 1.0]
+
+        result = validate_run_data(run, {"derivative_boundary_tolerance": 0.05})
+
+        self.assertEqual(result.status, "warn")
+        failed = {check.name for check in result.checks if not check.passed}
+        self.assertIn("physics_derivative_boundary_conditions", failed)
+
 
 if __name__ == "__main__":
     unittest.main()

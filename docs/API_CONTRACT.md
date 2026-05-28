@@ -85,6 +85,8 @@ Evaluation responses include the deterministic validator result under `validator
 
 During normal `/api/run` execution, validator `fail` is also used as control logic: the current concept is rejected and the pipeline attempts Re-Mining. Validator `warn` remains displayable and archived, but the response carries the recommended action.
 
+The deterministic validator checks schema, finite numeric values, relative error, performance-gain sanity, simple Dirichlet boundaries such as `u(0)=0`, and simple derivative boundaries such as `u'(0)=1` or `du_dy(0)=1`.
+
 ### `POST /api/eval/judge`
 
 Evaluates an existing run object against structural and numerical criteria.

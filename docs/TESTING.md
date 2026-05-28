@@ -5,10 +5,20 @@
 Run the stable unit and smoke tests:
 
 ```powershell
-& .\.venv\Scripts\python.exe -m unittest test_evaluation_unit.py test_pipeline_unit.py test_formulator_unit.py test_optimizer_unit.py test_synthesis_unit.py test_api_smoke.py
+& .\.venv\Scripts\python.exe -m unittest test_benchmark_unit.py test_validator_unit.py test_evaluation_unit.py test_pipeline_unit.py test_formulator_unit.py test_optimizer_unit.py test_synthesis_unit.py test_api_smoke.py
 ```
 
 The API smoke test uses FastAPI `TestClient` and writes runtime data into a temporary `VECTORNAUT_DATA_DIR`.
+
+## Deterministic Benchmark
+
+Run the quality benchmark cases:
+
+```powershell
+& .\.venv\Scripts\python.exe -m vectornaut.benchmark
+```
+
+The benchmark cases live in `benchmarks/eval_cases.json`. They cover known-good, warning, and failing result profiles so validator/eval behavior stays stable across changes.
 
 ## Manual Server Smoke
 
