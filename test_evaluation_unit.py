@@ -21,6 +21,8 @@ class EvaluationUnitTest(unittest.TestCase):
                 "solution_primary": [0.0, 0.5, 1.0],
                 "solution_reference": [0.0, 0.49, 0.98],
                 "performance_gain_pct": 12.0,
+                "primary_metric_value": 0.8,
+                "reference_metric_value": 1.0,
             },
             "synthesis": {"executive_summary": "ok"},
             "report_md": "# Report",
@@ -31,6 +33,7 @@ class EvaluationUnitTest(unittest.TestCase):
         self.assertTrue(result["passed"])
         self.assertTrue(result["scores"]["schema_valid"])
         self.assertTrue(result["scores"]["solver_stable"])
+        self.assertEqual(result["validator"]["status"], "pass")
 
     def test_evaluate_rejects_bad_solver_output(self):
         run = {
@@ -47,6 +50,8 @@ class EvaluationUnitTest(unittest.TestCase):
                 "sample_points": [0.0],
                 "solution_primary": [1.0],
                 "solution_reference": [],
+                "primary_metric_value": 1.0,
+                "reference_metric_value": 1.0,
             },
         }
 

@@ -101,6 +101,8 @@ class PipelineUnitTest(unittest.TestCase):
         self.assertEqual(output["query"], "test")
         self.assertEqual(output["miner"]["design_name"], "Mock Concept")
         self.assertEqual(output["simulator"]["solver_method"], "analytical")
+        self.assertEqual(output["validation"]["status"], "pass")
+        self.assertEqual(output["validation"]["recommended_action"], "accept")
         self.assertEqual(len(output["optimization_history"]), 1)
 
 

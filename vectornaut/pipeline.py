@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
 from vectornaut.runtime_guards import run_limits, validate_simulator_output
+from vectornaut.validator import validate_run_output
 
 
 class _PipelineValue:
@@ -237,6 +238,16 @@ class PipelineRunner:
                 user_query=req.query,
             )
         print("[+] Synthesis report generated successfully.")
+        validation_result = validate_run_output(
+            miner_output=miner_output,
+            auditor_output={
+                **auditor_output.model_dump(),
+                "audited_parameters_dict": auditor_output.audited_parameters_dict,
+                "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
+            },
+            simulator_output=sim_output,
+            optimization_history=optimization_history,
+        )
 
         return {
             "success": True,
@@ -250,6 +261,7 @@ class PipelineRunner:
                 "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
             },
             "simulator": sim_output.model_dump(),
+            "validation": validation_result.model_dump(),
             "optimization_history": optimization_history,
             "synthesis": synthesis_report.model_dump(),
             "failed_concepts": failed_concepts,

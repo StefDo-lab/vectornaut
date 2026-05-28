@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+import unittest
+
+from vectornaut.validator import validate_run_data
+
+
+def valid_run():
+    return {
+        "miner": {
+            "design_name": "Validated Concept",
+            "governing_equation": "d2u_dy2 = 0",
+            "boundary_conditions": ["u(0) = 0", "u(1) = 1"],
+            "dependent_variables": ["u"],
+        },
+        "auditor": {"audit_passed": True},
+        "simulator": {
+            "solver_method": "analytical",
+            "relative_error": 0.01,
+            "performance_gain_pct": 12.0,
+            "sample_points": [0.0, 0.5, 1.0],
+            "solution_primary": [0.0, 0.5, 1.0],
+            "solution_reference": [0.0, 0.49, 0.98],
+            "primary_metric_value": 0.8,
+            "reference_metric_value": 1.0,
+        },
+        "optimization_history": [],
+    }
+
+
+class ValidatorUnitTest(unittest.TestCase):
+    def test_validator_passes_stable_run(self):
+        result = validate_run_data(valid_run(), {"max_relative_error": 0.1})
+
+        self.assertEqual(result.status, "pass")
+        self.assertEqual(result.recommended_action, "accept")
+        self.assertGreaterEqual(result.score, 0.8)
+
+    def test_validator_warns_on_high_relative_error(self):
+        run = valid_run()
+        run["simulator"]["relative_error"] = 1.5
+
+        result = validate_run_data(run, {"max_relative_error": 0.1})
+
+        self.assertEqual(result.status, "warn")
+        self.assertEqual(result.recommended_action, "rerun_solver")
+        failed = {check.name for check in result.checks if not check.passed}
+        self.assertIn("numeric_relative_error", failed)
+
+    def test_validator_fails_on_broken_solution_arrays(self):
+        run = valid_run()
+        run["simulator"]["solution_reference"] = []
+
+        result = validate_run_data(run)
+
+        self.assertEqual(result.status, "fail")
+        failed = {check.name for check in result.checks if not check.passed}
+        self.assertIn("schema_aligned_solution_arrays", failed)
+
+
+if __name__ == "__main__":
+    unittest.main()

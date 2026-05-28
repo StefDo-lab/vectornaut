@@ -23,6 +23,8 @@ def sample_run():
             "sample_points": [0.0, 1.0],
             "solution_primary": [0.0, 1.0],
             "solution_reference": [0.0, 1.0],
+            "primary_metric_value": 0.8,
+            "reference_metric_value": 1.0,
         },
         "synthesis": {"executive_summary": "ok"},
         "report_md": "# ok",
@@ -83,6 +85,7 @@ class ApiSmokeTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertTrue(body["success"])
+        self.assertIn(body["validation"]["status"], ["pass", "warn"])
 
         history_response = self.client.get("/api/history?limit=5")
         self.assertEqual(history_response.status_code, 200)

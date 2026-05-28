@@ -54,6 +54,14 @@ Response shape:
   "miner": {},
   "auditor": {},
   "simulator": {},
+  "validation": {
+    "status": "pass",
+    "reliability": "high",
+    "score": 0.95,
+    "checks": [],
+    "warnings": [],
+    "recommended_action": "accept"
+  },
   "optimization_history": [],
   "synthesis": {},
   "failed_concepts": [],
@@ -72,6 +80,8 @@ Lists archived runs. New runs are indexed in SQLite and still written as JSON fi
 Loads a full archived run JSON document.
 
 ## Evaluation
+
+Evaluation responses include the deterministic validator result under `validator`. A validator `fail` makes the eval fail; `warn` keeps the eval usable but marks it as requiring inspection or solver rerun.
 
 ### `POST /api/eval/judge`
 

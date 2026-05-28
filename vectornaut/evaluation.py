@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from vectornaut.storage import eval_runs_dir, history_dir
+from vectornaut.validator import validate_run_data
 
 
 def make_eval_run_id() -> str:
@@ -154,6 +155,17 @@ def evaluate_run_output(run_data: Dict[str, Any], criteria: Optional[Dict[str, A
         severity="warning",
     )
 
+    validator_result = run_data.get("validation")
+    if not isinstance(validator_result, dict):
+        validator_result = validate_run_data(run_data, criteria).model_dump()
+    validator_passed = validator_result.get("status") in {"pass", "warn"}
+    add_check(
+        "validator_status",
+        validator_passed,
+        f"Validator status is {validator_result.get('status')!r} with reliability {validator_result.get('reliability')!r}.",
+        severity="error",
+    )
+
     error_checks = [check for check in checks if check["severity"] == "error"]
     warning_checks = [check for check in checks if check["severity"] == "warning"]
     errors_passed = all(check["passed"] for check in error_checks)
@@ -172,6 +184,7 @@ def evaluate_run_output(run_data: Dict[str, Any], criteria: Optional[Dict[str, A
     return {
         "passed": errors_passed,
         "scores": scores,
+        "validator": validator_result,
         "checks": checks,
         "warnings": warnings,
         "summary": {
