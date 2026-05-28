@@ -43,7 +43,7 @@
                         </div>
                     </div>
 
-                    <details class="settings-disclosure" open>
+                    <details class="settings-disclosure">
                         <summary>Run-Einstellungen</summary>
                         <div class="form-row">
                             <div class="form-group flex-1">
@@ -315,12 +315,10 @@
                     <span class="eyebrow">Weiterarbeit</span>
                     <h2 id="next-action-title">Nächste Aktion</h2>
                     <p id="next-action-detail" class="desc-text">Starte oder lade einen Run. Danach bewertet Vectornaut, ob du das Ergebnis übernehmen, prüfen oder erneut simulieren solltest.</p>
-                    <p class="action-help">Diese Aktionen beziehen sich immer auf die aktuell geöffnete Fallakte.</p>
+                    <p class="action-help">Nutze den Report zum Lesen und den Assistant zum Prüfen oder Weiterdenken.</p>
                     <div class="action-button-stack">
                         <button class="btn btn-secondary" onclick="openResultTab('tab-report')">Report öffnen</button>
-                        <button class="btn btn-secondary" onclick="askAssistant('Was ist die wichtigste Unsicherheit in diesem Run?')">Unsicherheit prüfen</button>
-                        <button class="btn btn-secondary" onclick="askAssistant('Welche Parameter sollte ich als nächstes testen?')">Parameter testen</button>
-                        <button class="btn btn-accent" onclick="useSuggestedAction()">Empfehlung ausführen</button>
+                        <button class="btn btn-accent" onclick="useSuggestedAction()">Im Assistant prüfen</button>
                     </div>
                 </section>
 
@@ -335,29 +333,29 @@
                     </div>
 
                     <div class="assistant-wrapper hidden" id="assistant-wrapper">
-                        <div class="info-card findings-summary-card">
-                            <span class="label">Kurzfazit</span>
-                            <h3 id="findings-summary-title">Analyseergebnis</h3>
-                            <p id="findings-summary-desc" class="desc-text">Loading simulation findings...</p>
-                            <div id="findings-stats-grid" class="findings-stats-grid"></div>
-                        </div>
-
-                        <div class="suggested-question-block">
-                            <span class="label">Direkt fragen</span>
-                            <div class="suggested-questions" id="suggested-questions"></div>
-                        </div>
-
                         <div class="assistant-container">
+                            <div class="chat-input-row">
+                                <textarea id="chat-input" rows="4" placeholder="Frage zum aktuellen Run..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"></textarea>
+                                <button class="btn btn-primary" id="chat-send-btn" onclick="sendChatMessage()">Senden</button>
+                            </div>
                             <div class="chat-history" id="chat-history">
                                 <div class="chat-message system-message">
                                     <p>Hallo. Ich habe Zugriff auf den aktuellen Run und kann Modell, Parameter, Simulation und Validator einordnen.</p>
                                 </div>
                             </div>
-                            <div class="chat-input-row">
-                                <textarea id="chat-input" rows="3" placeholder="Frage zum aktuellen Run..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"></textarea>
-                                <button class="btn btn-primary" id="chat-send-btn" onclick="sendChatMessage()">Senden</button>
-                            </div>
                         </div>
+
+                        <div class="suggested-question-block">
+                            <span class="label">Vorschläge</span>
+                            <div class="suggested-questions" id="suggested-questions"></div>
+                        </div>
+
+                        <details class="info-card findings-summary-card">
+                            <summary>Kurzfazit anzeigen</summary>
+                            <h3 id="findings-summary-title">Analyseergebnis</h3>
+                            <p id="findings-summary-desc" class="desc-text">Loading simulation findings...</p>
+                            <div id="findings-stats-grid" class="findings-stats-grid"></div>
+                        </details>
 
                         <div id="optimization-proposal" class="optimization-proposal hidden">
                             <h3>
