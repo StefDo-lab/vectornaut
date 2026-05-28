@@ -46,6 +46,9 @@ class FakeFormulator:
 
 
 class FakeAuditor:
+    def __init__(self, solver_method="analytical"):
+        self.solver_method = solver_method
+
     def mock_audit_design(self, miner_output, override_parameters=None, user_query=None):
         return AuditorOutput(
             audit_passed=True,
@@ -53,7 +56,7 @@ class FakeAuditor:
             audited_parameters=[],
             dimensionless_numbers=[],
             simulation_coefficient=0.001,
-            solver_method="analytical",
+            solver_method=self.solver_method,
             ui_metadata={},
         )
 
@@ -80,6 +83,53 @@ def fake_solver(miner_output, auditor_output, epochs):
 
 
 def invalid_but_runtime_complete_solver(miner_output, auditor_output, epochs):
+    return Dumpable(
+        epochs_trained=0,
+        final_loss=0.0,
+        loss_history=[],
+        performance_gain_pct=10.0,
+        relative_error=0.0,
+        sample_points=[0.0, 1.0],
+        solution_primary=[0.0, 1.0],
+        solution_reference=[0.0, 1.0],
+        primary_metric_value=1.0,
+        reference_metric_value=1.0,
+    )
+
+
+def fallback_sensitive_solver(miner_output, auditor_output, epochs):
+    method = auditor_output.solver_method
+    relative_error = 1.5 if method == "pinn" else 0.0
+    return Dumpable(
+        solver_method=method,
+        epochs_trained=10 if method == "pinn" else 0,
+        final_loss=0.2 if method == "pinn" else 0.0,
+        loss_history=[1.0, 0.2] if method == "pinn" else [],
+        performance_gain_pct=10.0,
+        relative_error=relative_error,
+        sample_points=[0.0, 1.0],
+        solution_primary=[0.0, 1.0],
+        solution_reference=[0.0, 1.0],
+        primary_metric_value=1.0,
+        reference_metric_value=1.0,
+    )
+
+
+def worse_fallback_solver(miner_output, auditor_output, epochs):
+    if auditor_output.solver_method == "pinn":
+        return Dumpable(
+            solver_method="pinn",
+            epochs_trained=10,
+            final_loss=0.2,
+            loss_history=[1.0, 0.2],
+            performance_gain_pct=10.0,
+            relative_error=1.5,
+            sample_points=[0.0, 1.0],
+            solution_primary=[0.0, 1.0],
+            solution_reference=[0.0, 1.0],
+            primary_metric_value=1.0,
+            reference_metric_value=1.0,
+        )
     return Dumpable(
         epochs_trained=0,
         final_loss=0.0,
@@ -139,6 +189,52 @@ class PipelineUnitTest(unittest.TestCase):
             ))
 
         self.assertIn("All bionic concepts failed validation", str(ctx.exception))
+
+    def test_pipeline_falls_back_when_validator_requests_solver_rerun(self):
+        runner = PipelineRunner(
+            miner=FakeMiner(),
+            formulator=FakeFormulator(),
+            auditor=FakeAuditor(solver_method="pinn"),
+            optimizer=object(),
+            synthesizer=FakeSynthesizer(),
+            solver=fallback_sensitive_solver,
+        )
+
+        output = runner.run(PipelineRunRequest(
+            query="test",
+            is_mock=True,
+            epochs=5,
+            max_optimization_rounds=1,
+        ))
+
+        self.assertEqual(output["simulator"]["solver_method"], "analytical")
+        self.assertEqual(output["auditor"]["solver_method"], "analytical")
+        self.assertEqual(output["validation"]["status"], "pass")
+        self.assertEqual(output["validation"]["recommended_action"], "accept")
+        self.assertEqual(output["optimization_history"][0]["solver_fallbacks"][0]["solver_method"], "analytical")
+
+    def test_pipeline_keeps_original_warning_when_fallback_is_worse(self):
+        runner = PipelineRunner(
+            miner=FakeMiner(),
+            formulator=FakeFormulator(),
+            auditor=FakeAuditor(solver_method="pinn"),
+            optimizer=object(),
+            synthesizer=FakeSynthesizer(),
+            solver=worse_fallback_solver,
+        )
+
+        output = runner.run(PipelineRunRequest(
+            query="test",
+            is_mock=True,
+            epochs=5,
+            max_optimization_rounds=1,
+        ))
+
+        self.assertEqual(output["simulator"]["solver_method"], "pinn")
+        self.assertEqual(output["auditor"]["solver_method"], "pinn")
+        self.assertEqual(output["validation"]["status"], "warn")
+        self.assertEqual(output["validation"]["recommended_action"], "rerun_solver")
+        self.assertEqual(output["optimization_history"][0]["solver_fallbacks"][0]["status"], "fail")
 
 
 if __name__ == "__main__":

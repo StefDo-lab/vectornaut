@@ -87,6 +87,8 @@ During normal `/api/run` execution, validator `fail` is also used as control log
 
 The deterministic validator checks schema, finite numeric values, relative error, performance-gain sanity, simple Dirichlet boundaries such as `u(0)=0`, and simple derivative boundaries such as `u'(0)=1` or `du_dy(0)=1`.
 
+If validator `warn` recommends `rerun_solver`, `/api/run` attempts deterministic solver fallbacks before returning the result. For 1D models it tries analytical/SciPy alternatives; for 2D models it tries FDM. Accepted fallback attempts are recorded in `optimization_history[].solver_fallbacks`.
+
 ### `POST /api/eval/judge`
 
 Evaluates an existing run object against structural and numerical criteria.

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 
@@ -14,6 +14,23 @@ class _PipelineValue:
 
     def model_dump(self) -> Dict[str, Any]:
         return dict(self.__dict__)
+
+
+class _AuditorSolverOverride:
+    def __init__(self, original: Any, solver_method: str):
+        self._original = original
+        self.solver_method = solver_method
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._original, name)
+
+    def model_dump(self) -> Dict[str, Any]:
+        if hasattr(self._original, "model_dump"):
+            data = self._original.model_dump()
+        else:
+            data = dict(getattr(self._original, "__dict__", {}))
+        data["solver_method"] = self.solver_method
+        return data
 
 
 class PipelineRunRequest(BaseModel):
@@ -90,6 +107,96 @@ class PipelineRunner:
             auditor_output=auditor_output,
             epochs=epochs,
         )
+
+    def _validation_for(
+        self,
+        miner_output: Any,
+        auditor_output: Any,
+        sim_output: Any,
+        optimization_history: List[Dict[str, Any]],
+    ) -> Any:
+        return validate_run_output(
+            miner_output=miner_output,
+            auditor_output={
+                **auditor_output.model_dump(),
+                "audited_parameters_dict": auditor_output.audited_parameters_dict,
+                "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
+            },
+            simulator_output=sim_output,
+            optimization_history=optimization_history,
+        )
+
+    def _fallback_solver_methods(self, miner_output: Any, auditor_output: Any) -> List[str]:
+        current = str(getattr(auditor_output, "solver_method", "") or "").lower()
+        independent_vars = getattr(miner_output, "independent_variables", []) or []
+        is_2d = len(independent_vars) == 2
+        candidates = ["fdm"] if is_2d else ["analytical", "scipy"]
+        return [method for method in candidates if method != current]
+
+    def _try_solver_fallbacks(
+        self,
+        miner_output: Any,
+        auditor_output: Any,
+        sim_output: Any,
+        validation_result: Any,
+        optimization_history: List[Dict[str, Any]],
+        epochs: int,
+        effective_mock: bool,
+    ) -> Tuple[Any, Any, Any, List[Dict[str, Any]]]:
+        if validation_result.recommended_action != "rerun_solver":
+            return auditor_output, sim_output, validation_result, []
+
+        fallback_attempts = []
+        best_auditor = auditor_output
+        best_sim = sim_output
+        best_validation = validation_result
+
+        for method in self._fallback_solver_methods(miner_output, auditor_output):
+            print(f"[*] Validator requested solver fallback. Trying {method.upper()}...")
+            fallback_auditor = _AuditorSolverOverride(auditor_output, method)
+            attempt: Dict[str, Any] = {"solver_method": method, "status": "failed"}
+
+            try:
+                candidate_sim = self._solve(
+                    miner_output=miner_output,
+                    auditor_output=fallback_auditor,
+                    epochs=epochs,
+                    effective_mock=effective_mock,
+                )
+                validate_simulator_output(candidate_sim)
+                candidate_validation = self._validation_for(
+                    miner_output=miner_output,
+                    auditor_output=fallback_auditor,
+                    sim_output=candidate_sim,
+                    optimization_history=optimization_history,
+                )
+                attempt.update({
+                    "status": candidate_validation.status,
+                    "reliability": candidate_validation.reliability,
+                    "score": candidate_validation.score,
+                    "recommended_action": candidate_validation.recommended_action,
+                })
+
+                current_score = float(getattr(best_validation, "score", 0.0) or 0.0)
+                candidate_score = float(candidate_validation.score or 0.0)
+                improves = candidate_validation.status == "pass" or (
+                    candidate_validation.status != "fail" and candidate_score > current_score
+                )
+                if improves:
+                    best_auditor = fallback_auditor
+                    best_sim = candidate_sim
+                    best_validation = candidate_validation
+                    print(f"[+] Solver fallback accepted: {method.upper()} ({candidate_validation.status}, score={candidate_validation.score})")
+                    if candidate_validation.status == "pass":
+                        fallback_attempts.append(attempt)
+                        break
+            except Exception as fallback_err:
+                attempt["error"] = str(fallback_err)
+                print(f"[-] Solver fallback {method.upper()} failed: {fallback_err}")
+
+            fallback_attempts.append(attempt)
+
+        return best_auditor, best_sim, best_validation, fallback_attempts
 
     def run(self, req: PipelineRunRequest) -> Dict[str, Any]:
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -187,16 +294,25 @@ class PipelineRunner:
                     "optimizer_reasoning": "",
                 }
                 optimization_history.append(round_data)
-                validation_result = validate_run_output(
+                validation_result = self._validation_for(
                     miner_output=miner_output,
-                    auditor_output={
-                        **auditor_output.model_dump(),
-                        "audited_parameters_dict": auditor_output.audited_parameters_dict,
-                        "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
-                    },
-                    simulator_output=sim_output,
+                    auditor_output=auditor_output,
+                    sim_output=sim_output,
                     optimization_history=optimization_history,
                 )
+                auditor_output, sim_output, validation_result, fallback_attempts = self._try_solver_fallbacks(
+                    miner_output=miner_output,
+                    auditor_output=auditor_output,
+                    sim_output=sim_output,
+                    validation_result=validation_result,
+                    optimization_history=optimization_history,
+                    epochs=safe_epochs,
+                    effective_mock=effective_mock,
+                )
+                if fallback_attempts:
+                    round_data["solver_fallbacks"] = fallback_attempts
+                    round_data["simulator"] = sim_output.model_dump()
+                    round_data["parameters"] = auditor_output.audited_parameters_dict
                 round_data["validation"] = validation_result.model_dump()
 
                 if validation_result.status == "fail":
@@ -267,14 +383,10 @@ class PipelineRunner:
             )
         print("[+] Synthesis report generated successfully.")
         if validation_result is None:
-            validation_result = validate_run_output(
+            validation_result = self._validation_for(
                 miner_output=miner_output,
-                auditor_output={
-                    **auditor_output.model_dump(),
-                    "audited_parameters_dict": auditor_output.audited_parameters_dict,
-                    "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
-                },
-                simulator_output=sim_output,
+                auditor_output=auditor_output,
+                sim_output=sim_output,
                 optimization_history=optimization_history,
             )
 
