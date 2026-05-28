@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=2.5.0">
+    <link rel="stylesheet" href="style.css?v=2.6.0">
 </head>
 <body>
     <div class="gradient-bg"></div>
@@ -27,20 +27,35 @@
             <aside class="workbench-sidebar animate-slide-in-left">
                 <section class="panel control-panel">
                     <div class="panel-heading">
-                        <span class="eyebrow">Auftrag</span>
-                        <h2>Neuen Run starten</h2>
+                        <span class="eyebrow">Arbeitsfeld</span>
+                        <h2 id="workbench-title">Neue Analyse</h2>
                     </div>
 
                     <div class="form-group">
-                        <label for="query-input">Entwicklungsauftrag</label>
-                        <textarea id="query-input" rows="8" placeholder="Beschreibe Ziel, Randbedingungen und gewünschte Wirkung. Beispiel: Entwickle eine flexible Schlauchinnenwand, die Druck- und Abriebfestigkeit erhält und gleichzeitig Reibungsverluste in Wasser reduziert."></textarea>
+                        <label for="query-input" id="query-label">Auftrag oder Frage</label>
+                        <textarea id="query-input" rows="8" placeholder="Beschreibe Ziel, Randbedingungen und gewünschte Wirkung. Nach der Analyse kannst du hier direkt Rückfragen stellen." onkeydown="if(event.key === 'Enter' && event.ctrlKey) { event.preventDefault(); handlePrimaryInput(); }"></textarea>
                         <div class="sample-chip-group" aria-label="Beispielaufträge">
                             <button type="button" class="sample-chip" onclick="insertSamplePrompt('friction')">Reibung reduzieren</button>
                             <button type="button" class="sample-chip" onclick="insertSamplePrompt('thermal')">Wärme isolieren</button>
                             <button type="button" class="sample-chip" onclick="insertSamplePrompt('membrane')">Membran filtern</button>
-                            <button type="button" class="sample-chip" onclick="insertSamplePrompt('impact')">Stoßenergie absorbieren</button>
-                            <button type="button" class="sample-chip" onclick="insertSamplePrompt('selfcleaning')">Selbstreinigung</button>
                         </div>
+                    </div>
+
+                    <button id="run-btn" class="btn btn-primary" onclick="handlePrimaryInput()">
+                        <span class="btn-text">Analyse starten</span>
+                        <span class="btn-glow"></span>
+                    </button>
+                    <button id="new-run-btn" class="btn btn-secondary hidden" onclick="resetForNewRun()">Neue Analyse vorbereiten</button>
+
+                    <div class="chat-history compact-chat hidden" id="chat-history">
+                        <div class="chat-message system-message">
+                            <p>Nach dem ersten Run kannst du hier zur aktuellen Fallakte weiterfragen.</p>
+                        </div>
+                    </div>
+
+                    <div class="suggested-question-block hidden" id="suggested-question-block">
+                        <span class="label">Vorschläge</span>
+                        <div class="suggested-questions" id="suggested-questions"></div>
                     </div>
 
                     <details class="settings-disclosure">
@@ -64,11 +79,6 @@
                             </div>
                         </div>
                     </details>
-
-                    <button id="run-btn" class="btn btn-primary" onclick="runDiscoveryLoop()">
-                        <span class="btn-text">Analyse starten</span>
-                        <span class="btn-glow"></span>
-                    </button>
                 </section>
 
                 <section class="panel history-panel">
@@ -99,50 +109,32 @@
                     <div class="pipeline-stepper compact-stepper">
                         <div id="step-miner" class="step">
                             <div class="step-icon">1</div>
-                            <div class="step-details">
-                                <h3>Konzept</h3>
-                                <p class="step-status">Idle</p>
-                            </div>
+                            <div class="step-details"><h3>Konzept</h3><p class="step-status">Idle</p></div>
                         </div>
                         <div class="step-divider"></div>
                         <div id="step-formulator" class="step">
                             <div class="step-icon">2</div>
-                            <div class="step-details">
-                                <h3>Modell</h3>
-                                <p class="step-status">Idle</p>
-                            </div>
+                            <div class="step-details"><h3>Modell</h3><p class="step-status">Idle</p></div>
                         </div>
                         <div class="step-divider"></div>
                         <div id="step-auditor" class="step">
                             <div class="step-icon">3</div>
-                            <div class="step-details">
-                                <h3>Audit</h3>
-                                <p class="step-status">Idle</p>
-                            </div>
+                            <div class="step-details"><h3>Audit</h3><p class="step-status">Idle</p></div>
                         </div>
                         <div class="step-divider"></div>
                         <div id="step-simulator" class="step">
                             <div class="step-icon">4</div>
-                            <div class="step-details">
-                                <h3>Simulation</h3>
-                                <p class="step-status">Idle</p>
-                            </div>
+                            <div class="step-details"><h3>Simulation</h3><p class="step-status">Idle</p></div>
                         </div>
                         <div class="step-divider"></div>
                         <div id="step-validator" class="step">
                             <div class="step-icon">5</div>
-                            <div class="step-details">
-                                <h3>Validierung</h3>
-                                <p class="step-status">Idle</p>
-                            </div>
+                            <div class="step-details"><h3>Validierung</h3><p class="step-status">Idle</p></div>
                         </div>
                         <div class="step-divider"></div>
                         <div id="step-report" class="step">
                             <div class="step-icon">6</div>
-                            <div class="step-details">
-                                <h3>Bericht</h3>
-                                <p class="step-status">Idle</p>
-                            </div>
+                            <div class="step-details"><h3>Bericht</h3><p class="step-status">Idle</p></div>
                         </div>
                     </div>
                 </section>
@@ -209,9 +201,7 @@
                     </div>
 
                     <div id="tab-report" class="tab-content">
-                        <div class="empty-state">
-                            <p>Noch kein Report verfügbar.</p>
-                        </div>
+                        <div class="empty-state"><p>Noch kein Report verfügbar.</p></div>
                         <div class="report-actions hidden" id="report-actions-container">
                             <button class="btn btn-accent" onclick="downloadPDFReport()">PDF exportieren</button>
                             <button class="btn btn-secondary" onclick="downloadMarkdownReport()">Markdown exportieren</button>
@@ -223,9 +213,7 @@
                     </div>
 
                     <div id="tab-simulation" class="tab-content">
-                        <div class="empty-state">
-                            <p>Noch keine Simulation verfügbar.</p>
-                        </div>
+                        <div class="empty-state"><p>Noch keine Simulation verfügbar.</p></div>
                         <div class="simulation-view hidden">
                             <div class="metrics-row">
                                 <div class="metric-card glow-purple" id="card-pinn-loss">
@@ -274,9 +262,7 @@
                     </div>
 
                     <div id="tab-params" class="tab-content">
-                        <div class="empty-state">
-                            <p>Noch keine Parameter verfügbar.</p>
-                        </div>
+                        <div class="empty-state"><p>Noch keine Parameter verfügbar.</p></div>
                         <div class="table-container hidden">
                             <table class="params-table">
                                 <thead>
@@ -309,70 +295,25 @@
                     </div>
                 </section>
             </main>
-
-            <aside class="action-panel animate-slide-in-right">
-                <section class="panel next-action-card" id="next-action-card">
-                    <span class="eyebrow">Weiterarbeit</span>
-                    <h2 id="next-action-title">Nächste Aktion</h2>
-                    <p id="next-action-detail" class="desc-text">Starte oder lade einen Run. Danach bewertet Vectornaut, ob du das Ergebnis übernehmen, prüfen oder erneut simulieren solltest.</p>
-                    <p class="action-help">Nutze den Report zum Lesen und den Assistant zum Prüfen oder Weiterdenken.</p>
-                    <div class="action-button-stack">
-                        <button class="btn btn-secondary" onclick="openResultTab('tab-report')">Report öffnen</button>
-                        <button class="btn btn-accent" onclick="useSuggestedAction()">Im Assistant prüfen</button>
-                    </div>
-                </section>
-
-                <section class="panel assistant-side-panel">
-                    <div class="panel-heading">
-                        <span class="eyebrow">Run Assistant</span>
-                        <h2>Fragen zum aktuellen Ergebnis</h2>
-                    </div>
-
-                    <div class="empty-state compact-empty" id="assistant-empty-state">
-                        <p>Noch kein aktiver Run.</p>
-                    </div>
-
-                    <div class="assistant-wrapper hidden" id="assistant-wrapper">
-                        <div class="assistant-container">
-                            <div class="chat-input-row">
-                                <textarea id="chat-input" rows="4" placeholder="Frage zum aktuellen Run..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"></textarea>
-                                <button class="btn btn-primary" id="chat-send-btn" onclick="sendChatMessage()">Senden</button>
-                            </div>
-                            <div class="chat-history" id="chat-history">
-                                <div class="chat-message system-message">
-                                    <p>Hallo. Ich habe Zugriff auf den aktuellen Run und kann Modell, Parameter, Simulation und Validator einordnen.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="suggested-question-block">
-                            <span class="label">Vorschläge</span>
-                            <div class="suggested-questions" id="suggested-questions"></div>
-                        </div>
-
-                        <details class="info-card findings-summary-card">
-                            <summary>Kurzfazit anzeigen</summary>
-                            <h3 id="findings-summary-title">Analyseergebnis</h3>
-                            <p id="findings-summary-desc" class="desc-text">Loading simulation findings...</p>
-                            <div id="findings-stats-grid" class="findings-stats-grid"></div>
-                        </details>
-
-                        <div id="optimization-proposal" class="optimization-proposal hidden">
-                            <h3>
-                                <span class="indicator-dot green"></span>
-                                Vorgeschlagene Parameter-Optimierungen
-                            </h3>
-                            <p class="desc-text" id="opt-explanation">Folgende veränderte Werte wurden berechnet:</p>
-                            <div id="proposal-params-list" class="proposal-params-list"></div>
-                            <button class="btn btn-accent" id="apply-opt-btn" onclick="applySuggestedParameters()">Optimierungslauf starten</button>
-                        </div>
-                    </div>
-                </section>
-            </aside>
         </div>
     </div>
 
+    <div class="hidden" aria-hidden="true">
+        <div id="assistant-empty-state"></div>
+        <div id="assistant-wrapper"></div>
+        <div id="next-action-title"></div>
+        <div id="next-action-detail"></div>
+        <div id="findings-summary-title"></div>
+        <div id="findings-summary-desc"></div>
+        <div id="findings-stats-grid"></div>
+        <div id="optimization-proposal"></div>
+        <div id="proposal-params-list"></div>
+        <div id="opt-explanation"></div>
+        <button id="chat-send-btn" type="button"></button>
+        <button id="apply-opt-btn" type="button"></button>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="app.js?v=2.5.0" charset="UTF-8"></script>
+    <script src="app.js?v=2.6.0" charset="UTF-8"></script>
 </body>
 </html>

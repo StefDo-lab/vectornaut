@@ -156,6 +156,60 @@ function openResultTab(tabId) {
     openTab(null, tabId);
 }
 
+function hasActiveRun() {
+    return Boolean(lastRunData);
+}
+
+function updateWorkbenchMode(mode) {
+    const title = document.getElementById("workbench-title");
+    const label = document.getElementById("query-label");
+    const input = document.getElementById("query-input");
+    const buttonText = document.querySelector("#run-btn .btn-text");
+    const newRunBtn = document.getElementById("new-run-btn");
+    const chatHistoryEl = document.getElementById("chat-history");
+
+    if (mode === "chat") {
+        if (title) title.innerText = "Mit Vectornaut weiterarbeiten";
+        if (label) label.innerText = "Frage oder Folgeauftrag";
+        if (input) input.placeholder = "Frage zur aktuellen Fallakte, bitte um Erklärung, oder gib einen Folgeauftrag ein...";
+        if (buttonText) buttonText.innerText = "Frage senden";
+        if (newRunBtn) newRunBtn.classList.remove("hidden");
+        if (chatHistoryEl) chatHistoryEl.classList.remove("hidden");
+    } else {
+        if (title) title.innerText = "Neue Analyse";
+        if (label) label.innerText = "Auftrag oder Frage";
+        if (input) input.placeholder = "Beschreibe Ziel, Randbedingungen und gewünschte Wirkung. Nach der Analyse kannst du hier direkt Rückfragen stellen.";
+        if (buttonText) buttonText.innerText = "Analyse starten";
+        if (newRunBtn) newRunBtn.classList.add("hidden");
+        if (chatHistoryEl) chatHistoryEl.classList.add("hidden");
+    }
+}
+
+function handlePrimaryInput() {
+    if (hasActiveRun()) {
+        sendChatMessage();
+    } else {
+        runDiscoveryLoop();
+    }
+}
+
+function resetForNewRun() {
+    lastRunData = null;
+    keepChatHistory = false;
+    currentSuggestedParams = null;
+    const input = document.getElementById("query-input");
+    if (input) {
+        input.value = "";
+        input.focus();
+    }
+    const suggestionBlock = document.getElementById("suggested-question-block");
+    if (suggestionBlock) suggestionBlock.classList.add("hidden");
+    resetChat();
+    clearResults();
+    resetStepper();
+    updateWorkbenchMode("run");
+}
+
 async function runDiscoveryLoop(overrideParams = null) {
     const query = document.getElementById("query-input").value.trim();
     const epochs = parseInt(document.getElementById("epochs-input").value);
@@ -293,7 +347,7 @@ async function runDiscoveryLoop(overrideParams = null) {
         loadHistoryList();
         
         runBtn.disabled = false;
-        runBtn.querySelector(".btn-text").innerText = "Analyse starten";
+        updateWorkbenchMode("chat");
 
     } catch (e) {
         writeLog(`[ERROR] Pipeline failed: ${e.message}`, "error-log");
@@ -733,6 +787,11 @@ function renderResults(data) {
             resetChat();
         }
         updateAssistantTab(data);
+        updateWorkbenchMode("chat");
+        const queryInput = document.getElementById("query-input");
+        if (queryInput && !keepChatHistory) {
+            queryInput.value = "";
+        }
         keepChatHistory = false;
     } catch (assistantErr) {
         console.error("Failed to update Bionic Assistant tab:", assistantErr);
@@ -1136,7 +1195,7 @@ function resetChat() {
     if (chatHistoryEl) {
         chatHistoryEl.innerHTML = `
             <div class="chat-message system-message">
-                <p>Hallo! Ich bin dein Bionischer Design-Assistent. Ich habe Zugriff auf alle Parameter und Testergebnisse deines aktuellen Entwurfs. Wie kann ich dir heute helfen?</p>
+                <p>Ich habe Zugriff auf die aktuelle Fallakte. Stell hier Rückfragen oder gib einen Folgeauftrag ein.</p>
             </div>
         `;
     }
@@ -1296,6 +1355,8 @@ function updateAssistantTab(data) {
     
     // Populate Suggested Questions
     questionsEl.innerHTML = "";
+    const suggestionBlock = document.getElementById("suggested-question-block");
+    if (suggestionBlock) suggestionBlock.classList.remove("hidden");
     questions.forEach(q => {
         const btn = document.createElement("button");
         btn.className = "question-btn";
@@ -1312,8 +1373,9 @@ function updateAssistantTab(data) {
 }
 
 async function sendChatMessage(messageText = null) {
-    const inputEl = document.getElementById("chat-input");
+    const inputEl = document.getElementById("query-input");
     const sendBtn = document.getElementById("chat-send-btn");
+    const runBtn = document.getElementById("run-btn");
     const chatHistoryEl = document.getElementById("chat-history");
     
     if (!inputEl || !chatHistoryEl) return;
@@ -1339,6 +1401,7 @@ async function sendChatMessage(messageText = null) {
     // 3. Disable input/button during request
     if (inputEl) inputEl.disabled = true;
     if (sendBtn) sendBtn.disabled = true;
+    if (runBtn) runBtn.disabled = true;
     
     // Show typing / loading message
     const loadingDiv = document.createElement("div");
@@ -1424,6 +1487,7 @@ async function sendChatMessage(messageText = null) {
             inputEl.focus();
         }
         if (sendBtn) sendBtn.disabled = false;
+        if (runBtn) runBtn.disabled = false;
         chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
     }
 }
