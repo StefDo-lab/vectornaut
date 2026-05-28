@@ -185,6 +185,37 @@ textarea {
     resize: none;
 }
 
+#query-input {
+    min-height: 190px;
+    line-height: 1.55;
+}
+
+.sample-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.sample-chip {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    padding: 0.42rem 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.sample-chip:hover {
+    border-color: var(--primary-hover);
+    color: #ffffff;
+    background: rgba(123, 44, 191, 0.16);
+    transform: translateY(-1px);
+}
+
 .form-row {
     display: flex;
     gap: 1rem;

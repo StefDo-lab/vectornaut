@@ -7,15 +7,23 @@ let keepChatHistory = false;
 
 // Initialize elements
 document.addEventListener("DOMContentLoaded", () => {
-    applySampleQuery();
     loadHistoryList();
 });
 
-function applySampleQuery() {
-    const select = document.getElementById("query-select");
+const samplePrompts = {
+    friction: "Entwickle eine bionisch inspirierte Innenoberfläche für flexible Wasserschläuche, die den Strömungswiderstand reduziert, aber weiterhin hohe Druckfestigkeit, Abriebfestigkeit und einfache Herstellbarkeit bietet.",
+    thermal: "Entwickle ein leichtes bionisches Isolationsmaterial für Drohnengehäuse, das Wärmeverluste bei Kälte reduziert, wenig Gewicht hinzufügt und mechanisch robust gegen Vibrationen bleibt.",
+    membrane: "Entwickle eine bionisch inspirierte Membran zur Wasserfiltration, die hohe Durchflussrate mit selektiver Partikelrückhaltung kombiniert und Fouling möglichst stark reduziert.",
+    impact: "Entwickle eine stoßabsorbierende Leichtbaustruktur für Schutzgehäuse, inspiriert von biologischen Schalen- oder Faserverbundstrukturen, mit hoher Energieaufnahme und geringer Masse.",
+    selfcleaning: "Entwickle eine selbstreinigende bionische Oberfläche für Solarpanels, die Staub- und Wasseranhaftung reduziert, UV-beständig ist und industriell beschichtet werden kann."
+};
+
+function insertSamplePrompt(key) {
     const textarea = document.getElementById("query-input");
-    if (select.value) {
-        textarea.value = select.value;
+    if (textarea && samplePrompts[key]) {
+        textarea.value = samplePrompts[key];
+        textarea.focus();
+        writeLog(`[SYSTEM] Beispielauftrag eingefügt: ${key}`, "info-log");
     }
 }
 
@@ -27,11 +35,11 @@ function setMode(mockVal) {
     if (mockVal) {
         btnLive.classList.remove("active");
         btnMock.classList.add("active");
-        writeLog("[SYSTEM] Switched to OFFLINE MOCK mode. Execution will be instantaneous and cost no tokens.", "info-log");
+        writeLog("[SYSTEM] Offline-Mock aktiviert. Der Lauf ist schnell und nutzt keine Live-Modellaufrufe.", "info-log");
     } else {
         btnMock.classList.remove("active");
         btnLive.classList.add("active");
-        writeLog("[SYSTEM] Switched to LIVE API mode. Gemini-3.5-flash will perform bionic mining and audits.", "info-log");
+        writeLog("[SYSTEM] Live-Modus aktiviert. Vectornaut nutzt das konfigurierte Modell für Konzeptsuche und Audit.", "info-log");
     }
 }
 
@@ -54,10 +62,10 @@ async function loadHistoryList() {
     if (!select) return;
 
     try {
-        if (status) status.innerText = "Loading saved runs...";
+        if (status) status.innerText = "Gespeicherte Läufe werden geladen...";
         const response = await fetch("/api/history?limit=40");
         if (!response.ok) {
-            throw new Error("Could not load saved runs.");
+            throw new Error("Gespeicherte Läufe konnten nicht geladen werden.");
         }
 
         const data = await response.json();
@@ -67,9 +75,9 @@ async function loadHistoryList() {
         if (!runs.length) {
             const option = document.createElement("option");
             option.value = "";
-            option.innerText = "No saved runs found";
+            option.innerText = "Keine gespeicherten Läufe gefunden";
             select.appendChild(option);
-            if (status) status.innerText = "No saved runs found yet.";
+            if (status) status.innerText = "Noch keine gespeicherten Läufe gefunden.";
             return;
         }
 
@@ -81,10 +89,10 @@ async function loadHistoryList() {
             select.appendChild(option);
         }
 
-        if (status) status.innerText = `${runs.length} saved run${runs.length === 1 ? "" : "s"} available.`;
+        if (status) status.innerText = `${runs.length} gespeicherte Läufe verfügbar.`;
     } catch (err) {
         console.error("Failed to load history:", err);
-        select.innerHTML = `<option value="">History unavailable</option>`;
+        select.innerHTML = `<option value="">Historie nicht verfügbar</option>`;
         if (status) status.innerText = err.message;
     }
 }
@@ -93,16 +101,16 @@ async function loadSelectedHistoryRun() {
     const select = document.getElementById("history-select");
     const status = document.getElementById("history-status");
     if (!select || !select.value) {
-        if (status) status.innerText = "Select a saved run first.";
+        if (status) status.innerText = "Bitte zuerst einen gespeicherten Lauf auswählen.";
         return;
     }
 
     try {
-        if (status) status.innerText = "Loading saved run...";
+        if (status) status.innerText = "Gespeicherter Lauf wird geladen...";
         const response = await fetch(`/api/history/${encodeURIComponent(select.value)}`);
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(err.detail || "Could not load selected run.");
+            throw new Error(err.detail || "Ausgewählter Lauf konnte nicht geladen werden.");
         }
 
         const data = await response.json();
@@ -113,11 +121,11 @@ async function loadSelectedHistoryRun() {
         setStepState("step-simulator", "completed", "Loaded from history");
         document.querySelectorAll(".step-divider").forEach(div => div.classList.add("completed"));
         renderResults(data);
-        writeLog(`[HISTORY] Loaded saved run: ${data.miner?.design_name || data.miner_stage?.design_name || select.value}`, "info-log");
-        if (status) status.innerText = "Saved run loaded into dashboard.";
+        writeLog(`[HISTORY] Gespeicherter Lauf geladen: ${data.miner?.design_name || data.miner_stage?.design_name || select.value}`, "info-log");
+        if (status) status.innerText = "Gespeicherter Lauf wurde ins Dashboard geladen.";
     } catch (err) {
         console.error("Failed to load selected history run:", err);
-        writeLog(`[ERROR] Failed to load saved run: ${err.message}`, "error-log");
+        writeLog(`[ERROR] Gespeicherter Lauf konnte nicht geladen werden: ${err.message}`, "error-log");
         if (status) status.innerText = err.message;
     }
 }
@@ -150,7 +158,7 @@ async function runDiscoveryLoop(overrideParams = null) {
     const runBtn = document.getElementById("run-btn");
     
     if (!query) {
-        alert("Please specify a design request!");
+        alert("Bitte gib zuerst einen Entwicklungsauftrag ein.");
         return;
     }
 
@@ -158,7 +166,7 @@ async function runDiscoveryLoop(overrideParams = null) {
 
     // UI resets
     runBtn.disabled = true;
-    runBtn.querySelector(".btn-text").innerText = "Processing...";
+    runBtn.querySelector(".btn-text").innerText = "Analyse läuft...";
     
     resetStepper();
     clearResults();
@@ -167,7 +175,7 @@ async function runDiscoveryLoop(overrideParams = null) {
     if (overrideParams) {
         writeLog(`[SYSTEM] Injecting parameter overrides: ${JSON.stringify(overrideParams)}`, "info-log");
     }
-    writeLog(`[SYSTEM] Requesting ${epochs} epochs for PINN-lite solver...`);
+    writeLog(`[SYSTEM] Fordere ${epochs} Epochen für den PINN-lite-Solver an...`);
     if (!isMock) {
         writeLog(`[SYSTEM] HINWEIS: Die Pipeline läuft jetzt im Closed-Loop (Miner ➜ Formulator ➜ Auditor ➜ Simulator ➜ Optimizer ➜ ggf. Re-Mining). Der Server führt mehrere Durchgänge autonom im Hintergrund aus. Bitte habe 1-2 Minuten Geduld...`, "info-log");
     }
@@ -285,7 +293,7 @@ async function runDiscoveryLoop(overrideParams = null) {
         loadHistoryList();
         
         runBtn.disabled = false;
-        runBtn.querySelector(".btn-text").innerText = "Run Discovery Loop";
+        runBtn.querySelector(".btn-text").innerText = "Analyse starten";
 
     } catch (e) {
         writeLog(`[ERROR] Pipeline failed: ${e.message}`, "error-log");
@@ -293,7 +301,7 @@ async function runDiscoveryLoop(overrideParams = null) {
         setStepState("step-auditor", "error", "Failed");
         setStepState("step-simulator", "error", "Failed");
         runBtn.disabled = false;
-        runBtn.querySelector(".btn-text").innerText = "Run Discovery Loop";
+        runBtn.querySelector(".btn-text").innerText = "Analyse starten";
     }
 }
 
@@ -333,12 +341,12 @@ function getValidationTone(status) {
 
 function formatValidationAction(action) {
     const labels = {
-        accept: "Accept result",
-        inspect: "Inspect warnings",
-        rerun_solver: "Rerun with another solver",
-        remine: "Try a new concept"
+        accept: "Ergebnis übernehmen",
+        inspect: "Warnungen prüfen",
+        rerun_solver: "Mit anderem Solver erneut versuchen",
+        remine: "Neues Konzept suchen"
     };
-    return labels[action] || action || "No action available";
+    return labels[action] || action || "Keine Aktion verfügbar";
 }
 
 function renderValidationSummary(validation) {
@@ -353,9 +361,9 @@ function renderValidationSummary(validation) {
 
     card.className = `info-card validation-card validation-${tone}`;
     document.getElementById("validation-status-badge").innerText = status.toUpperCase();
-    document.getElementById("validation-reliability").innerText = `Reliability: ${reliability.toUpperCase()}`;
+    document.getElementById("validation-reliability").innerText = `Verlässlichkeit: ${reliability.toUpperCase()}`;
     document.getElementById("validation-score").innerText = score !== null ? `Score ${(score * 100).toFixed(0)}%` : "Score -";
-    document.getElementById("validation-action").innerText = `Recommended action: ${formatValidationAction(validation?.recommended_action)}`;
+    document.getElementById("validation-action").innerText = `Empfohlene Aktion: ${formatValidationAction(validation?.recommended_action)}`;
 
     const warningsEl = document.getElementById("validation-warnings");
     warningsEl.innerHTML = "";
@@ -368,7 +376,7 @@ function renderValidationSummary(validation) {
         });
     } else {
         const li = document.createElement("li");
-        li.innerText = "No validator warnings.";
+        li.innerText = "Keine Validator-Warnungen.";
         warningsEl.appendChild(li);
     }
 }
@@ -382,7 +390,7 @@ function writeValidationLog(validation) {
         logClass
     );
     if (validation.warnings && validation.warnings.length) {
-        writeLog(`[VALIDATOR] Warning: ${validation.warnings[0]}`, "warning-log");
+        writeLog(`[VALIDATOR] Warnung: ${validation.warnings[0]}`, "warning-log");
     }
 }
 

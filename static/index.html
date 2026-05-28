@@ -24,7 +24,7 @@
                 <span class="logo-glow"></span>
                 <h1 class="logo-text">Vectornaut <span class="version">2.0</span></h1>
             </div>
-            <p class="subtitle">Autonomous Decoupled Agentic Discovery Loop (Miner ➜ Auditor ➜ Simulator)</p>
+            <p class="subtitle">Bionische Konzeptsuche mit Modellierung, Simulation, Validierung und technischem Bericht</p>
         </header>
 
         <!-- Main Layout -->
@@ -32,21 +32,18 @@
             
             <!-- Left Panel: Controls -->
             <section class="panel glass-panel animate-slide-in-left">
-                <h2>Control Panel</h2>
-                <div class="form-group">
-                    <label for="query-select">Select a Sample Request or Write Your Own</label>
-                    <select id="query-select" onchange="applySampleQuery()">
-                        <option value="">-- Custom Request --</option>
-                        <option value="design a microtextured biomimetic drag reduction surface for high-velocity water craft" selected>Shark-Skin Drag Reduction (Riblets)</option>
-                        <option value="design a lightweight thermal insulation material inspired by polar bear fur for extreme cold drone flights">Polar Bear Fur (Thermal insulation)</option>
-                        <option value="design a highly impact-resistant cellular composite material inspired by the mantis shrimp dactyl club">Mantis Shrimp Club (Impact Resistance)</option>
-                        <option value="design a hydrophobic self-cleaning surface inspired by the lotus leaf effect for solar panel coatings">Lotus Leaf Hydrophobicity (Self-Cleaning)</option>
-                    </select>
-                </div>
+                <h2>Steuerung</h2>
 
                 <div class="form-group">
-                    <label for="query-input">Design Request Query</label>
-                    <textarea id="query-input" rows="4" placeholder="Describe the physical problem or biomimetic inspiration..."></textarea>
+                    <label for="query-input">Entwicklungsauftrag</label>
+                    <textarea id="query-input" rows="7" placeholder="Beschreibe das technische Ziel, die Randbedingungen und die gewünschte Wirkung. Beispiel: Entwickle eine flexible Schlauchinnenwand, die Druck- und Abriebfestigkeit erhält und gleichzeitig Reibungsverluste in Wasser reduziert."></textarea>
+                    <div class="sample-chip-group" aria-label="Beispielaufträge">
+                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('friction')">Reibung reduzieren</button>
+                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('thermal')">Wärme isolieren</button>
+                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('membrane')">Membran filtern</button>
+                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('impact')">Stoßenergie absorbieren</button>
+                        <button type="button" class="sample-chip" onclick="insertSamplePrompt('selfcleaning')">Selbstreinigung</button>
+                    </div>
                 </div>
 
                 <div class="form-row">
@@ -57,7 +54,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Execution Mode</label>
+                    <label>Ausführungsmodus</label>
                     <div class="toggle-container">
                         <button id="mode-live" class="toggle-btn active" onclick="setMode(false)">
                             <span class="indicator-dot green"></span> Live API (Gemini)
@@ -69,20 +66,20 @@
                 </div>
 
                 <button id="run-btn" class="btn btn-primary" onclick="runDiscoveryLoop()">
-                    <span class="btn-text">Run Discovery Loop</span>
+                    <span class="btn-text">Analyse starten</span>
                     <span class="btn-glow"></span>
                 </button>
 
                 <div class="history-panel">
                     <div class="history-header">
-                        <label for="history-select">Previous Runs</label>
-                        <button class="btn-icon" title="Refresh previous runs" onclick="loadHistoryList()">↻</button>
+                        <label for="history-select">Frühere Läufe</label>
+                        <button class="btn-icon" title="Frühere Läufe aktualisieren" onclick="loadHistoryList()">↻</button>
                     </div>
                     <select id="history-select">
-                        <option value="">No saved runs loaded</option>
+                        <option value="">Keine gespeicherten Läufe geladen</option>
                     </select>
-                    <button id="load-history-btn" class="btn btn-secondary" onclick="loadSelectedHistoryRun()">Load Selected Run</button>
-                    <p id="history-status" class="history-status">Saved runs are loaded from local history files.</p>
+                    <button id="load-history-btn" class="btn btn-secondary" onclick="loadSelectedHistoryRun()">Ausgewählten Lauf laden</button>
+                    <p id="history-status" class="history-status">Gespeicherte Läufe werden aus der lokalen Historie geladen.</p>
                 </div>
             </section>
 
@@ -91,7 +88,7 @@
                 
                 <!-- Pipeline Stepper -->
                 <section class="panel glass-panel animate-slide-in-right">
-                    <h2>Pipeline Execution State</h2>
+                    <h2>Pipeline-Status</h2>
                     <div class="pipeline-stepper">
                         <div id="step-miner" class="step">
                             <div class="step-icon">1</div>
