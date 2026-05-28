@@ -1302,7 +1302,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .workbench-grid {
-    grid-template-columns: minmax(290px, 340px) minmax(620px, 1fr) minmax(320px, 390px);
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(290px, 360px);
     gap: 1rem;
     align-items: start;
 }
@@ -1439,6 +1439,7 @@ h2 {
 
 .record-card {
     min-height: 760px;
+    overflow: hidden;
 }
 
 .record-header {
@@ -1456,6 +1457,13 @@ h2 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.validation-note {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    margin-top: -0.25rem;
 }
 
 .tab-header {
@@ -1494,6 +1502,43 @@ h2 {
     flex-wrap: wrap;
     gap: 0.55rem;
     margin-bottom: 1rem;
+}
+
+.record-card .tab-content,
+#tab-report,
+#markdown-report,
+.markdown-body {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.markdown-body {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.markdown-body table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: normal;
+}
+
+.markdown-body th,
+.markdown-body td {
+    min-width: 140px;
+    max-width: 360px;
+    vertical-align: top;
+}
+
+.markdown-body td {
+    overflow-wrap: anywhere;
+}
+
+.markdown-body pre {
+    overflow-x: auto;
+    white-space: pre-wrap;
 }
 
 .report-actions .btn,
@@ -1577,8 +1622,32 @@ h2 {
     padding: 1rem;
 }
 
+.action-panel {
+    height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+.action-panel .panel {
+    margin-bottom: 0;
+}
+
 .next-action-card {
+    flex: 0 0 auto;
     border-color: rgba(0, 245, 212, 0.12);
+}
+
+.next-action-card h2 {
+    line-height: 1.25;
+}
+
+.action-help {
+    margin-top: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
 }
 
 .action-button-stack {
@@ -1593,18 +1662,26 @@ h2 {
 }
 
 .assistant-side-panel {
-    max-height: calc(100vh - 2rem);
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .assistant-side-panel .assistant-wrapper {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
 }
 
 .findings-summary-card {
+    flex: 0 0 auto;
+    max-height: 210px;
+    overflow-y: auto;
     margin-bottom: 0.9rem;
     padding: 0.9rem;
 }
@@ -1631,6 +1708,9 @@ h2 {
 }
 
 .suggested-question-block {
+    flex: 0 0 auto;
+    max-height: 130px;
+    overflow-y: auto;
     margin-bottom: 0.9rem;
 }
 
@@ -1649,14 +1729,17 @@ h2 {
 }
 
 .assistant-container {
-    min-height: 360px;
+    flex: 1 1 260px;
+    min-height: 250px;
     padding: 0.85rem;
     margin-bottom: 0.9rem;
+    overflow: hidden;
 }
 
 .chat-history {
-    max-height: 315px;
-    min-height: 170px;
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
 }
 
 .chat-message {
@@ -1666,6 +1749,7 @@ h2 {
 }
 
 .chat-input-row {
+    flex: 0 0 auto;
     display: grid;
     grid-template-columns: 1fr;
 }
@@ -1704,25 +1788,13 @@ h2 {
     max-width: 1100px;
 }
 
-@media (max-width: 1380px) {
+@media (max-width: 1180px) {
     .workbench-grid {
-        grid-template-columns: minmax(280px, 320px) minmax(560px, 1fr);
-    }
-
-    .action-panel {
-        position: static;
-        grid-column: 1 / -1;
-        display: grid;
-        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-        gap: 1rem;
-    }
-
-    .assistant-side-panel {
-        max-height: none;
+        grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) minmax(270px, 320px);
     }
 }
 
-@media (max-width: 1050px) {
+@media (max-width: 900px) {
     .app-shell .header,
     .row-heading,
     .record-header {
@@ -1742,6 +1814,16 @@ h2 {
     .workbench-sidebar,
     .action-panel {
         position: static;
+    }
+
+    .action-panel {
+        height: auto;
+        overflow: visible;
+    }
+
+    .assistant-side-panel {
+        max-height: none;
+        overflow: visible;
     }
 
     .compact-stepper {

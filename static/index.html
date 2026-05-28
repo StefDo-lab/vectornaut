@@ -195,8 +195,9 @@
                                 </div>
                                 <div class="validation-score-row">
                                     <strong id="validation-reliability">-</strong>
-                                    <span id="validation-score">Score -</span>
+                                    <span id="validation-score">Prüfscore -</span>
                                 </div>
+                                <p id="validation-score-help" class="validation-note">Der Prüfscore ist kein Wahrscheinlichkeitswert.</p>
                                 <p id="validation-action" class="desc-text">-</p>
                                 <ul id="validation-warnings" class="validation-warnings"></ul>
                             </div>
@@ -314,6 +315,7 @@
                     <span class="eyebrow">Weiterarbeit</span>
                     <h2 id="next-action-title">Nächste Aktion</h2>
                     <p id="next-action-detail" class="desc-text">Starte oder lade einen Run. Danach bewertet Vectornaut, ob du das Ergebnis übernehmen, prüfen oder erneut simulieren solltest.</p>
+                    <p class="action-help">Diese Aktionen beziehen sich immer auf die aktuell geöffnete Fallakte.</p>
                     <div class="action-button-stack">
                         <button class="btn btn-secondary" onclick="openResultTab('tab-report')">Report öffnen</button>
                         <button class="btn btn-secondary" onclick="askAssistant('Was ist die wichtigste Unsicherheit in diesem Run?')">Unsicherheit prüfen</button>

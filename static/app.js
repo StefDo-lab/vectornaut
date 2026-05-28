@@ -371,11 +371,22 @@ function renderValidationSummary(validation) {
     const reliability = validation?.reliability || "unknown";
     const score = typeof validation?.score === "number" ? validation.score : null;
     const warnings = validation?.warnings || [];
+    const reliabilityLabels = {
+        high: "hoch",
+        medium: "mittel",
+        low: "niedrig",
+        unknown: "unbekannt"
+    };
+    const reliabilityLabel = reliabilityLabels[String(reliability).toLowerCase()] || reliability;
 
     card.className = `info-card validation-card validation-${tone}`;
     document.getElementById("validation-status-badge").innerText = status.toUpperCase();
-    document.getElementById("validation-reliability").innerText = `Verlässlichkeit: ${reliability.toUpperCase()}`;
-    document.getElementById("validation-score").innerText = score !== null ? `Score ${(score * 100).toFixed(0)}%` : "Score -";
+    document.getElementById("validation-reliability").innerText = `Verlässlichkeit: ${reliabilityLabel}`;
+    document.getElementById("validation-score").innerText = score !== null ? `Prüfscore ${(score * 100).toFixed(0)}%` : "Prüfscore -";
+    const helpEl = document.getElementById("validation-score-help");
+    if (helpEl) {
+        helpEl.innerText = "Prüfscore = Anteil bestandener Checks, nicht die Wahrscheinlichkeit, dass das Ergebnis korrekt ist.";
+    }
     document.getElementById("validation-action").innerText = `Empfohlene Aktion: ${formatValidationAction(validation?.recommended_action)}`;
 
     const warningsEl = document.getElementById("validation-warnings");
