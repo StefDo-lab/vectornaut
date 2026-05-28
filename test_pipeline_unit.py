@@ -79,6 +79,21 @@ def fake_solver(miner_output, auditor_output, epochs):
     )
 
 
+def invalid_but_runtime_complete_solver(miner_output, auditor_output, epochs):
+    return Dumpable(
+        epochs_trained=0,
+        final_loss=0.0,
+        loss_history=[],
+        performance_gain_pct=10.0,
+        relative_error=0.0,
+        sample_points=[0.0, 1.0],
+        solution_primary=[0.0, 1.0],
+        solution_reference=[0.0, 1.0],
+        primary_metric_value=1.0,
+        reference_metric_value=1.0,
+    )
+
+
 class PipelineUnitTest(unittest.TestCase):
     def test_pipeline_runner_orchestrates_with_injected_dependencies(self):
         runner = PipelineRunner(
@@ -104,6 +119,26 @@ class PipelineUnitTest(unittest.TestCase):
         self.assertEqual(output["validation"]["status"], "pass")
         self.assertEqual(output["validation"]["recommended_action"], "accept")
         self.assertEqual(len(output["optimization_history"]), 1)
+
+    def test_pipeline_rejects_validator_failures(self):
+        runner = PipelineRunner(
+            miner=FakeMiner(),
+            formulator=FakeFormulator(),
+            auditor=FakeAuditor(),
+            optimizer=object(),
+            synthesizer=FakeSynthesizer(),
+            solver=invalid_but_runtime_complete_solver,
+        )
+
+        with self.assertRaises(ValueError) as ctx:
+            runner.run(PipelineRunRequest(
+                query="test",
+                is_mock=True,
+                epochs=5,
+                max_optimization_rounds=1,
+            ))
+
+        self.assertIn("All bionic concepts failed validation", str(ctx.exception))
 
 
 if __name__ == "__main__":

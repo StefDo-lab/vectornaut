@@ -323,6 +323,69 @@ function clearResults() {
     }
 }
 
+function getValidationTone(status) {
+    const normalized = String(status || "unknown").toLowerCase();
+    if (normalized === "pass") return "pass";
+    if (normalized === "warn") return "warn";
+    if (normalized === "fail") return "fail";
+    return "unknown";
+}
+
+function formatValidationAction(action) {
+    const labels = {
+        accept: "Accept result",
+        inspect: "Inspect warnings",
+        rerun_solver: "Rerun with another solver",
+        remine: "Try a new concept"
+    };
+    return labels[action] || action || "No action available";
+}
+
+function renderValidationSummary(validation) {
+    const card = document.getElementById("validation-card");
+    if (!card) return;
+
+    const status = validation?.status || "unknown";
+    const tone = getValidationTone(status);
+    const reliability = validation?.reliability || "unknown";
+    const score = typeof validation?.score === "number" ? validation.score : null;
+    const warnings = validation?.warnings || [];
+
+    card.className = `info-card validation-card validation-${tone}`;
+    document.getElementById("validation-status-badge").innerText = status.toUpperCase();
+    document.getElementById("validation-reliability").innerText = `Reliability: ${reliability.toUpperCase()}`;
+    document.getElementById("validation-score").innerText = score !== null ? `Score ${(score * 100).toFixed(0)}%` : "Score -";
+    document.getElementById("validation-action").innerText = `Recommended action: ${formatValidationAction(validation?.recommended_action)}`;
+
+    const warningsEl = document.getElementById("validation-warnings");
+    warningsEl.innerHTML = "";
+    const topWarnings = warnings.slice(0, 3);
+    if (topWarnings.length) {
+        topWarnings.forEach(warning => {
+            const li = document.createElement("li");
+            li.innerText = warning;
+            warningsEl.appendChild(li);
+        });
+    } else {
+        const li = document.createElement("li");
+        li.innerText = "No validator warnings.";
+        warningsEl.appendChild(li);
+    }
+}
+
+function writeValidationLog(validation) {
+    if (!validation) return;
+    const tone = getValidationTone(validation.status);
+    const logClass = tone === "pass" ? "success-log" : tone === "warn" ? "warning-log" : "error-log";
+    writeLog(
+        `[VALIDATOR] ${String(validation.status || "unknown").toUpperCase()} | reliability=${validation.reliability || "unknown"} | action=${validation.recommended_action || "inspect"}`,
+        logClass
+    );
+    if (validation.warnings && validation.warnings.length) {
+        writeLog(`[VALIDATOR] Warning: ${validation.warnings[0]}`, "warning-log");
+    }
+}
+
 function renderResults(data) {
     lastRunData = data;
     
@@ -386,6 +449,7 @@ function renderResults(data) {
     const simCoeff = getSafeNumber(auditorObj.simulation_coefficient);
     document.getElementById("derived-coefficient").innerText = simCoeff !== null ? simCoeff.toFixed(6) : "-";
     document.getElementById("derived-coefficient-label").innerText = `Derived Coefficient (for ${uiMeta.domain_name})`;
+    renderValidationSummary(data.validation);
 
     // Render SVG Schematic if present
     const schematicCard = document.getElementById("schematic-card");
@@ -522,6 +586,7 @@ function renderResults(data) {
         console.error("Error building charts:", chartError);
         writeLog(`[ERROR] Visualizations failed: ${chartError.message}`, "error-log");
     }
+    writeValidationLog(data.validation);
 
     // Update slider and display value to actual epochs trained
     if (sim && sim.epochs_trained) {

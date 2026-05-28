@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Marked.js CDN for markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=2.4.1">
+    <link rel="stylesheet" href="style.css?v=2.4.2">
 </head>
 <body>
     <div class="gradient-bg"></div>
@@ -154,6 +154,18 @@
                             <div class="info-card">
                                 <span class="label" id="derived-coefficient-label">Derived Simulation Coefficient</span>
                                 <p id="derived-coefficient" class="val-highlight">-</p>
+                            </div>
+                            <div id="validation-card" class="info-card validation-card validation-unknown">
+                                <div class="validation-card-header">
+                                    <span class="label">Validation</span>
+                                    <span id="validation-status-badge" class="validation-badge">-</span>
+                                </div>
+                                <div class="validation-score-row">
+                                    <strong id="validation-reliability">-</strong>
+                                    <span id="validation-score">Score -</span>
+                                </div>
+                                <p id="validation-action" class="desc-text">-</p>
+                                <ul id="validation-warnings" class="validation-warnings"></ul>
                             </div>
                             <div id="schematic-card" class="info-card span-2 hidden">
                                 <span class="label">Microstructure Schematic Blueprint</span>
@@ -334,6 +346,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="app.js?v=2.4.1" charset="UTF-8"></script>
+    <script src="app.js?v=2.4.2" charset="UTF-8"></script>
 </body>
 </html>

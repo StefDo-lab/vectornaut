@@ -102,6 +102,7 @@ class PipelineRunner:
         miner_output = None
         auditor_output = None
         sim_output = None
+        validation_result = None
         optimization_history = []
 
         max_concept_attempts = 3
@@ -111,6 +112,7 @@ class PipelineRunner:
         for concept_attempt in range(1, max_concept_attempts + 1):
             print(f"\n[*] Starting Concept Attempt {concept_attempt}...")
             concept_failed = False
+            validation_result = None
 
             if req.previous_miner_output and concept_attempt == 1:
                 miner_output = req.previous_miner_output
@@ -185,6 +187,32 @@ class PipelineRunner:
                     "optimizer_reasoning": "",
                 }
                 optimization_history.append(round_data)
+                validation_result = validate_run_output(
+                    miner_output=miner_output,
+                    auditor_output={
+                        **auditor_output.model_dump(),
+                        "audited_parameters_dict": auditor_output.audited_parameters_dict,
+                        "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
+                    },
+                    simulator_output=sim_output,
+                    optimization_history=optimization_history,
+                )
+                round_data["validation"] = validation_result.model_dump()
+
+                if validation_result.status == "fail":
+                    failed_detail = "; ".join(
+                        check.detail
+                        for check in validation_result.checks
+                        if check.severity == "error" and not check.passed
+                    )
+                    print(f"[-] Validator rejected result: {failed_detail}")
+                    failed_concepts.append({
+                        "design_name": miner_output.design_name,
+                        "inspiration_source": miner_output.inspiration_source,
+                        "reason": f"Validator failed: {failed_detail}",
+                    })
+                    concept_failed = True
+                    break
 
                 if round_idx < max_opt_rounds:
                     print(f"[*] Evaluating round {round_idx} with Optimizer...")
@@ -238,16 +266,17 @@ class PipelineRunner:
                 user_query=req.query,
             )
         print("[+] Synthesis report generated successfully.")
-        validation_result = validate_run_output(
-            miner_output=miner_output,
-            auditor_output={
-                **auditor_output.model_dump(),
-                "audited_parameters_dict": auditor_output.audited_parameters_dict,
-                "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
-            },
-            simulator_output=sim_output,
-            optimization_history=optimization_history,
-        )
+        if validation_result is None:
+            validation_result = validate_run_output(
+                miner_output=miner_output,
+                auditor_output={
+                    **auditor_output.model_dump(),
+                    "audited_parameters_dict": auditor_output.audited_parameters_dict,
+                    "dimensionless_numbers_dict": auditor_output.dimensionless_numbers_dict,
+                },
+                simulator_output=sim_output,
+                optimization_history=optimization_history,
+            )
 
         return {
             "success": True,

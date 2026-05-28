@@ -83,6 +83,8 @@ Loads a full archived run JSON document.
 
 Evaluation responses include the deterministic validator result under `validator`. A validator `fail` makes the eval fail; `warn` keeps the eval usable but marks it as requiring inspection or solver rerun.
 
+During normal `/api/run` execution, validator `fail` is also used as control logic: the current concept is rejected and the pipeline attempts Re-Mining. Validator `warn` remains displayable and archived, but the response carries the recommended action.
+
 ### `POST /api/eval/judge`
 
 Evaluates an existing run object against structural and numerical criteria.
