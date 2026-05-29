@@ -165,6 +165,8 @@ class ScriptGenerator:
                     with open(output_json_path, "r", encoding="utf-8") as rf:
                         results_data = json.load(rf)
                     results_data["script_path"] = script_path
+                    results_data["params_json_path"] = params_json_path
+                    results_data["execution_mode"] = "generated_python_subprocess"
                     results_data["plot_png_path"] = plot_png_path
                     return results_data
                 except Exception as read_err:

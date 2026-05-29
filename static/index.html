@@ -164,6 +164,7 @@
                             <button class="btn btn-secondary btn-compact" onclick="openResultTab('tab-report')">Report</button>
                             <button class="btn btn-secondary btn-compact" onclick="explainValidatorInChat()">Validator erklären</button>
                             <button class="btn btn-primary btn-compact" id="solver-compare-btn" onclick="runSolverComparison()">Solver vergleichen</button>
+                            <button class="btn btn-secondary btn-compact" id="dynamic-script-btn" onclick="runDynamicScriptCheck()">Python-Skript testen</button>
                         </div>
                     </div>
 
@@ -264,6 +265,8 @@
                                     <h4 id="metric-wss-analytical">-</h4>
                                 </div>
                             </div>
+
+                            <div id="dynamic-script-card" class="dynamic-script-card hidden"></div>
 
                             <div class="charts-grid">
                                 <div class="chart-container" id="container-loss-chart">

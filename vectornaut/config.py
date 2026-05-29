@@ -143,3 +143,8 @@ class SimulatorOutput(BaseModel):
     validation_passed: Optional[bool] = Field(description="True if automated validation tests passed", default=None)
     validation_report: Optional[str] = Field(description="Markdown report of the automated validation runs", default=None)
     validation_tests: Optional[List[Dict[str, Any]]] = Field(description="Details of each run validation test", default=None)
+    script_path: Optional[str] = Field(description="Absolute path to the generated dynamic solver script", default=None)
+    params_json_path: Optional[str] = Field(description="Absolute path to the generated solver parameter JSON", default=None)
+    test_script_path: Optional[str] = Field(description="Absolute path to the generated validation test script", default=None)
+    test_output_path: Optional[str] = Field(description="Absolute path to the generated validation test result JSON", default=None)
+    execution_mode: Optional[str] = Field(description="Execution mode metadata for generated or deterministic solvers", default=None)

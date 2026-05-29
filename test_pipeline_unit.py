@@ -144,6 +144,34 @@ def worse_fallback_solver(miner_output, auditor_output, epochs):
     )
 
 
+def dynamic_metadata_solver(miner_output, auditor_output, epochs):
+    method = auditor_output.solver_method
+    data = {
+        "solver_method": method,
+        "epochs_trained": 0,
+        "final_loss": 0.0,
+        "loss_history": [],
+        "performance_gain_pct": 12.0,
+        "relative_error": 0.0,
+        "sample_points": [0.0, 1.0],
+        "solution_primary": [0.0, 1.0],
+        "solution_reference": [0.0, 1.0],
+        "primary_metric_value": 1.0,
+        "reference_metric_value": 1.0,
+    }
+    if method == "dynamic_script":
+        data.update({
+            "validation_passed": True,
+            "validation_tests": [{"name": "test_nominal_run", "passed": True, "message": ""}],
+            "script_path": "generated_scripts/solver_mock.py",
+            "params_json_path": "generated_scripts/params_mock.json",
+            "test_script_path": "generated_tests/test_solver_mock.py",
+            "test_output_path": "generated_tests/results_test_mock.json",
+            "execution_mode": "generated_python_subprocess",
+        })
+    return Dumpable(**data)
+
+
 class PipelineUnitTest(unittest.TestCase):
     def test_pipeline_runner_orchestrates_with_injected_dependencies(self):
         runner = PipelineRunner(
@@ -235,6 +263,34 @@ class PipelineUnitTest(unittest.TestCase):
         self.assertEqual(output["validation"]["status"], "warn")
         self.assertEqual(output["validation"]["recommended_action"], "rerun_solver")
         self.assertEqual(output["optimization_history"][0]["solver_fallbacks"][0]["status"], "fail")
+
+    def test_solver_compare_can_run_dynamic_script_path(self):
+        runner = PipelineRunner(
+            miner=FakeMiner(),
+            formulator=FakeFormulator(),
+            auditor=FakeAuditor(),
+            optimizer=object(),
+            synthesizer=FakeSynthesizer(),
+            solver=dynamic_metadata_solver,
+        )
+        current_run = runner.run(PipelineRunRequest(
+            query="test",
+            is_mock=True,
+            epochs=5,
+            max_optimization_rounds=1,
+        ))
+
+        comparison = runner.compare_solvers(
+            current_run=current_run,
+            methods=["dynamic_script"],
+            epochs=5,
+            is_mock=True,
+        )
+
+        self.assertTrue(comparison["success"])
+        self.assertEqual(comparison["best_solver"], "dynamic_script")
+        self.assertEqual(comparison["results"][0]["status"], "pass")
+        self.assertEqual(comparison["results"][0]["recommended_action"], "accept")
 
 
 if __name__ == "__main__":

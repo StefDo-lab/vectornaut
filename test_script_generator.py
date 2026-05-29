@@ -76,7 +76,6 @@ raise ValueError("Intentional crash for testing self-correction loop")
         good_code = """
 import argparse
 import json
-import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--params', required=True)
@@ -102,13 +101,9 @@ results = {
 with open(args.output, 'w', encoding='utf-8') as f:
     json.dump(results, f)
 
-# Generate a plot
-plt.figure()
-plt.plot([0.0, 0.5, 1.0], [1.0, 1.5, 2.0], 'cyan', label='Bionic')
-plt.plot([0.0, 0.5, 1.0], [1.0, 1.25, 1.5], 'magenta', label='Reference')
-plt.legend()
-plt.savefig(args.plot)
-plt.close()
+# Write a tiny PNG signature payload; the generator only requires that the plot file exists.
+with open(args.plot, 'wb') as f:
+    f.write(b'\\x89PNG\\r\\n\\x1a\\n')
 """
 
         mock_response_1 = MagicMock()

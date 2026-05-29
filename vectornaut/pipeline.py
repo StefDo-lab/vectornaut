@@ -417,7 +417,17 @@ class PipelineRunner:
         is_mock: bool = False,
     ) -> Dict[str, Any]:
         miner_output = MinerOutput.model_validate(current_run.get("miner", {}))
-        auditor_output = AuditorOutput.model_validate(current_run.get("auditor", {}))
+        auditor_data = dict(current_run.get("auditor", {}))
+        if not isinstance(auditor_data.get("ui_metadata"), dict) or not auditor_data.get("ui_metadata"):
+            auditor_data["ui_metadata"] = {
+                "domain_name": miner_output.domain or "Scientific Domain",
+                "independent_var": {"label": (miner_output.independent_variables or ["x"])[0], "unit": ""},
+                "dependent_var": {"label": (miner_output.dependent_variables or ["u"])[0], "unit": ""},
+                "primary_metric": {"label": "Primary Metric"},
+                "reference_metric": {"label": "Reference Metric"},
+                "performance_gain": {"label": "Performance Gain"},
+            }
+        auditor_output = AuditorOutput.model_validate(auditor_data)
         safe_epochs, _ = run_limits(epochs, 1)
         base_method = str(current_run.get("simulator", {}).get("solver_method") or auditor_output.solver_method).lower()
         candidate_methods = methods or [base_method, *self._fallback_solver_methods(miner_output, auditor_output)]
@@ -456,6 +466,13 @@ class PipelineRunner:
                     "performance_gain_pct": sim_data.get("performance_gain_pct"),
                     "primary_metric_value": sim_data.get("primary_metric_value"),
                     "reference_metric_value": sim_data.get("reference_metric_value"),
+                    "validation_passed": sim_data.get("validation_passed"),
+                    "validation_tests": sim_data.get("validation_tests"),
+                    "script_path": sim_data.get("script_path"),
+                    "params_json_path": sim_data.get("params_json_path"),
+                    "test_script_path": sim_data.get("test_script_path"),
+                    "test_output_path": sim_data.get("test_output_path"),
+                    "execution_mode": sim_data.get("execution_mode"),
                     "warnings": validation.warnings[:3],
                 })
             except Exception as err:

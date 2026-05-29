@@ -163,6 +163,14 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     if simulator.get("solver_method") == "pinn":
         md.append(f"- **PINN Trainingsepochen:** {simulator.get('epochs_trained', 0)}")
         md.append(f"- **PINN End-Loss (MSE):** `{simulator.get('final_loss', 0.0):.4e}`")
+    elif simulator.get("solver_method") == "dynamic_script":
+        md.append("\n### KI-generierter Python-Solver")
+        md.append("- **Ausführung:** generiertes Python-Skript in separatem Subprocess")
+        md.append(f"- **Solver-Skript:** `{os.path.basename(simulator.get('script_path') or 'N/A')}`")
+        md.append(f"- **Parameterdatei:** `{os.path.basename(simulator.get('params_json_path') or 'N/A')}`")
+        md.append(f"- **Testskript:** `{os.path.basename(simulator.get('test_script_path') or 'N/A')}`")
+        md.append(f"- **Testresultat:** `{os.path.basename(simulator.get('test_output_path') or 'N/A')}`")
+        md.append(f"- **Automatische Tests bestanden:** `{simulator.get('validation_passed')}`")
         
     custom_plot = simulator.get("custom_plot_url")
     if custom_plot:

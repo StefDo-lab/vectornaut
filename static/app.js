@@ -389,7 +389,7 @@ function completeAllSteps(statusText = "Complete") {
 
 function clearResults() {
     document.querySelectorAll(".empty-state").forEach(el => el.classList.remove("hidden"));
-    document.querySelectorAll(".overview-grid, .table-container, .simulation-view, #raw-json-report, #markdown-report, #report-actions-container, #assistant-wrapper, #run-decision-bar, #solver-compare-panel").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".overview-grid, .table-container, .simulation-view, #raw-json-report, #markdown-report, #report-actions-container, #assistant-wrapper, #run-decision-bar, #solver-compare-panel, #dynamic-script-card").forEach(el => el.classList.add("hidden"));
     const rawReport = document.getElementById("raw-json-report");
     if (rawReport) {
         rawReport.style.display = "none";
@@ -656,25 +656,33 @@ function renderSolverComparison(data) {
         const relErr = typeof result.relative_error === "number" ? result.relative_error.toExponential(2) : "-";
         const gain = typeof result.performance_gain_pct === "number" ? `${result.performance_gain_pct.toFixed(2)}%` : "-";
         const warning = result.error || humanizeValidationWarning((result.warnings || [])[0]);
+        const scriptName = result.script_path ? String(result.script_path).split(/[\\/]/).pop() : "";
+        const testName = result.test_script_path ? String(result.test_script_path).split(/[\\/]/).pop() : "";
+        const scriptMeta = result.solver_method === "dynamic_script"
+            ? `<p>Script: <code>${escapeHtml(scriptName || "nicht erzeugt")}</code></p><p>Tests: <code>${escapeHtml(testName || "nicht erzeugt")}</code></p>`
+            : "";
         card.innerHTML = `
             <span>Solver</span>
             <strong>${escapeHtml(String(result.solver_method || "-").toUpperCase())}</strong>
             <p>Status: ${escapeHtml(String(result.status || "failed").toUpperCase())} · Score ${score}</p>
             <p>Rel. Fehler: ${relErr} · Gain: ${gain}</p>
+            ${scriptMeta}
             <p>${escapeHtml(warning)}</p>
         `;
         resultsEl.appendChild(card);
     });
 }
 
-async function runSolverComparison() {
+async function runSolverComparisonWithMethods(methods, loadingText) {
     if (!lastRunData) return;
-    const btn = document.getElementById("solver-compare-btn");
+    const btn = methods && methods.includes("dynamic_script")
+        ? document.getElementById("dynamic-script-btn")
+        : document.getElementById("solver-compare-btn");
     const panel = document.getElementById("solver-compare-panel");
     const statusEl = document.getElementById("solver-compare-status");
     const resultsEl = document.getElementById("solver-compare-results");
     if (panel) panel.classList.remove("hidden");
-    if (statusEl) statusEl.innerText = "Solver-Vergleich läuft...";
+    if (statusEl) statusEl.innerText = loadingText || "Solver-Vergleich läuft...";
     if (resultsEl) resultsEl.innerHTML = "";
     if (btn) btn.disabled = true;
 
@@ -685,6 +693,7 @@ async function runSolverComparison() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 current_run: lastRunData,
+                methods,
                 epochs,
                 is_mock: isMock
             })
@@ -704,6 +713,16 @@ async function runSolverComparison() {
     }
 }
 
+async function runSolverComparison() {
+    if (!lastRunData) return;
+    return runSolverComparisonWithMethods(null, "Solver-Vergleich läuft...");
+}
+
+async function runDynamicScriptCheck() {
+    if (!lastRunData) return;
+    return runSolverComparisonWithMethods(["dynamic_script"], "KI generiert Python-Solver und Validierungstests...");
+}
+
 function writeValidationLog(validation) {
     if (!validation) return;
     const tone = getValidationTone(validation.status);
@@ -715,6 +734,36 @@ function writeValidationLog(validation) {
     if (validation.warnings && validation.warnings.length) {
         writeLog(`[VALIDATOR] Warnung: ${validation.warnings[0]}`, "warning-log");
     }
+}
+
+function renderDynamicScriptDetails(sim) {
+    const card = document.getElementById("dynamic-script-card");
+    if (!card) return;
+
+    if (!sim || sim.solver_method !== "dynamic_script") {
+        card.classList.add("hidden");
+        card.innerHTML = "";
+        return;
+    }
+
+    const tests = sim.validation_tests || [];
+    const passedCount = tests.filter(test => test.passed).length;
+    const totalCount = tests.length;
+    const status = sim.validation_passed === true ? "Tests bestanden" : "Tests nicht vollständig bestanden";
+    const scriptName = sim.script_path ? sim.script_path.split(/[\\/]/).pop() : "nicht verfügbar";
+    const testName = sim.test_script_path ? sim.test_script_path.split(/[\\/]/).pop() : "nicht verfügbar";
+
+    card.classList.remove("hidden");
+    card.innerHTML = `
+        <span class="eyebrow">Dynamic Script Solver</span>
+        <h4>KI-generierter Python-Solver: ${escapeHtml(status)}</h4>
+        <p>Ausführung: ${escapeHtml(sim.execution_mode || "generated_python_subprocess")} · Tests: ${passedCount}/${totalCount}</p>
+        <ul>
+            <li>Solver-Skript: <code>${escapeHtml(scriptName)}</code></li>
+            <li>Testskript: <code>${escapeHtml(testName)}</code></li>
+            <li>Validator-Status: ${sim.validation_passed === true ? "freigegeben" : "prüfen"}</li>
+        </ul>
+    `;
 }
 
 function renderResults(data) {
@@ -859,6 +908,7 @@ function renderResults(data) {
     document.getElementById("metric-drag-reduction").innerText = performanceGain !== null ? `${performanceGain.toFixed(2)}%` : "-";
     document.getElementById("metric-wss-pinn").innerText = primaryMetricVal !== null ? primaryMetricVal.toFixed(4) : "-";
     document.getElementById("metric-wss-analytical").innerText = refMetricVal !== null ? refMetricVal.toFixed(4) : "-";
+    renderDynamicScriptDetails(sim);
     
     // Toggle PINN loss card and chart visibility
     const isPinn = sim.solver_method === "pinn";

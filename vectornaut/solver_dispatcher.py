@@ -736,6 +736,8 @@ def dispatch_and_solve(
             
             validation_passed = test_res.get("success", False)
             validation_tests = test_res.get("test_results", [])
+            test_script_path = test_res.get("test_script_path")
+            test_output_path = test_res.get("test_output_path")
             
             # Format a simple markdown report of the validation runs
             report_lines = []
@@ -760,6 +762,8 @@ def dispatch_and_solve(
             validation_passed = False
             validation_report = f"### Status der Testausführung: ❌ CRASHED\n\nFehler bei der Testgenerierung/-ausführung: `{str(test_err)}`"
             validation_tests = [{"name": "validation_runner", "passed": False, "message": str(test_err)}]
+            test_script_path = None
+            test_output_path = None
         
         return SimulatorOutput(
             solver_method="dynamic_script",
@@ -776,7 +780,12 @@ def dispatch_and_solve(
             custom_plot_url=f"/plots/{plot_filename}",
             validation_passed=validation_passed,
             validation_report=validation_report,
-            validation_tests=validation_tests
+            validation_tests=validation_tests,
+            script_path=res.get("script_path"),
+            params_json_path=res.get("params_json_path"),
+            test_script_path=test_script_path,
+            test_output_path=test_output_path,
+            execution_mode=res.get("execution_mode", "generated_python_subprocess")
         )
 
 
