@@ -661,12 +661,18 @@ function renderSolverComparison(data) {
         const scriptMeta = result.solver_method === "dynamic_script"
             ? `<p>Script: <code>${escapeHtml(scriptName || "nicht erzeugt")}</code></p><p>Tests: <code>${escapeHtml(testName || "nicht erzeugt")}</code></p>`
             : "";
+        const sweep = result.parameter_sweep;
+        const sweepBest = sweep?.best;
+        const sweepMeta = sweepBest
+            ? `<p>Sweep-Best: <code>${escapeHtml(sweepBest.label || "baseline")}</code> · ${Number(sweepBest.performance_gain_pct || 0).toFixed(2)}%</p>`
+            : "";
         card.innerHTML = `
             <span>Solver</span>
             <strong>${escapeHtml(String(result.solver_method || "-").toUpperCase())}</strong>
             <p>Status: ${escapeHtml(String(result.status || "failed").toUpperCase())} · Score ${score}</p>
             <p>Rel. Fehler: ${relErr} · Gain: ${gain}</p>
             ${scriptMeta}
+            ${sweepMeta}
             <p>${escapeHtml(warning)}</p>
         `;
         resultsEl.appendChild(card);
@@ -752,6 +758,15 @@ function renderDynamicScriptDetails(sim) {
     const status = sim.validation_passed === true ? "Tests bestanden" : "Tests nicht vollständig bestanden";
     const scriptName = sim.script_path ? sim.script_path.split(/[\\/]/).pop() : "nicht verfügbar";
     const testName = sim.test_script_path ? sim.test_script_path.split(/[\\/]/).pop() : "nicht verfügbar";
+    const sweep = sim.parameter_sweep || null;
+    const best = sweep?.best || null;
+    currentDynamicSweepParams = best?.parameters || null;
+    const sweepHtml = sweep ? `
+        <p>Zielmetrik: ${escapeHtml(sweep.objective?.name || "Performance Gain")} (${escapeHtml(sweep.objective?.direction || "maximize")})</p>
+        <p>Parameter-Sweep: ${sweep.valid_candidate_count || 0}/${sweep.candidate_count || 0} Varianten verwertbar.</p>
+        ${best ? `<p>Bestes Set: <strong>${escapeHtml(best.label || "baseline")}</strong> · Gain ${Number(best.performance_gain_pct || 0).toFixed(2)}%</p>` : "<p>Kein verwertbares Parameterset gefunden.</p>"}
+        ${best?.parameters ? `<button class="btn btn-secondary btn-compact" onclick="applyDynamicSweepBest()">Bestes Parameterset übernehmen</button>` : ""}
+    ` : "";
 
     card.classList.remove("hidden");
     card.innerHTML = `
@@ -763,7 +778,14 @@ function renderDynamicScriptDetails(sim) {
             <li>Testskript: <code>${escapeHtml(testName)}</code></li>
             <li>Validator-Status: ${sim.validation_passed === true ? "freigegeben" : "prüfen"}</li>
         </ul>
+        ${sweepHtml}
     `;
+}
+
+function applyDynamicSweepBest() {
+    if (!currentDynamicSweepParams) return;
+    currentSuggestedParams = currentDynamicSweepParams;
+    applySuggestedParameters();
 }
 
 function renderResults(data) {
@@ -1396,6 +1418,7 @@ function downloadPDFReport() {
 // Bionic Assistant Chat State
 let chatHistory = [];
 let currentSuggestedParams = null;
+let currentDynamicSweepParams = null;
 
 function resetChat() {
     chatHistory = [];

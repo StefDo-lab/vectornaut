@@ -171,6 +171,18 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
         md.append(f"- **Testskript:** `{os.path.basename(simulator.get('test_script_path') or 'N/A')}`")
         md.append(f"- **Testresultat:** `{os.path.basename(simulator.get('test_output_path') or 'N/A')}`")
         md.append(f"- **Automatische Tests bestanden:** `{simulator.get('validation_passed')}`")
+        sweep = simulator.get("parameter_sweep") or {}
+        objective = sweep.get("objective") or simulator.get("objective_metric") or {}
+        if sweep:
+            best = sweep.get("best") or {}
+            md.append("\n### Dynamic-Script Parameter-Sweep")
+            md.append(f"- **Zielmetrik:** `{objective.get('name', 'Performance Gain')}` ({objective.get('direction', 'maximize')})")
+            md.append(f"- **Getestete Varianten:** {sweep.get('valid_candidate_count', 0)} verwertbar von {sweep.get('candidate_count', 0)}")
+            if best:
+                md.append(f"- **Bestes Ergebnis:** `{best.get('label', 'N/A')}` mit `{best.get('performance_gain_pct', 'N/A')}%` Gain")
+                changed = best.get("changed_parameter")
+                if changed:
+                    md.append(f"- **Bester Parameter:** `{changed} = {best.get('changed_value')}`")
         
     custom_plot = simulator.get("custom_plot_url")
     if custom_plot:

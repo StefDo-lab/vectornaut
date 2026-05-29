@@ -473,6 +473,8 @@ class PipelineRunner:
                     "test_script_path": sim_data.get("test_script_path"),
                     "test_output_path": sim_data.get("test_output_path"),
                     "execution_mode": sim_data.get("execution_mode"),
+                    "objective_metric": sim_data.get("objective_metric"),
+                    "parameter_sweep": sim_data.get("parameter_sweep"),
                     "warnings": validation.warnings[:3],
                 })
             except Exception as err:

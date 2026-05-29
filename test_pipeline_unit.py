@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+import json
+import os
+import tempfile
 import unittest
 from types import SimpleNamespace
 
 from vectornaut.pipeline import PipelineRunRequest, PipelineRunner
+from vectornaut.solver_dispatcher import _dynamic_parameter_sweep
 
 
 class Dumpable(SimpleNamespace):
@@ -168,6 +172,17 @@ def dynamic_metadata_solver(miner_output, auditor_output, epochs):
             "test_script_path": "generated_tests/test_solver_mock.py",
             "test_output_path": "generated_tests/results_test_mock.json",
             "execution_mode": "generated_python_subprocess",
+            "objective_metric": {"name": "Performance Gain", "direction": "maximize"},
+            "parameter_sweep": {
+                "candidate_count": 2,
+                "valid_candidate_count": 2,
+                "best": {
+                    "label": "slip_length=0.001",
+                    "parameters": {"slip_length": 0.001},
+                    "performance_gain_pct": 12.0,
+                },
+                "candidates": [],
+            },
         })
     return Dumpable(**data)
 
@@ -291,6 +306,59 @@ class PipelineUnitTest(unittest.TestCase):
         self.assertEqual(comparison["best_solver"], "dynamic_script")
         self.assertEqual(comparison["results"][0]["status"], "pass")
         self.assertEqual(comparison["results"][0]["recommended_action"], "accept")
+        self.assertEqual(comparison["results"][0]["parameter_sweep"]["best"]["label"], "slip_length=0.001")
+
+    def test_dynamic_parameter_sweep_ranks_generated_script_variants(self):
+        script = """
+import argparse
+import json
+parser = argparse.ArgumentParser()
+parser.add_argument('--params', required=True)
+parser.add_argument('--output', required=True)
+parser.add_argument('--plot', required=True)
+args = parser.parse_args()
+with open(args.params, encoding='utf-8') as f:
+    params = json.load(f)
+gain = float(params.get('slip_length', 0.0)) * 1000.0
+out = {
+    'success': True,
+    'performance_gain_pct': gain,
+    'relative_error': 0.0,
+    'sample_points': [0.0, 1.0],
+    'solution_primary': [0.0, 1.0],
+    'solution_reference': [0.0, 1.0],
+    'primary_metric_value': gain,
+    'reference_metric_value': 1.0,
+}
+with open(args.output, 'w', encoding='utf-8') as f:
+    json.dump(out, f)
+with open(args.plot, 'wb') as f:
+    f.write(b'PNG')
+"""
+        miner_output = FakeFormulator().mock_formulate_model("test", FakeMiner().mock_mine_design("test"))
+        miner_output.parameters = [
+            Dumpable(name="slip_length", value=0.001, min_bound=0.0, max_bound=0.01, justification="test")
+        ]
+        auditor_output = FakeAuditor().mock_audit_design(miner_output)
+        auditor_output.audited_parameters = [Dumpable(name="slip_length", value=0.001)]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            script_path = os.path.join(tmp, "solver_mock.py")
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(script)
+            sweep = _dynamic_parameter_sweep(
+                miner_output=miner_output,
+                auditor_output=auditor_output,
+                script_path=script_path,
+                base_params={"slip_length": 0.001, "simulation_coefficient": 0.001},
+                base_result={"performance_gain_pct": 1.0, "relative_error": 0.0, "primary_metric_value": 1.0, "reference_metric_value": 1.0},
+                slug="mock",
+                timestamp="20260101_000000",
+            )
+
+        self.assertGreaterEqual(sweep["valid_candidate_count"], 2)
+        self.assertEqual(sweep["objective"]["direction"], "maximize")
+        self.assertGreater(sweep["best"]["performance_gain_pct"], sweep["baseline"]["performance_gain_pct"])
 
 
 if __name__ == "__main__":

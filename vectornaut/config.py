@@ -148,3 +148,5 @@ class SimulatorOutput(BaseModel):
     test_script_path: Optional[str] = Field(description="Absolute path to the generated validation test script", default=None)
     test_output_path: Optional[str] = Field(description="Absolute path to the generated validation test result JSON", default=None)
     execution_mode: Optional[str] = Field(description="Execution mode metadata for generated or deterministic solvers", default=None)
+    objective_metric: Optional[Dict[str, Any]] = Field(description="Objective metric contract used to score solver results", default=None)
+    parameter_sweep: Optional[Dict[str, Any]] = Field(description="Dynamic-script parameter sweep summary and candidate results", default=None)
