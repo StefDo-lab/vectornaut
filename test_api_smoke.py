@@ -91,6 +91,33 @@ class ApiSmokeTest(unittest.TestCase):
         self.assertEqual(history_response.status_code, 200)
         self.assertGreaterEqual(len(history_response.json()["runs"]), 1)
 
+    def test_solver_compare_endpoint_uses_current_run(self):
+        run_response = self.client.post(
+            "/api/run",
+            json={
+                "query": "design drag reducing surface",
+                "is_mock": True,
+                "epochs": 1,
+                "max_optimization_rounds": 1,
+            },
+        )
+        self.assertEqual(run_response.status_code, 200)
+
+        compare_response = self.client.post(
+            "/api/run/solver-compare",
+            json={
+                "current_run": run_response.json(),
+                "is_mock": True,
+                "epochs": 1,
+                "methods": ["analytical", "scipy"],
+            },
+        )
+        self.assertEqual(compare_response.status_code, 200)
+        body = compare_response.json()
+        self.assertTrue(body["success"])
+        self.assertGreaterEqual(len(body["results"]), 1)
+        self.assertIn("solver_method", body["results"][0])
+
 
 if __name__ == "__main__":
     unittest.main()

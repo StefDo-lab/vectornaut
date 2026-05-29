@@ -1365,6 +1365,10 @@ h2 {
     resize: vertical;
 }
 
+.control-panel .sample-chip-group {
+    display: none;
+}
+
 .compact-chat {
     max-height: 260px;
     min-height: 0;
@@ -1477,6 +1481,106 @@ h2 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.run-decision-bar,
+.solver-compare-panel {
+    border: 1px solid rgba(0, 245, 212, 0.16);
+    border-radius: 8px;
+    background: rgba(5, 6, 11, 0.28);
+    margin-bottom: 0.95rem;
+    padding: 0.9rem;
+}
+
+.run-decision-bar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.2fr) minmax(260px, 1fr) auto;
+    gap: 0.85rem;
+    align-items: center;
+}
+
+.run-decision-bar.hidden,
+.solver-compare-panel.hidden {
+    display: none;
+}
+
+.run-decision-main strong {
+    display: block;
+    color: var(--text-color);
+    font-family: var(--font-heading);
+    font-size: 1rem;
+}
+
+.run-decision-main p {
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    line-height: 1.4;
+    margin: 0.25rem 0 0;
+}
+
+.run-decision-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.run-decision-facts div,
+.solver-compare-card {
+    min-width: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.55rem;
+}
+
+.run-decision-facts span,
+.solver-compare-card span {
+    display: block;
+    color: var(--text-muted);
+    font-family: var(--font-heading);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.run-decision-facts strong,
+.solver-compare-card strong {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--accent-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.run-decision-actions {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 150px;
+}
+
+.solver-compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.55rem;
+    margin-top: 0.75rem;
+}
+
+.solver-compare-card p {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    margin: 0.3rem 0 0;
+}
+
+.validation-explainer {
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    color: var(--text-color);
+    font-size: 0.86rem;
+    line-height: 1.45;
 }
 
 .validation-note {
@@ -1797,6 +1901,14 @@ h2 {
 
     .workbench-sidebar {
         position: static;
+    }
+
+    .run-decision-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .run-decision-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .compact-stepper {

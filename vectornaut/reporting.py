@@ -43,6 +43,7 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     auditor = data.get("auditor", {})
     simulator = data.get("simulator", {})
     synthesis = data.get("synthesis", {})
+    validation = data.get("validation", {})
     
     from datetime import datetime
     try:
@@ -68,6 +69,30 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     if synthesis.get("pros_and_cons"):
         md.append("## Vor- & Nachteile (Gegenüberstellung)")
         md.append(synthesis.get("pros_and_cons"))
+        md.append("")
+
+    if validation:
+        score = validation.get("score")
+        score_text = f"{score * 100:.0f}%" if isinstance(score, (int, float)) else "N/A"
+        action_labels = {
+            "accept": "Ergebnis übernehmen",
+            "inspect": "Warnungen prüfen",
+            "rerun_solver": "Mit alternativem Solver vergleichen",
+            "remine": "Neues Konzept suchen",
+        }
+        action = validation.get("recommended_action", "inspect")
+        md.append("## Prüfentscheidung des Validators")
+        md.append(f"- **Status:** `{str(validation.get('status', 'unknown')).upper()}`")
+        md.append(f"- **Verlässlichkeit:** `{str(validation.get('reliability', 'unknown')).upper()}`")
+        md.append(f"- **Prüfscore:** `{score_text}`")
+        md.append(f"- **Empfohlene Aktion:** **{action_labels.get(action, action)}**")
+        md.append("")
+        md.append("Der Prüfscore ist der Anteil bestandener technischer Checks. Er ist keine Wahrscheinlichkeit, dass das Ergebnis real korrekt ist.")
+        warnings = validation.get("warnings", [])
+        if warnings:
+            md.append("\n### Wichtigste Validator-Hinweise")
+            for warning in warnings[:5]:
+                md.append(f"- {warning}")
         md.append("")
     
     md.append("## 1. Konzept & Bionische Inspiration")
@@ -188,8 +213,18 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
             sim_res = run.get("simulator", {})
             gain = sim_res.get("performance_gain_pct", 0.0)
             val_status = "✅ PASS" if sim_res.get("validation_passed") else "❌ FAIL" if sim_res.get("validation_passed") is not None else "N/A"
+            if run.get("validation", {}).get("status"):
+                val_status = str(run.get("validation", {}).get("status")).upper()
             reasoning = run.get("optimizer_reasoning", "Konvergenz erreicht oder Limit erreicht.").replace("\n", " ").strip()
             md.append(f"| {r_num} | {params_str} | `{coeff_val:.6f}` | **{gain:.2f}%** | {val_status} | {reasoning} |")
+
+            fallbacks = run.get("solver_fallbacks", [])
+            if fallbacks:
+                fallback_text = "; ".join(
+                    f"{fb.get('solver_method', 'unknown').upper()}: {fb.get('status', 'failed')} (score={fb.get('score', 'N/A')})"
+                    for fb in fallbacks
+                )
+                md.append(f"\nSolver-Fallbacks Runde {r_num}: {fallback_text}\n")
 
     # Append Section 8: Commercial & Engineering Synthesis
     synthesis = data.get("synthesis", {})

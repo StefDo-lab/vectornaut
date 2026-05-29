@@ -148,6 +148,37 @@
                         <div class="record-status-chip" id="record-status-chip">Kein aktiver Run</div>
                     </div>
 
+                    <div class="run-decision-bar hidden" id="run-decision-bar">
+                        <div class="run-decision-main">
+                            <span class="eyebrow">Prüfentscheidung</span>
+                            <strong id="run-decision-title">Noch keine Bewertung</strong>
+                            <p id="run-decision-detail">Starte eine Analyse, um Solver, Validator und empfohlene Folgeaktion zu sehen.</p>
+                        </div>
+                        <div class="run-decision-facts">
+                            <div><span>Status</span><strong id="run-header-status">-</strong></div>
+                            <div><span>Score</span><strong id="run-header-score">-</strong></div>
+                            <div><span>Solver</span><strong id="run-header-solver">-</strong></div>
+                            <div><span>Aktion</span><strong id="run-header-action">-</strong></div>
+                        </div>
+                        <div class="run-decision-actions">
+                            <button class="btn btn-secondary btn-compact" onclick="openResultTab('tab-report')">Report</button>
+                            <button class="btn btn-secondary btn-compact" onclick="explainValidatorInChat()">Validator erklären</button>
+                            <button class="btn btn-primary btn-compact" id="solver-compare-btn" onclick="runSolverComparison()">Solver vergleichen</button>
+                        </div>
+                    </div>
+
+                    <div class="solver-compare-panel hidden" id="solver-compare-panel">
+                        <div class="panel-heading row-heading">
+                            <div>
+                                <span class="eyebrow">Solver-Vergleich</span>
+                                <h3>Alternative Rechenwege</h3>
+                            </div>
+                            <button class="btn-icon" title="Solver-Vergleich ausblenden" onclick="hideSolverComparison()">x</button>
+                        </div>
+                        <div id="solver-compare-status" class="history-status">Noch nicht gestartet.</div>
+                        <div id="solver-compare-results" class="solver-compare-grid"></div>
+                    </div>
+
                     <div class="tab-header">
                         <button class="tab-link active" onclick="openTab(event, 'tab-overview')">Kurzakte</button>
                         <button class="tab-link" onclick="openTab(event, 'tab-report')">Report</button>

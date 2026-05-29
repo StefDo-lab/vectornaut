@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 
+from vectornaut.config import AuditorOutput, MinerOutput
 from vectornaut.runtime_guards import run_limits, validate_simulator_output
 from vectornaut.validator import validate_run_output
 
@@ -408,6 +409,76 @@ class PipelineRunner:
             "failed_concepts": failed_concepts,
         }
 
+    def compare_solvers(
+        self,
+        current_run: Dict[str, Any],
+        methods: Optional[List[str]] = None,
+        epochs: int = 200,
+        is_mock: bool = False,
+    ) -> Dict[str, Any]:
+        miner_output = MinerOutput.model_validate(current_run.get("miner", {}))
+        auditor_output = AuditorOutput.model_validate(current_run.get("auditor", {}))
+        safe_epochs, _ = run_limits(epochs, 1)
+        base_method = str(current_run.get("simulator", {}).get("solver_method") or auditor_output.solver_method).lower()
+        candidate_methods = methods or [base_method, *self._fallback_solver_methods(miner_output, auditor_output)]
+
+        results = []
+        seen = set()
+        for method in candidate_methods:
+            normalized_method = str(method or "").lower()
+            if not normalized_method or normalized_method in seen:
+                continue
+            seen.add(normalized_method)
+
+            attempt: Dict[str, Any] = {"solver_method": normalized_method, "status": "failed"}
+            try:
+                method_auditor = _AuditorSolverOverride(auditor_output, normalized_method)
+                sim_output = self._solve(
+                    miner_output=miner_output,
+                    auditor_output=method_auditor,
+                    epochs=safe_epochs,
+                    effective_mock=is_mock,
+                )
+                validate_simulator_output(sim_output)
+                validation = self._validation_for(
+                    miner_output=miner_output,
+                    auditor_output=method_auditor,
+                    sim_output=sim_output,
+                    optimization_history=[],
+                )
+                sim_data = sim_output.model_dump()
+                attempt.update({
+                    "status": validation.status,
+                    "reliability": validation.reliability,
+                    "score": validation.score,
+                    "recommended_action": validation.recommended_action,
+                    "relative_error": sim_data.get("relative_error"),
+                    "performance_gain_pct": sim_data.get("performance_gain_pct"),
+                    "primary_metric_value": sim_data.get("primary_metric_value"),
+                    "reference_metric_value": sim_data.get("reference_metric_value"),
+                    "warnings": validation.warnings[:3],
+                })
+            except Exception as err:
+                attempt["error"] = str(err)
+            results.append(attempt)
+
+        successful = [item for item in results if item.get("status") in {"pass", "warn"}]
+        best = None
+        if successful:
+            best = max(successful, key=lambda item: float(item.get("score") or 0.0))
+
+        return {
+            "success": True,
+            "base_solver": base_method,
+            "results": results,
+            "best_solver": best.get("solver_method") if best else None,
+            "best_status": best.get("status") if best else None,
+        }
+
 
 def run_pipeline(req: PipelineRunRequest) -> Dict[str, Any]:
     return PipelineRunner().run(req)
+
+
+def compare_solvers(current_run: Dict[str, Any], methods: Optional[List[str]] = None, epochs: int = 200, is_mock: bool = False) -> Dict[str, Any]:
+    return PipelineRunner().compare_solvers(current_run=current_run, methods=methods, epochs=epochs, is_mock=is_mock)

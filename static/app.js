@@ -389,13 +389,14 @@ function completeAllSteps(statusText = "Complete") {
 
 function clearResults() {
     document.querySelectorAll(".empty-state").forEach(el => el.classList.remove("hidden"));
-    document.querySelectorAll(".overview-grid, .table-container, .simulation-view, #raw-json-report, #markdown-report, #report-actions-container, #assistant-wrapper").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".overview-grid, .table-container, .simulation-view, #raw-json-report, #markdown-report, #report-actions-container, #assistant-wrapper, #run-decision-bar, #solver-compare-panel").forEach(el => el.classList.add("hidden"));
     const rawReport = document.getElementById("raw-json-report");
     if (rawReport) {
         rawReport.style.display = "none";
     }
     updateRecordStatus(null);
     renderNextAction(null);
+    renderRunDecision(null);
 }
 
 function getValidationTone(status) {
@@ -414,6 +415,67 @@ function formatValidationAction(action) {
         remine: "Neues Konzept suchen"
     };
     return labels[action] || action || "Keine Aktion verfügbar";
+}
+
+function humanizeValidationWarning(warning) {
+    const text = String(warning || "");
+    const lower = text.toLowerCase();
+    if (lower.includes("simple derivative residual") || lower.includes("ableitung")) {
+        return "Die Ableitungs-Randbedingung ist deutlich verletzt. Das Feld kann formal berechnet sein, passt aber nicht gut zur geforderten Steigung am Rand.";
+    }
+    if (lower.includes("relative_error")) {
+        return "Die primäre Lösung weicht zu stark von der Referenzlösung ab. Ein zweiter Solver ist sinnvoll, bevor du das Ergebnis übernimmst.";
+    }
+    if (lower.includes("pinn") || lower.includes("loss")) {
+        return "Der PINN-Solver ist noch nicht ausreichend konvergiert. Mehr Epochen oder ein deterministischer Vergleichslöser kann helfen.";
+    }
+    if (lower.includes("finite") || lower.includes("nan") || lower.includes("inf")) {
+        return "Mindestens ein numerischer Wert ist nicht endlich. Das ist ein harter Hinweis auf ein instabiles Rechenergebnis.";
+    }
+    return text || "Der Validator sieht eine Annahme, Randbedingung oder Kennzahl, die vor der Weiterverwendung geprüft werden sollte.";
+}
+
+function getValidationActionExplanation(validation) {
+    const action = validation?.recommended_action || "inspect";
+    const warning = (validation?.warnings || [])[0];
+    const warningText = humanizeValidationWarning(warning);
+    if (action === "accept") {
+        return "Die Pflichtchecks sind bestanden. Das Ergebnis ist für die nächste technische Auswertung brauchbar, bleibt aber ein Modellresultat.";
+    }
+    if (action === "rerun_solver") {
+        return `${warningText} Vectornaut sollte denselben Fall mit einem alternativen Solver erneut rechnen und die Kennzahlen vergleichen.`;
+    }
+    if (action === "remine") {
+        return `${warningText} Der aktuelle Konzeptpfad ist wahrscheinlich zu schwach; eine neue Konzeptsuche ist sinnvoller als Feintuning.`;
+    }
+    return `${warningText} Prüfe die Fallakte, bevor du auf Basis dieses Runs entscheidest.`;
+}
+
+function renderRunDecision(data) {
+    const bar = document.getElementById("run-decision-bar");
+    if (!bar) return;
+
+    if (!data) {
+        bar.classList.add("hidden");
+        return;
+    }
+
+    const validation = data.validation || {};
+    const sim = data.simulator || {};
+    const auditor = data.auditor || {};
+    const status = String(validation.status || "unknown").toUpperCase();
+    const score = typeof validation.score === "number" ? `${(validation.score * 100).toFixed(0)}%` : "-";
+    const solver = String(sim.solver_method || auditor.solver_method || "-").toUpperCase();
+    const action = formatValidationAction(validation.recommended_action);
+    const reliability = validation.reliability ? String(validation.reliability).toUpperCase() : "UNKNOWN";
+
+    bar.classList.remove("hidden");
+    document.getElementById("run-decision-title").innerText = `${status} · Verlässlichkeit ${reliability}`;
+    document.getElementById("run-decision-detail").innerText = getValidationActionExplanation(validation);
+    document.getElementById("run-header-status").innerText = status;
+    document.getElementById("run-header-score").innerText = score;
+    document.getElementById("run-header-solver").innerText = solver;
+    document.getElementById("run-header-action").innerText = action;
 }
 
 function renderValidationSummary(validation) {
@@ -443,13 +505,23 @@ function renderValidationSummary(validation) {
     }
     document.getElementById("validation-action").innerText = `Empfohlene Aktion: ${formatValidationAction(validation?.recommended_action)}`;
 
+    let explainer = document.getElementById("validation-explainer");
+    if (!explainer) {
+        explainer = document.createElement("p");
+        explainer.id = "validation-explainer";
+        explainer.className = "validation-explainer";
+        card.appendChild(explainer);
+    }
+    explainer.innerText = getValidationActionExplanation(validation);
+
     const warningsEl = document.getElementById("validation-warnings");
     warningsEl.innerHTML = "";
     const topWarnings = warnings.slice(0, 3);
     if (topWarnings.length) {
         topWarnings.forEach(warning => {
             const li = document.createElement("li");
-            li.innerText = warning;
+            li.innerText = humanizeValidationWarning(warning);
+            li.title = warning;
             warningsEl.appendChild(li);
         });
     } else {
@@ -547,6 +619,91 @@ function useSuggestedAction() {
     }
 }
 
+function explainValidatorInChat() {
+    if (!lastRunData) return;
+    const validation = lastRunData.validation || {};
+    const warning = (validation.warnings || [])[0] || "keine konkrete Warnung";
+    sendChatMessage(`Bitte erkläre mir die Validator-Bewertung dieses Runs: Status ${validation.status}, Score ${validation.score}, Reliability ${validation.reliability}, Warnung: ${warning}. Was bedeutet das praktisch und was sollte ich als nächstes tun?`);
+}
+
+function hideSolverComparison() {
+    const panel = document.getElementById("solver-compare-panel");
+    if (panel) panel.classList.add("hidden");
+}
+
+function renderSolverComparison(data) {
+    const panel = document.getElementById("solver-compare-panel");
+    const statusEl = document.getElementById("solver-compare-status");
+    const resultsEl = document.getElementById("solver-compare-results");
+    if (!panel || !statusEl || !resultsEl) return;
+
+    panel.classList.remove("hidden");
+    resultsEl.innerHTML = "";
+    const results = data?.results || [];
+    if (!results.length) {
+        statusEl.innerText = "Keine Solver-Ergebnisse erhalten.";
+        return;
+    }
+
+    statusEl.innerText = data.best_solver
+        ? `Bester Vergleich: ${String(data.best_solver).toUpperCase()} (${String(data.best_status || "unknown").toUpperCase()}).`
+        : "Kein alternativer Solver hat ein verwertbares Ergebnis geliefert.";
+
+    results.forEach(result => {
+        const card = document.createElement("div");
+        card.className = `solver-compare-card validation-${getValidationTone(result.status)}`;
+        const score = typeof result.score === "number" ? `${(result.score * 100).toFixed(0)}%` : "-";
+        const relErr = typeof result.relative_error === "number" ? result.relative_error.toExponential(2) : "-";
+        const gain = typeof result.performance_gain_pct === "number" ? `${result.performance_gain_pct.toFixed(2)}%` : "-";
+        const warning = result.error || humanizeValidationWarning((result.warnings || [])[0]);
+        card.innerHTML = `
+            <span>Solver</span>
+            <strong>${escapeHtml(String(result.solver_method || "-").toUpperCase())}</strong>
+            <p>Status: ${escapeHtml(String(result.status || "failed").toUpperCase())} · Score ${score}</p>
+            <p>Rel. Fehler: ${relErr} · Gain: ${gain}</p>
+            <p>${escapeHtml(warning)}</p>
+        `;
+        resultsEl.appendChild(card);
+    });
+}
+
+async function runSolverComparison() {
+    if (!lastRunData) return;
+    const btn = document.getElementById("solver-compare-btn");
+    const panel = document.getElementById("solver-compare-panel");
+    const statusEl = document.getElementById("solver-compare-status");
+    const resultsEl = document.getElementById("solver-compare-results");
+    if (panel) panel.classList.remove("hidden");
+    if (statusEl) statusEl.innerText = "Solver-Vergleich läuft...";
+    if (resultsEl) resultsEl.innerHTML = "";
+    if (btn) btn.disabled = true;
+
+    try {
+        const epochs = parseInt(document.getElementById("epochs-input").value) || 200;
+        const response = await fetch("/api/run/solver-compare", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                current_run: lastRunData,
+                epochs,
+                is_mock: isMock
+            })
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Solver-Vergleich fehlgeschlagen.");
+        }
+        const data = await response.json();
+        renderSolverComparison(data);
+        writeLog(`[VALIDATOR] Solver-Vergleich abgeschlossen. Bester Solver: ${data.best_solver || "keiner"}`, "info-log");
+    } catch (err) {
+        if (statusEl) statusEl.innerText = err.message;
+        writeLog(`[ERROR] Solver-Vergleich fehlgeschlagen: ${err.message}`, "error-log");
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
 function writeValidationLog(validation) {
     if (!validation) return;
     const tone = getValidationTone(validation.status);
@@ -626,6 +783,7 @@ function renderResults(data) {
     renderValidationSummary(data.validation);
     updateRecordStatus(data);
     renderNextAction(data);
+    renderRunDecision(data);
 
     // Render SVG Schematic if present
     const schematicCard = document.getElementById("schematic-card");
