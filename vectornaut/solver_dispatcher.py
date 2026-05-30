@@ -19,13 +19,19 @@ from .config import SimulatorOutput, MinerOutput, AuditorOutput
 
 
 def _dynamic_objective_contract(auditor_output: AuditorOutput) -> Dict[str, Any]:
+    if getattr(auditor_output, "objective_metric", None):
+        contract = auditor_output.objective_metric
+        return contract.model_dump() if hasattr(contract, "model_dump") else dict(contract)
     ui_meta = auditor_output.ui_metadata.model_dump() if hasattr(auditor_output.ui_metadata, "model_dump") else {}
     return {
-        "name": ui_meta.get("performance_gain", {}).get("label", "Performance Gain"),
+        "objective_name": ui_meta.get("performance_gain", {}).get("label", "Performance Gain"),
         "score_field": "performance_gain_pct",
         "direction": "maximize",
         "primary_metric": ui_meta.get("primary_metric", {}).get("label", "Primary Metric"),
         "reference_metric": ui_meta.get("reference_metric", {}).get("label", "Reference Metric"),
+        "lower_is_better": False,
+        "acceptance_threshold": 0.0,
+        "hard_constraints": ["relative_error <= 1.0", "parameters within bounds", "finite numeric outputs"],
         "note": "Dynamic-script variants are ranked by performance_gain_pct. The generated script must keep this metric definition stable across variants.",
     }
 
@@ -135,18 +141,29 @@ def _dynamic_parameter_sweep(
                     "error": str(err),
                 })
 
+    objective = _dynamic_objective_contract(auditor_output)
+    score_field = objective.get("score_field", "performance_gain_pct")
+    direction = objective.get("direction", "maximize")
+    threshold = float(objective.get("acceptance_threshold", 0.0) or 0.0)
     valid = [
         item for item in candidates
-        if item.get("status") == "ok" and isinstance(item.get("performance_gain_pct"), (int, float))
+        if item.get("status") == "ok" and isinstance(item.get(score_field), (int, float))
+        and (float(item.get("relative_error", 0.0) or 0.0) <= 1.0)
     ]
-    best = max(valid, key=lambda item: float(item.get("performance_gain_pct"))) if valid else None
+    if direction == "minimize":
+        accepted = [item for item in valid if float(item.get(score_field)) <= threshold]
+        best = min(valid, key=lambda item: float(item.get(score_field))) if valid else None
+    else:
+        accepted = [item for item in valid if float(item.get(score_field)) >= threshold]
+        best = max(valid, key=lambda item: float(item.get(score_field))) if valid else None
     return {
-        "objective": _dynamic_objective_contract(auditor_output),
+        "objective": objective,
         "baseline": candidates[0],
         "best": best,
         "candidates": candidates,
         "candidate_count": len(candidates),
         "valid_candidate_count": len(valid),
+        "accepted_candidate_count": len(accepted),
     }
 
 class GenericPINN(nn.Module):

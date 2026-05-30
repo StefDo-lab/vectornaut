@@ -427,6 +427,18 @@ class PipelineRunner:
                 "reference_metric": {"label": "Reference Metric"},
                 "performance_gain": {"label": "Performance Gain"},
             }
+        if not auditor_data.get("objective_metric"):
+            ui_meta = auditor_data["ui_metadata"]
+            auditor_data["objective_metric"] = {
+                "objective_name": ui_meta.get("performance_gain", {}).get("label", "Performance Gain"),
+                "score_field": "performance_gain_pct",
+                "direction": "maximize",
+                "primary_metric": ui_meta.get("primary_metric", {}).get("label", "Primary Metric"),
+                "reference_metric": ui_meta.get("reference_metric", {}).get("label", "Reference Metric"),
+                "lower_is_better": False,
+                "acceptance_threshold": 0.0,
+                "hard_constraints": ["relative_error <= 1.0", "parameters within bounds", "finite numeric outputs"],
+            }
         auditor_output = AuditorOutput.model_validate(auditor_data)
         safe_epochs, _ = run_limits(epochs, 1)
         base_method = str(current_run.get("simulator", {}).get("solver_method") or auditor_output.solver_method).lower()

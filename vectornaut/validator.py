@@ -257,6 +257,23 @@ def validate_run_output(
         score=0.35,
     )
 
+    objective = simulator.get("objective_metric") or auditor.get("objective_metric") or {}
+    score_field = objective.get("score_field", "performance_gain_pct")
+    direction = objective.get("direction", "maximize")
+    threshold = float(objective.get("acceptance_threshold", 0.0) or 0.0)
+    objective_score = simulator.get(score_field)
+    if objective:
+        objective_ok = _is_finite_number(objective_score) and (
+            float(objective_score) >= threshold if direction != "minimize" else float(objective_score) <= threshold
+        )
+        add(
+            "objective_metric_contract",
+            objective_ok,
+            f"{score_field}={objective_score!r}, direction={direction}, threshold={threshold}.",
+            severity="warning",
+            score=0.45,
+        )
+
     solver_method = str(simulator.get("solver_method") or "").lower()
     final_loss = simulator.get("final_loss", 0.0)
     if solver_method == "pinn":

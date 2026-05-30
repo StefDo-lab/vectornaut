@@ -663,8 +663,9 @@ function renderSolverComparison(data) {
             : "";
         const sweep = result.parameter_sweep;
         const sweepBest = sweep?.best;
+        const objectiveName = sweep?.objective?.objective_name || sweep?.objective?.name || "Performance Gain";
         const sweepMeta = sweepBest
-            ? `<p>Sweep-Best: <code>${escapeHtml(sweepBest.label || "baseline")}</code> · ${Number(sweepBest.performance_gain_pct || 0).toFixed(2)}%</p>`
+            ? `<p>Sweep-Best: <code>${escapeHtml(sweepBest.label || "baseline")}</code> · ${Number(sweepBest.performance_gain_pct || 0).toFixed(2)}% (${escapeHtml(objectiveName)})</p>`
             : "";
         card.innerHTML = `
             <span>Solver</span>
@@ -762,8 +763,8 @@ function renderDynamicScriptDetails(sim) {
     const best = sweep?.best || null;
     currentDynamicSweepParams = best?.parameters || null;
     const sweepHtml = sweep ? `
-        <p>Zielmetrik: ${escapeHtml(sweep.objective?.name || "Performance Gain")} (${escapeHtml(sweep.objective?.direction || "maximize")})</p>
-        <p>Parameter-Sweep: ${sweep.valid_candidate_count || 0}/${sweep.candidate_count || 0} Varianten verwertbar.</p>
+        <p>Zielmetrik: ${escapeHtml(sweep.objective?.objective_name || sweep.objective?.name || "Performance Gain")} (${escapeHtml(sweep.objective?.direction || "maximize")})</p>
+        <p>Parameter-Sweep: ${sweep.valid_candidate_count || 0}/${sweep.candidate_count || 0} Varianten verwertbar, ${sweep.accepted_candidate_count || 0} akzeptiert.</p>
         ${best ? `<p>Bestes Set: <strong>${escapeHtml(best.label || "baseline")}</strong> · Gain ${Number(best.performance_gain_pct || 0).toFixed(2)}%</p>` : "<p>Kein verwertbares Parameterset gefunden.</p>"}
         ${best?.parameters ? `<button class="btn btn-secondary btn-compact" onclick="applyDynamicSweepBest()">Bestes Parameterset übernehmen</button>` : ""}
     ` : "";

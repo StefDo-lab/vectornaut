@@ -1,5 +1,5 @@
 import math
-from .config import get_client, MinerOutput, AuditorOutput, AuditedParameter, DimensionlessNumber
+from .config import get_client, MinerOutput, AuditorOutput, AuditedParameter, DimensionlessNumber, ObjectiveMetricContract
 
 def extract_param(params_dict, keys, default):
     for key in keys:
@@ -56,7 +56,16 @@ class Auditor:
              "performance_gain": {{ "label": "Label of performance gain metric (e.g., Drag Reduction Efficiency)" }}
            }}
 
-         6. Perform a structural and material stress check:
+        7. Define objective_metric as a strict optimization contract:
+           - objective_name: human-readable target, e.g. "Drag Reduction Efficiency" or "Fatigue Life Gain".
+           - score_field: use "performance_gain_pct" unless there is a concrete reason not to.
+           - direction: "maximize" if higher score is better, "minimize" if lower score is better.
+           - primary_metric/reference_metric: must match the physical meaning of ui_metadata metrics.
+           - lower_is_better: true if the raw primary metric is a loss/risk/stress/friction metric.
+           - acceptance_threshold: minimum acceptable score for maximize, maximum acceptable score for minimize.
+           - hard_constraints: include relative error, finite outputs, parameter bounds, and any domain-specific safety limits.
+
+         8. Perform a structural and material stress check:
             - Identify likely operational stresses and load conditions from the user query (e.g. pressure, compression, bending, friction, shear, thermal load).
             - Estimate the material limits (e.g. yield strength, maximum temperature) of the bionic material.
             - If the proposed parameters would cause a structural collapse (e.g. if microstructures are too thin and tall under high pressure, or if temperatures exceed material limits), explain this failure in 'audit_notes'.
@@ -198,6 +207,8 @@ class Auditor:
                 else:
                     final_ui_meta[k] = v
 
+        objective_contract = audited.objective_metric or build_objective_contract(final_ui_meta)
+
         solver_method = audited.solver_method or "pinn"
         if user_query and any(k in user_query.lower() for k in ["script", "skript", "dynamic solver", "custom solver"]):
             solver_method = "dynamic_script"
@@ -209,7 +220,8 @@ class Auditor:
             dimensionless_numbers=dimensionless_list,
             simulation_coefficient=recalculated_coeff,
             solver_method=solver_method,
-            ui_metadata=final_ui_meta
+            ui_metadata=final_ui_meta,
+            objective_metric=objective_contract
         )
 
     def mock_audit_design(self, miner_output: MinerOutput, override_parameters: dict = None, user_query: str = None) -> AuditorOutput:
@@ -268,6 +280,15 @@ class Auditor:
         if user_query and any(k in user_query.lower() for k in ["script", "skript", "dynamic solver", "custom solver"]):
             solver_method = "dynamic_script"
 
+        final_ui_meta = {
+            "domain_name": "Fluid Dynamics",
+            "independent_var": { "label": "Channel Height", "unit": "m" },
+            "dependent_var": { "label": "Flow Velocity", "unit": "m/s" },
+            "primary_metric": { "label": "PINN Wall Shear Stress" },
+            "reference_metric": { "label": "Analytical Wall Shear Stress" },
+            "performance_gain": { "label": "Drag Reduction Efficiency" }
+        }
+
         return AuditorOutput(
             audit_passed=True,
             audit_notes="Mock audit: proposed parameters are within safe operational bounds. Analytical dimensionless numbers and boundary conditions validated.",
@@ -275,12 +296,31 @@ class Auditor:
             dimensionless_numbers=dimensionless_list,
             simulation_coefficient=coeff,
             solver_method=solver_method,
-            ui_metadata={
-                "domain_name": "Fluid Dynamics",
-                "independent_var": { "label": "Channel Height", "unit": "m" },
-                "dependent_var": { "label": "Flow Velocity", "unit": "m/s" },
-                "primary_metric": { "label": "PINN Wall Shear Stress" },
-                "reference_metric": { "label": "Analytical Wall Shear Stress" },
-                "performance_gain": { "label": "Drag Reduction Efficiency" }
-            }
+            ui_metadata=final_ui_meta,
+            objective_metric=build_objective_contract(final_ui_meta)
         )
+
+
+def build_objective_contract(ui_metadata: dict) -> ObjectiveMetricContract:
+    primary = (ui_metadata.get("primary_metric") or {}).get("label", "Primary Metric")
+    reference = (ui_metadata.get("reference_metric") or {}).get("label", "Reference Metric")
+    objective = (ui_metadata.get("performance_gain") or {}).get("label", "Performance Gain")
+    primary_lower = primary.lower()
+    lower_is_better = any(term in primary_lower for term in [
+        "stress", "friction", "drag", "loss", "risk", "error", "damage", "shear"
+    ])
+    return ObjectiveMetricContract(
+        objective_name=objective,
+        score_field="performance_gain_pct",
+        direction="maximize",
+        primary_metric=primary,
+        reference_metric=reference,
+        lower_is_better=lower_is_better,
+        acceptance_threshold=0.0,
+        hard_constraints=[
+            "relative_error <= 1.0",
+            "parameters within bounds",
+            "finite numeric outputs",
+            "validation_passed == true for generated scripts",
+        ],
+    )

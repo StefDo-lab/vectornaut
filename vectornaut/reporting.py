@@ -140,6 +140,19 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     
     md.append(f"\n- **Abgeleiteter Simulationskoeffizient:** `{auditor.get('simulation_coefficient', 0.0)}` (genutzt in den Gleichungen)")
     md.append(f"- **Freigegebener Solver:** `{auditor.get('solver_method', 'N/A').upper()}`\n")
+    objective_contract = auditor.get("objective_metric") or simulator.get("objective_metric") or {}
+    if objective_contract:
+        md.append("### Bewertungsvertrag (Metric Contract)")
+        md.append(f"- **Zielmetrik:** `{objective_contract.get('objective_name', 'Performance Gain')}`")
+        md.append(f"- **Score-Feld:** `{objective_contract.get('score_field', 'performance_gain_pct')}`")
+        md.append(f"- **Richtung:** `{objective_contract.get('direction', 'maximize')}`")
+        md.append(f"- **Primary Metric:** `{objective_contract.get('primary_metric', 'Primary Metric')}`")
+        md.append(f"- **Reference Metric:** `{objective_contract.get('reference_metric', 'Reference Metric')}`")
+        md.append(f"- **Acceptance Threshold:** `{objective_contract.get('acceptance_threshold', 0.0)}`")
+        constraints = objective_contract.get("hard_constraints") or []
+        if constraints:
+            md.append("- **Harte Nebenbedingungen:** " + "; ".join(f"`{c}`" for c in constraints))
+        md.append("")
     
     md.append("## 4. Audit-Bewertung (Auditor Notes)")
     md.append(f"> {auditor.get('audit_notes', 'Keine Audit-Notizen vorhanden.')}\n")
@@ -172,12 +185,13 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
         md.append(f"- **Testresultat:** `{os.path.basename(simulator.get('test_output_path') or 'N/A')}`")
         md.append(f"- **Automatische Tests bestanden:** `{simulator.get('validation_passed')}`")
         sweep = simulator.get("parameter_sweep") or {}
-        objective = sweep.get("objective") or simulator.get("objective_metric") or {}
+        objective = sweep.get("objective") or simulator.get("objective_metric") or auditor.get("objective_metric") or {}
         if sweep:
             best = sweep.get("best") or {}
             md.append("\n### Dynamic-Script Parameter-Sweep")
-            md.append(f"- **Zielmetrik:** `{objective.get('name', 'Performance Gain')}` ({objective.get('direction', 'maximize')})")
+            md.append(f"- **Zielmetrik:** `{objective.get('objective_name', objective.get('name', 'Performance Gain'))}` ({objective.get('direction', 'maximize')})")
             md.append(f"- **Getestete Varianten:** {sweep.get('valid_candidate_count', 0)} verwertbar von {sweep.get('candidate_count', 0)}")
+            md.append(f"- **Akzeptierte Varianten:** {sweep.get('accepted_candidate_count', 0)}")
             if best:
                 md.append(f"- **Bestes Ergebnis:** `{best.get('label', 'N/A')}` mit `{best.get('performance_gain_pct', 'N/A')}%` Gain")
                 changed = best.get("changed_parameter")

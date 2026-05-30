@@ -58,6 +58,17 @@ class ScriptGenerator:
         with open(params_json_path, "w", encoding="utf-8") as pf:
             json.dump(audited_params, pf, indent=4)
 
+        objective_metric = auditor_output.objective_metric.model_dump() if getattr(auditor_output, "objective_metric", None) else {
+            "objective_name": auditor_output.ui_metadata.performance_gain.label,
+            "score_field": "performance_gain_pct",
+            "direction": "maximize",
+            "primary_metric": auditor_output.ui_metadata.primary_metric.label,
+            "reference_metric": auditor_output.ui_metadata.reference_metric.label,
+            "lower_is_better": False,
+            "acceptance_threshold": 0.0,
+            "hard_constraints": ["relative_error <= 1.0", "finite numeric outputs", "parameters within bounds"],
+        }
+
         # Generierungs-Prompt entwerfen
         prompt = f"""
         Schreibe ein eigenständiges Python-Skript, um das folgende physikalische System numerisch zu lösen.
@@ -78,6 +89,15 @@ class ScriptGenerator:
         Die Parameter sind in der Eingabedatei definiert. Ein wichtiger abgeleiteter Koeffizient ist:
         simulation_coefficient = {auditor_output.simulation_coefficient}
         
+        ### VERBINDLICHER METRIC CONTRACT
+        Das Skript MUSS diese Bewertungslogik einhalten und darf keine eigene Zielmetrik erfinden:
+        {json.dumps(objective_metric, ensure_ascii=False, indent=2)}
+
+        `primary_metric_value`, `reference_metric_value` und `performance_gain_pct` muessen konsistent aus diesem Contract abgeleitet werden.
+        Wenn `lower_is_better=true`, ist eine Verringerung der primary_metric gegenueber reference eine Verbesserung.
+        Wenn `lower_is_better=false`, ist eine Erhoehung der primary_metric gegenueber reference eine Verbesserung.
+        Der Wert in `score_field` ist die einzige Optimierungs-Zielgroesse fuer Parameter-Sweeps.
+
         ### ANFORDERUNGEN AN DAS SKRIPT:
         1. CLI-SCHNITTSTELLE: Das Skript MUSS folgende Argumente per argparse akzeptieren:
            --params: Pfad zu einer JSON-Datei mit den Eingangsparametern.

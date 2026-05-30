@@ -83,6 +83,26 @@ class ValidatorUnitTest(unittest.TestCase):
         failed = {check.name for check in result.checks if not check.passed}
         self.assertIn("physics_derivative_boundary_conditions", failed)
 
+    def test_validator_enforces_objective_metric_contract(self):
+        run = valid_run()
+        run["auditor"]["objective_metric"] = {
+            "objective_name": "Damage Reduction",
+            "score_field": "performance_gain_pct",
+            "direction": "maximize",
+            "primary_metric": "Damage Risk",
+            "reference_metric": "Reference Damage Risk",
+            "lower_is_better": True,
+            "acceptance_threshold": 0.0,
+            "hard_constraints": ["relative_error <= 1.0"],
+        }
+        run["simulator"]["performance_gain_pct"] = -12.0
+
+        result = validate_run_data(run)
+
+        self.assertEqual(result.status, "warn")
+        failed = {check.name for check in result.checks if not check.passed}
+        self.assertIn("objective_metric_contract", failed)
+
 
 if __name__ == "__main__":
     unittest.main()

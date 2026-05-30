@@ -110,6 +110,20 @@ class UIMetadata(BaseModel):
     reference_metric: MetricMetadata = Field(description="Metadata for reference solver metric")
     performance_gain: MetricMetadata = Field(description="Metadata for performance gain metric")
 
+class ObjectiveMetricContract(BaseModel):
+    objective_name: str = Field(description="Human-readable optimization objective name")
+    score_field: str = Field(default="performance_gain_pct", description="Simulator output field used for ranking")
+    direction: str = Field(default="maximize", description="Either 'maximize' or 'minimize'")
+    primary_metric: str = Field(description="Name of the primary solver metric")
+    reference_metric: str = Field(description="Name of the reference metric")
+    lower_is_better: bool = Field(default=False, description="Whether lower primary metric values are preferable")
+    acceptance_threshold: float = Field(default=0.0, description="Minimum acceptable score when maximizing, maximum acceptable score when minimizing")
+    hard_constraints: List[str] = Field(default_factory=lambda: [
+        "relative_error <= 1.0",
+        "parameters within bounds",
+        "finite numeric outputs",
+    ], description="Non-negotiable constraints for accepting solver or sweep results")
+
 class AuditorOutput(BaseModel):
     audit_passed: bool = Field(description="True if the parameters are physically plausible and safe for simulator execution")
     audit_notes: str = Field(description="Detailed notes explaining the checks performed, reasons for success/failure, or adjustments made")
@@ -118,6 +132,7 @@ class AuditorOutput(BaseModel):
     simulation_coefficient: float = Field(description="Derived core coefficient (e.g., slip length, heat transfer coefficient) used directly in the simulator boundary/PDE equations")
     solver_method: str = Field(description="The selected solver method: 'analytical', 'scipy', or 'pinn'")
     ui_metadata: UIMetadata = Field(description="Metadata describing labels, units, and axes for dynamic UI rendering")
+    objective_metric: Optional[ObjectiveMetricContract] = Field(default=None, description="Contract defining how solver outputs are ranked and accepted")
 
     @property
     def audited_parameters_dict(self) -> Dict[str, float]:
