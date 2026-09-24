@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 # Adjust path to import vectornaut
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from vectornaut.config import MinerOutput, ParameterProposal, AuditorOutput, AuditedParameter, DimensionlessNumber
 from vectornaut.solver_dispatcher import dispatch_and_solve

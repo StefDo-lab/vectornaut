@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List
 
 # Ensure correct pathing
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 load_dotenv()
 

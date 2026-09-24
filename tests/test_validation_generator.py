@@ -6,7 +6,7 @@ import json
 from unittest.mock import MagicMock
 
 # Make sure we can import vectornaut
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from vectornaut.config import (
     MinerOutput, AuditorOutput, ParameterProposal, AuditedParameter,
