@@ -172,6 +172,9 @@ def _solve_2d(
     bcs: List[str],
     params: Dict[str, float]
 ) -> SimulatorOutput:
+    # Imported here (not with the re-exports above) to keep this helper local to the 2D path.
+    from .solvers.solvers_2d import parse_bcs_2d
+
     x_name = miner_output.independent_variables[0]
     y_name = miner_output.independent_variables[1]
     dep_name = miner_output.dependent_variables[0]
@@ -185,22 +188,10 @@ def _solve_2d(
 
     rhs_expr = parse_rhs_2d(rhs_str, x_name, y_name, params)
 
-    bcs_parsed = {}
-    for bc_str in bcs:
-        try:
-            edge, bc_type, val = parse_bc_2d_string(bc_str, dep_name, miner_output.independent_variables, params)
-            bcs_parsed[edge] = {'type': bc_type, 'value': val}
-        except Exception as e:
-            print(f"[*] Error parsing 2D boundary condition {bc_str}: {e}")
-
-    for edge in ['left', 'right', 'bottom', 'top']:
-        if edge not in bcs_parsed:
-            if edge == 'left':
-                bcs_parsed[edge] = {'type': 'dirichlet', 'value': params.get('T_hot', params.get('T_wall', 373.0 if dep_name == 'T' else 1.0))}
-            elif edge == 'right':
-                bcs_parsed[edge] = {'type': 'dirichlet', 'value': params.get('T_cold', params.get('T_ambient', 273.0 if dep_name == 'T' else 0.0))}
-            else:
-                bcs_parsed[edge] = {'type': 'neumann', 'value': 0.0}
+    # Parses all edge BCs (constant or varying along the edge) and derives the rectangular
+    # domain from them. Unparseable BCs raise, so the pipeline treats this as a solver
+    # failure; missing edges default to zero flux (see parse_bcs_2d).
+    bcs_parsed, x_bounds, y_bounds = parse_bcs_2d(bcs, dep_name, miner_output.independent_variables, params)
 
     epochs_2d = epochs
     loss_history = []
@@ -209,7 +200,9 @@ def _solve_2d(
     grid_size = 20
 
     # Reference solver: 2D FDM
-    x_vals, y_vals, u_fdm = solve_fdm_2d(rhs_expr, bcs_parsed, x_sym, y_sym, grid_size=grid_size)
+    x_vals, y_vals, u_fdm = solve_fdm_2d(
+        rhs_expr, bcs_parsed, x_sym, y_sym, grid_size=grid_size, x_bounds=x_bounds, y_bounds=y_bounds
+    )
 
     sample_points_2d = []
     solution_reference_2d = []
@@ -221,6 +214,14 @@ def _solve_2d(
     method_requested = auditor_output.solver_method.lower()
     if method_requested not in ["pinn", "fdm"]:
         method_requested = "pinn"
+
+    # The PINN cache is keyed on the domain as well (this also skips models cached by older
+    # versions, which always trained on the unit square).
+    cache_params = dict(params)
+    cache_params.update({
+        "_domain_x_min": float(x_bounds[0]), "_domain_x_max": float(x_bounds[1]),
+        "_domain_y_min": float(y_bounds[0]), "_domain_y_max": float(y_bounds[1]),
+    })
 
     solution_primary_2d = []
     if method_requested == "pinn":
@@ -241,14 +242,15 @@ def _solve_2d(
                 loaded_message="[*] Loaded pre-trained 2D model successfully.",
                 gov_eq=gov_eq,
                 bcs=bcs,
-                params=params,
+                params=cache_params,
                 build_model=lambda: GenericPINN(input_dim=2, hidden_dim=32),
                 on_loaded=_use_cached_model,
             )
 
             if not pretrained_loaded:
                 model, loss_history = solve_pytorch_pinn_2d(
-                    rhs_expr, bcs_parsed, x_sym, y_sym, epochs=epochs_2d
+                    rhs_expr, bcs_parsed, x_sym, y_sym, epochs=epochs_2d,
+                    x_bounds=x_bounds, y_bounds=y_bounds
                 )
                 epochs_trained = epochs_2d
                 final_loss = loss_history[-1]
@@ -264,7 +266,7 @@ def _solve_2d(
                     design_name=miner_output.design_name,
                     gov_eq=gov_eq,
                     bcs=bcs,
-                    params=params,
+                    params=cache_params,
                     final_loss=final_loss,
                     loss_history=loss_history,
                 )
@@ -275,10 +277,52 @@ def _solve_2d(
     if method_requested == "fdm" or not solution_primary_2d:
         method_requested = "fdm"
         solution_primary_2d = solution_reference_2d
+        # The primary solution is the FDM field itself, so use an FDM solve on a grid refined
+        # by a factor of 2 as the reference: its nodes contain the primary grid, and
+        # relative_error then estimates the discretisation error of the primary solution.
+        fine_size = 2 * (grid_size - 1) + 1
+        _, _, u_fine = solve_fdm_2d(
+            rhs_expr, bcs_parsed, x_sym, y_sym, grid_size=fine_size, x_bounds=x_bounds, y_bounds=y_bounds
+        )
+        u_fine_at_samples = u_fine[::2, ::2]
+        solution_reference_2d = [
+            float(u_fine_at_samples[i, j]) for i in range(grid_size) for j in range(grid_size)
+        ]
 
     primary_metric = float(np.mean(solution_primary_2d))
     reference_metric = float(np.mean(solution_reference_2d))
-    performance_gain = min(99.0, max(0.0, auditor_output.simulation_coefficient * 100.0))
+
+    # Performance gain, as in 1D: change of the primary metric (mean field value) relative to a
+    # baseline solve without the bionic effect, i.e. with the simulation coefficient and its
+    # aliases set to 0: gain = (1 - primary / baseline) * 100. If the equation and BCs do not
+    # use the coefficient, the baseline is the same problem and the gain is 0 by definition.
+    coefficient_names = ["simulation_coefficient", "slippage_coefficient", "lambda", "slip_length"]
+    problem_text = " ".join([gov_eq] + list(bcs))
+    used_coefficients = [
+        name for name in coefficient_names
+        if params.get(name, 0.0) != 0.0 and re.search(rf"\b{re.escape(name)}\b", problem_text)
+    ]
+    performance_gain = 0.0
+    if used_coefficients:
+        try:
+            baseline_params = params.copy()
+            for name in coefficient_names:
+                if name in baseline_params:
+                    baseline_params[name] = 0.0
+            baseline_rhs = parse_rhs_2d(rhs_str, x_name, y_name, baseline_params)
+            baseline_bcs, baseline_x_bounds, baseline_y_bounds = parse_bcs_2d(
+                bcs, dep_name, miner_output.independent_variables, baseline_params
+            )
+            _, _, u_baseline = solve_fdm_2d(
+                baseline_rhs, baseline_bcs, x_sym, y_sym, grid_size=grid_size,
+                x_bounds=baseline_x_bounds, y_bounds=baseline_y_bounds
+            )
+            baseline_metric = float(np.mean(u_baseline))
+            if abs(baseline_metric) > 1e-8:
+                performance_gain = (1.0 - (primary_metric / baseline_metric)) * 100.0
+        except Exception as e:
+            print(f"[*] 2D baseline solve (coefficient = 0) failed: {e}. Performance gain set to 0.")
+            performance_gain = 0.0
 
     abs_diff = np.abs(np.array(solution_primary_2d) - np.array(solution_reference_2d))
     ref_norm = np.abs(np.array(solution_reference_2d))
