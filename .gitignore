@@ -17,6 +17,7 @@ saved_models/
 generated_scripts/
 generated_tests/
 eval_runs/
+model_evals/
 static/plots/
 vectornaut.sqlite3
 run_report.json
