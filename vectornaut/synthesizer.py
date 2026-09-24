@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pydantic import BaseModel, Field
-from .config import get_client, MinerOutput, AuditorOutput, SimulatorOutput
+from .config import get_client, get_model_name, get_thinking_config, MinerOutput, AuditorOutput, SimulatorOutput
 
 class SynthesisReport(BaseModel):
     executive_summary: str = Field(description="Eine leicht verständliche Zusammenfassung der bionischen Idee, der physikalischen Funktionsweise und der verwendeten Materialien (auf Deutsch, informelles 'du').")
@@ -50,9 +50,10 @@ class Synthesizer:
 
         client = self.client or get_client()
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model=get_model_name("synthesizer"),
             contents=prompt,
             config=types.GenerateContentConfig(
+                thinking_config=get_thinking_config("synthesizer"),
                 response_mime_type="application/json",
                 response_schema=SynthesisReport,
             )

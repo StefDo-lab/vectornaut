@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 
-from vectornaut.config import AuditorOutput, MinerOutput
+from vectornaut.config import AuditorOutput, MinerOutput, get_model_name
 from vectornaut.runtime_guards import run_limits, validate_simulator_output
 from vectornaut.validator import validate_run_output
 
@@ -212,6 +212,13 @@ class PipelineRunner:
         sim_output = None
         validation_result = None
         optimization_history = []
+        # Stages that made a live model call in this run (recorded as result["models"]).
+        live_stages: List[str] = []
+
+        def _record_live_stage(*stages: str) -> None:
+            for stage in stages:
+                if stage not in live_stages:
+                    live_stages.append(stage)
 
         max_concept_attempts = 3
         concept_failed = False
@@ -236,6 +243,7 @@ class PipelineRunner:
                 else:
                     concept = self.miner.mine_design(req.query, failed_concepts=failed_concepts)
                     miner_output = self.formulator.formulate_model(req.query, concept)
+                    _record_live_stage("miner", "formulator")
 
             print(f"[+] Concept Mined & Formulated: {miner_output.design_name}")
 
@@ -258,6 +266,7 @@ class PipelineRunner:
                         override_parameters=active_overrides,
                         user_query=req.query,
                     )
+                    _record_live_stage("auditor")
 
                 if not auditor_output.audit_passed:
                     print(f"[-] Auditor failed at round {round_idx}: {auditor_output.audit_notes}")
@@ -270,6 +279,12 @@ class PipelineRunner:
                     break
 
                 try:
+                    if (
+                        not effective_mock
+                        and self.solver is None
+                        and str(getattr(auditor_output, "solver_method", "") or "").lower() == "dynamic_script"
+                    ):
+                        _record_live_stage("script_generator", "test_generator")
                     sim_output = self._solve(
                         miner_output=miner_output,
                         auditor_output=auditor_output,
@@ -337,6 +352,7 @@ class PipelineRunner:
                         opt_decision = self.optimizer.mock_optimize(miner_output, optimization_history)
                     else:
                         opt_decision = self.optimizer.optimize(miner_output, optimization_history)
+                        _record_live_stage("optimizer")
 
                     round_data["optimizer_reasoning"] = opt_decision.reasoning
                     print(f"[+] Optimizer reasoning: {opt_decision.reasoning}")
@@ -382,6 +398,7 @@ class PipelineRunner:
                 simulator_output=sim_output,
                 user_query=req.query,
             )
+            _record_live_stage("synthesizer")
         print("[+] Synthesis report generated successfully.")
         if validation_result is None:
             validation_result = self._validation_for(
@@ -407,6 +424,7 @@ class PipelineRunner:
             "optimization_history": optimization_history,
             "synthesis": synthesis_report.model_dump(),
             "failed_concepts": failed_concepts,
+            "models": {stage: get_model_name(stage) for stage in live_stages},
         }
 
     def compare_solvers(

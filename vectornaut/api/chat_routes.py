@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from vectornaut.config import get_client
+from vectornaut.config import get_client, get_model_name, get_thinking_config
 
 router = APIRouter(prefix="/api", tags=["chat"])
 class ChatMessage(BaseModel):
@@ -299,9 +299,10 @@ async def chat_with_assistant(req: ChatRequest):
             full_prompt += context_prompt
             
             response = client.models.generate_content(
-                model="gemini-3.5-flash",
+                model=get_model_name("chat"),
                 contents=full_prompt,
                 config=types.GenerateContentConfig(
+                    thinking_config=get_thinking_config("chat"),
                     response_mime_type="application/json",
                     response_schema=GeminiChatResponse,
                 )

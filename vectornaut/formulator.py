@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import json
-from .config import get_client, MinerConceptOutput, ModelFormulation, MinerOutput
+from .config import get_client, get_model_name, get_thinking_config, MinerConceptOutput, ModelFormulation, MinerOutput
 
 class ModelFormulator:
-    def __init__(self, client=None, thinking_level: str = "medium"):
+    def __init__(self, client=None, thinking_level: str = None):
         """
         Initializes the ModelFormulator agent.
         The thinking_level can be set to "low", "medium", or "high" to customize Gemini's planning depth.
+        If omitted, VECTORNAUT_THINKING_FORMULATOR is used, falling back to "medium".
         """
         self.client = client
         self.thinking_level = thinking_level
@@ -14,7 +15,8 @@ class ModelFormulator:
     def formulate_model(self, query: str, concept: MinerConceptOutput, thinking_level: str = None) -> MinerOutput:
         """
         Formulates a rigorous, mathematically consistent physical model (ODE/PDE, boundary conditions, vars)
-        based on the provided bionic concept using gemini-3.5-flash with thinking.
+        based on the provided bionic concept using the configured formulator model with thinking.
+        An explicit thinking_level (call argument, then constructor) wins over VECTORNAUT_THINKING_FORMULATOR.
         """
         from google.genai import types
 
@@ -63,12 +65,10 @@ class ModelFormulator:
 
         client = self.client or get_client()
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model=get_model_name("formulator"),
             contents=prompt,
             config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(
-                    thinking_level=active_thinking_level
-                ),
+                thinking_config=get_thinking_config("formulator", default="medium", override=active_thinking_level),
                 response_mime_type="application/json",
                 response_schema=ModelFormulation,
             )

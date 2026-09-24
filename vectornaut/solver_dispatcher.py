@@ -75,7 +75,7 @@ def dispatch_and_solve(
     bcs = miner_output.boundary_conditions
 
     # Merge audited parameters and simulation coefficient
-    params = _merged_params(auditor_output)
+    merged = _merged_params(auditor_output)
 
     # Auto-detect and inject missing parameters used in equations or BCs
     params = auto_detect_and_inject_missing_params(
@@ -83,19 +83,21 @@ def dispatch_and_solve(
         bcs_list=bcs,
         independent_vars=miner_output.independent_variables,
         dependent_vars=miner_output.dependent_variables,
-        params=params
+        params=merged
     )
-    # Update back to audited_parameters_dict so that they are saved in history and synthesis
-    for k, v in params.items():
-        if k not in auditor_output.audited_parameters_dict:
-            auditor_output.audited_parameters_dict[k] = v
+    # Record the injected defaults on the auditor output so that they are saved in
+    # history and synthesis. audited_parameters_dict is a read-only view, so the
+    # AuditedParameter list itself has to be extended.
+    injected = {k: v for k, v in params.items() if k not in merged}
+    if injected:
+        auditor_output.add_injected_parameters(injected)
 
     is_2d = len(miner_output.independent_variables) == 2
     if is_2d:
         return _solve_2d(miner_output, auditor_output, epochs, gov_eq, bcs, params)
 
     # 1D flow continues here
-    return _solve_1d(miner_output, auditor_output, epochs, gov_eq, bcs)
+    return _solve_1d(miner_output, auditor_output, epochs, gov_eq, bcs, params)
 
 
 def _solve_dynamic_script(
@@ -302,13 +304,15 @@ def _solve_1d(
     auditor_output: AuditorOutput,
     epochs: int,
     gov_eq: str,
-    bcs: List[str]
+    bcs: List[str],
+    params: Dict[str, float]
 ) -> SimulatorOutput:
     x_name = miner_output.independent_variables[0]
     y_name = miner_output.dependent_variables[0]
 
-    # Merge audited parameters and simulation coefficient
-    params = _merged_params(auditor_output)
+    # params: audited parameters merged with the simulation coefficient aliases and
+    # auto-injected defaults (see dispatch_and_solve)
+    params = params.copy()
 
     # Identify domain bounds
     domain_min, domain_max = get_domain_bounds(bcs, params)

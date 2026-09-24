@@ -65,9 +65,12 @@ Response shape:
   "optimization_history": [],
   "synthesis": {},
   "failed_concepts": [],
+  "models": {},
   "report_md": "..."
 }
 ```
+
+`models` maps each pipeline stage that made a live Gemini call in this run to the model name it used, e.g. `{"miner": "gemini-3.5-flash", "formulator": "gemini-3.5-flash", "auditor": "gemini-3.5-flash", "optimizer": "gemini-3.5-flash", "synthesizer": "gemini-3.5-flash"}`. `script_generator` and `test_generator` appear when a `dynamic_script` solve was attempted. In mock mode it is an empty object. Runs archived before this field existed do not contain it. See `docs/OPERATIONS.md` for the `VECTORNAUT_MODEL*` variables.
 
 ## History
 

@@ -24,6 +24,22 @@ VECTORNAUT_SCRIPT_TIMEOUT_SECONDS=60
 
 If `GEMINI_API_KEY` is missing, `/api/run` falls back to mock mode unless the lower-level live model call is explicitly reached.
 
+### Model and thinking level per stage
+
+Every stage that calls Gemini resolves its model at call time, so changing the environment takes effect without code changes:
+
+```text
+VECTORNAUT_MODEL_<STAGE>   -> model for one stage, e.g. VECTORNAUT_MODEL_AUDITOR=<model-id>
+VECTORNAUT_MODEL           -> model for all stages without a stage-specific value
+(default)                  -> gemini-3.5-flash
+```
+
+Stage names: `MINER`, `FORMULATOR`, `AUDITOR`, `OPTIMIZER`, `SYNTHESIZER`, `SCRIPT_GENERATOR`, `TEST_GENERATOR`, `CHAT`.
+
+The thinking level can be set per stage with `VECTORNAUT_THINKING_<STAGE>` (`minimal`, `low`, `medium`, `high`). Invalid values are ignored with a warning and the stage default is used. Defaults: miner `medium`, formulator `medium`, auditor `high`; all other stages send no thinking config unless the variable is set. An explicit `thinking_level` passed to `ModelFormulator(...)` or `formulate_model(...)` wins over the environment.
+
+Live `/api/run` responses list the model used per stage under `models`.
+
 ## Storage
 
 The current storage model is hybrid:

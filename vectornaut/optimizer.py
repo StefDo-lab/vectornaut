@@ -2,7 +2,7 @@
 import os
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
-from .config import get_client, MinerOutput
+from .config import get_client, get_model_name, get_thinking_config, MinerOutput
 
 class ParameterAdjustment(BaseModel):
     name: str = Field(description="Name des Parameters, der angepasst werden soll")
@@ -76,9 +76,10 @@ class Optimizer:
 
         client = self.client or get_client()
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model=get_model_name("optimizer"),
             contents=prompt,
             config=types.GenerateContentConfig(
+                thinking_config=get_thinking_config("optimizer"),
                 response_mime_type="application/json",
                 response_schema=OptimizerDecision,
             )

@@ -30,6 +30,80 @@ def get_client():
             # The client will check GEMINI_API_KEY env variable automatically
             return genai.Client()
 
+# ==========================================
+# Per-stage model / thinking configuration
+# ==========================================
+
+DEFAULT_MODEL_NAME = "gemini-3.5-flash"
+
+# Pipeline stages that call the model. Each can be configured via
+# VECTORNAUT_MODEL_<STAGE> / VECTORNAUT_THINKING_<STAGE> (stage name upper-cased).
+MODEL_STAGES = (
+    "miner",
+    "formulator",
+    "auditor",
+    "optimizer",
+    "synthesizer",
+    "script_generator",
+    "test_generator",
+    "chat",
+)
+
+# Thinking levels accepted by google-genai's ThinkingConfig.thinking_level.
+THINKING_LEVELS = ("minimal", "low", "medium", "high")
+
+def _stage_env_suffix(stage: str) -> str:
+    normalized = (stage or "").strip().lower()
+    if normalized not in MODEL_STAGES:
+        raise ValueError(f"Unknown model stage '{stage}'. Expected one of: {', '.join(MODEL_STAGES)}")
+    return normalized.upper()
+
+def get_model_name(stage: str) -> str:
+    """
+    Resolves the Gemini model for a pipeline stage at call time:
+    VECTORNAUT_MODEL_<STAGE> -> VECTORNAUT_MODEL -> DEFAULT_MODEL_NAME.
+    """
+    suffix = _stage_env_suffix(stage)
+    for env_name in (f"VECTORNAUT_MODEL_{suffix}", "VECTORNAUT_MODEL"):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return value
+    return DEFAULT_MODEL_NAME
+
+def normalize_thinking_level(value: Optional[str]) -> Optional[str]:
+    """Returns the lower-cased thinking level if it is valid, otherwise None."""
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return normalized if normalized in THINKING_LEVELS else None
+
+def get_thinking_level(stage: str, default: Optional[str] = None) -> Optional[str]:
+    """
+    Resolves the thinking level for a pipeline stage at call time:
+    VECTORNAUT_THINKING_<STAGE> -> default. Invalid values fall back to default.
+    A default of None means the stage sends no thinking config.
+    """
+    env_name = f"VECTORNAUT_THINKING_{_stage_env_suffix(stage)}"
+    raw = os.environ.get(env_name, "").strip()
+    if raw:
+        level = normalize_thinking_level(raw)
+        if level:
+            return level
+        print(f"[!] Ignoring invalid {env_name}='{raw}' (allowed: {', '.join(THINKING_LEVELS)}). Using default: {default}")
+    return default
+
+def get_thinking_config(stage: str, default: Optional[str] = None, override: Optional[str] = None):
+    """
+    Builds the google-genai ThinkingConfig for a stage, or None if the stage runs
+    without thinking. An explicit override (e.g. a constructor/call argument) wins
+    over the environment.
+    """
+    level = override or get_thinking_level(stage, default)
+    if not level:
+        return None
+    from google.genai import types
+    return types.ThinkingConfig(thinking_level=level)
+
 class ParameterProposal(BaseModel):
     name: str = Field(description="Name of the parameter, e.g., riblet_height, riblet_spacing, viscosity")
     value: float = Field(description="Proposed initial value of the parameter")
@@ -136,7 +210,30 @@ class AuditorOutput(BaseModel):
 
     @property
     def audited_parameters_dict(self) -> Dict[str, float]:
+        # Read-only view: a fresh dict on every access, writes to it are discarded.
+        # Use add_injected_parameters() to record additional parameters.
         return {p.name: p.value for p in self.audited_parameters}
+
+    def add_injected_parameters(self, params: Dict[str, float]) -> List[str]:
+        """
+        Records parameters that were not audited (e.g. defaults auto-injected by the
+        solver for symbols missing in the equations/BCs) so they show up in history,
+        synthesis and the API response. Existing audited values are never overwritten.
+        Returns the names that were added.
+        """
+        existing = {p.name for p in self.audited_parameters}
+        added = []
+        for name, value in params.items():
+            if name in existing:
+                continue
+            self.audited_parameters.append(AuditedParameter(name=name, value=float(value)))
+            existing.add(name)
+            added.append(name)
+        if added:
+            injected_desc = ", ".join(f"{name}={float(params[name]):g}" for name in added)
+            note = f"Automatisch ergänzte Standardparameter (nicht auditiert): {injected_desc}"
+            self.audit_notes = f"{self.audit_notes}\n{note}" if self.audit_notes else note
+        return added
 
     @property
     def dimensionless_numbers_dict(self) -> Dict[str, float]:

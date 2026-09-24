@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from pydantic import BaseModel, Field
 from google.genai import types
-from .config import get_client, MinerOutput, AuditorOutput
+from .config import get_client, get_model_name, get_thinking_config, MinerOutput, AuditorOutput
 from .storage import data_path
 
 class GeneratedTestScriptResponse(BaseModel):
@@ -129,9 +129,10 @@ class TestScriptGenerator:
         while correction_iteration < max_iterations:
             print(f"[*] Generating test script iteration {correction_iteration + 1}...")
             response = self.client.models.generate_content(
-                model="gemini-3.5-flash",
+                model=get_model_name("test_generator"),
                 contents=current_prompt,
                 config=types.GenerateContentConfig(
+                    thinking_config=get_thinking_config("test_generator"),
                     response_mime_type="application/json",
                     response_schema=GeneratedTestScriptResponse,
                 )

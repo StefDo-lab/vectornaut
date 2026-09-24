@@ -1,5 +1,5 @@
 import math
-from .config import get_client, MinerOutput, AuditorOutput, AuditedParameter, DimensionlessNumber, ObjectiveMetricContract
+from .config import get_client, get_model_name, get_thinking_config, MinerOutput, AuditorOutput, AuditedParameter, DimensionlessNumber, ObjectiveMetricContract
 
 def extract_param(params_dict, keys, default):
     for key in keys:
@@ -14,7 +14,8 @@ class Auditor:
     def audit_design(self, miner_output: MinerOutput, override_parameters: dict = None, user_query: str = None) -> AuditorOutput:
         """
         Audits proposed parameters against physical constraints.
-        Enforces thinking_level="high" for deep physical reasoning.
+        Uses thinking_level="high" by default for deep physical reasoning
+        (override via VECTORNAUT_MODEL_AUDITOR / VECTORNAUT_THINKING_AUDITOR).
         """
         from google.genai import types
 
@@ -76,12 +77,10 @@ class Auditor:
 
         client = self.client or get_client()
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model=get_model_name("auditor"),
             contents=prompt,
             config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(
-                    thinking_level="high"
-                ),
+                thinking_config=get_thinking_config("auditor", default="high"),
                 response_mime_type="application/json",
                 response_schema=AuditorOutput,
             )

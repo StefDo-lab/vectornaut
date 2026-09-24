@@ -1,4 +1,4 @@
-from .config import get_client, MinerConceptOutput, ParameterProposal
+from .config import get_client, get_model_name, get_thinking_config, MinerConceptOutput, ParameterProposal
 
 class Miner:
     def __init__(self, client=None):
@@ -7,7 +7,8 @@ class Miner:
     def mine_design(self, query: str, failed_concepts: list = None) -> MinerConceptOutput:
         """
         Explores bionics/materials spaces and outputs structured design targets.
-        Uses gemini-3.5-flash with thinking_level="medium".
+        Uses the configured miner model (default gemini-3.5-flash) with thinking_level="medium"
+        (override via VECTORNAUT_MODEL_MINER / VECTORNAUT_THINKING_MINER).
         Supports re-mining feedback.
         """
         import json
@@ -59,12 +60,10 @@ class Miner:
 
         client = self.client or get_client()
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model=get_model_name("miner"),
             contents=prompt,
             config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(
-                    thinking_level="medium"
-                ),
+                thinking_config=get_thinking_config("miner", default="medium"),
                 response_mime_type="application/json",
                 response_schema=MinerConceptOutput,
             )
