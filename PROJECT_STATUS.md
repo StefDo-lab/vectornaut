@@ -1,73 +1,103 @@
 # Vectornaut Omni - Project Status & Handoff Protocol
 
-This document serves as the single source of truth for the **Vectornaut Omni** project state. It is designed to quickly bring any successor AI agent up to speed when starting a new session.
+This document is the single source of truth for the **Vectornaut Omni** project state. It is meant to bring any new contributor (human or AI agent) up to speed quickly at the start of a session.
+
+Last reviewed: 2026-09-24
 
 ---
 
 ## 🎯 Project Overview & Core Goals
 
-**Vectornaut Omni** is an evolution of a specialized "shark-skin drag simulator" into an open-ended, multi-domain physics solver platform. 
-* **Target Vision**: A comprehensive, web-based dashboard where users can input design prompts (e.g., riblet structures, thermal shields, wings), which are then analyzed, simulated, and visualized.
+**Vectornaut Omni** grew out of a specialized "shark-skin drag simulator" into an open-ended, multi-domain physics solver platform.
+* **Target Vision**: A web dashboard where users enter design prompts (e.g., riblet structures, thermal shields, wings), which are then turned into physics models, simulated, validated, and reported.
 * **Core Domains**: Fluid dynamics (drag reduction, boundary layers), thermodynamics (heat transfer, transient shields), structural mechanics, and general 1D/2D partial differential equations (PDEs).
 
 ---
 
-## 🏗️ System Architecture & File Structure
+## 🔁 Pipeline
 
-The project resides in:
-* `C:\Users\Stefan\.gemini\antigravity\scratch\vectornaut_project`
+`vectornaut/pipeline.py` (`PipelineRunner`) runs each request through these stages:
 
-Key files and components:
-* **[web_server.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/web_server.py)**: FastAPI web server running the backend API (port `8080`).
-* **`vectornaut/`**:
-  * **[auditor.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/vectornaut/auditor.py)**: Audits design prompts, determines equations, boundary conditions, and routes to appropriate solvers.
-  * **[solver_dispatcher.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/vectornaut/solver_dispatcher.py)**: Routes requests to specific solver backends and processes outputs.
-  * **[script_generator.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/vectornaut/script_generator.py)**: Generates and runs Python simulation scripts with an automated self-correction loop.
-  * **[pinn_solver.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/vectornaut/pinn_solver.py)**: Physics-Informed Neural Network solver for 2D PDEs.
-  * **[fdm_solver.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/vectornaut/fdm_solver.py)**: Finite Difference Method solver for 2D PDEs.
-* **`static/`**:
-  * **[index.html](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/static/index.html)**: Premium dark-mode dashboard UI.
-  * **[app.js](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/static/app.js)**: Client-side frontend logic (API calls, heatmap rendering, marked.js integration).
-  * **[style.css](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/static/style.css)**: CSS stylesheets (Harmonious bionic styling).
-* **`generated_scripts/`**: Directory where the autonomous Python solver scripts are saved.
-* **`static/plots/`**: Location where custom Matplotlib charts from dynamic solver scripts are served.
+1. **Miner** (`miner.py`): finds a bio-inspired concept for the query (Gemini).
+2. **Formulator** (`formulator.py`): turns the concept into a governing equation, boundary conditions, and parameters (Gemini).
+3. **Auditor** (`auditor.py`): checks physical plausibility and material limits and picks a solver method (Gemini). Queries containing `script`, `skript`, `dynamic solver`, or `custom solver` are routed to `dynamic_script`.
+4. **Solver** (`solver_dispatcher.py` + `solvers/`): solves the model (see below).
+5. **Validator** (`validator.py`): deterministic, non-AI checks of the solver output. It returns `accept`, `rerun_solver`, or `remine`. Warnings trigger automatic fallback to other solver methods.
+6. **Optimizer** (`optimizer.py`): proposes parameter updates across optimization rounds (Gemini).
+7. **Synthesizer / Reporting** (`synthesizer.py`, `reporting.py`): writes the practical/commercial summary and the Markdown run report, then archives the run.
+
+Without `GEMINI_API_KEY`, `/api/run` falls back to mock mode, so the pipeline and tests work offline.
 
 ---
 
-## 🚀 Current Status & Key Features Implemented
+## 🏗️ Repository Layout
 
-### 1. Autonomous Script Solver (`dynamic_script`)
-* **Self-Correction Loop**: When users query a physical scenario containing script-keywords (e.g. `"script"`, `"skript"`, `"dynamic solver"`), the system writes a custom Python script using the Gemini API.
-* **Execution & Verification**: The script is executed in a subprocess. If it crashes (e.g., division by zero, library errors), the error traceback is sent back to Gemini. The script is corrected and re-run (up to 3 attempts).
-* **Plotting & Visualization**: Generates custom Matplotlib plots, which are saved to `static/plots/` and dynamically rendered in the UI with a cache-busting timestamp parameter (`?t=...`).
+```text
+web_server.py            FastAPI app (port 8080), mounts routes from vectornaut/api/
+main.py                  Command-line entry point
+vectornaut/
+  api/                   HTTP routes: run, chat, history, eval, system (health)
+  pipeline.py            Pipeline orchestration, solver fallback, solver comparison
+  miner.py, formulator.py, auditor.py, optimizer.py, synthesizer.py   Gemini-backed stages
+  validator.py           Deterministic result validation
+  evaluation.py, benchmark.py   Eval records and the deterministic quality benchmark
+  solver_dispatcher.py   Solver entry point: dispatch_and_solve() routes to 1D / 2D / dynamic script
+  solvers/
+    parsing.py           1D equation/BC parsing, missing-parameter detection, domain bounds
+    pinn_model.py        GenericPINN network shared by 1D and 2D PINN solvers
+    solvers_1d.py        SymPy analytical, SciPy BVP, 1D PINN
+    solvers_2d.py        2D parsing, 2D FDM, 2D PINN
+    model_cache.py       Save/reuse trained PINN models
+    dynamic_script.py    Objective contract, parameter sweep, generated-script validation
+  script_generator.py    Gemini writes a Python solver script, runs it, self-corrects (up to 3 attempts)
+  test_generator.py      Gemini writes validation test scripts for generated solvers
+  runtime_guards.py      Epoch/round limits and solver output sanity checks
+  storage.py             Data directory paths and SQLite history index
+  config.py              Pydantic schemas and Gemini client
+static/                  Dashboard UI (index.html, app.js, style.css)
+benchmarks/eval_cases.json   Benchmark cases (known-good, warning, failing profiles)
+tests/                   Stable offline suite (unittest discovery)
+tests/live/              Tests needing a running server, network, or GEMINI_API_KEY
+tests/manual/            Offline scripts run by hand (solver checks)
+scripts/                 One-off maintenance helpers (see scripts/README.md)
+docs/                    API_CONTRACT.md, OPERATIONS.md, TESTING.md
+```
 
-### 2. 2D PDE Solvers (FDM & PINN)
-* **PINN Solver**: A PyTorch-based solver for 2D boundary value problems. Supported by disk-caching of trained networks to prevent redundant CPU/GPU training.
-* **FDM Solver**: A classical grid solver serving as a reference check.
-* **Epoch Synchronization**: The UI epoch slider dynamically configures the solver's training epochs. Loaded cache files correctly identify trained epoch length.
-
-### 3. Premium UI & Markdown Report
-* **Marked.js Integration**: The "Discovery Report" is rendered from markdown using custom CSS (blockquotes, clean tables, code blocks).
-* **Developer Controls**: Features a "Toggle Developer JSON" and "Download Raw JSON" button.
-* **Optimization Chat History**: The chat history is preserved during consecutive parameter optimization runs (tracked via `keepChatHistory` JS flag).
+Runtime data (history, reports, eval runs, generated scripts/tests, saved models, SQLite index) is written under `VECTORNAUT_DATA_DIR` (default: the current directory) and ignored by Git. Plots from dynamic scripts go to `static/plots/` so the web server can serve them.
 
 ---
 
-## 🧪 Verification & Unit Tests
+## 🚀 Current Status
 
-The codebase includes several active verification test scripts:
-* **[test_script_generator.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/test_script_generator.py)**: Mocks script crashes and verifies that the self-correction loop successfully heals the code.
-* **[test_live_script_solver.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/test_live_script_solver.py)**: Performs a live end-to-end API call to verify automatic routing, script generation, and plotting.
-* **[test_parameter_propagation.py](file:///C:/Users/Stefan/.gemini/antigravity/scratch/vectornaut_project/test_parameter_propagation.py)**: Verifies that consecutive optimization runs correctly propagate override parameters (e.g., `slip_length`).
+* **Working prototype.** The full pipeline runs end to end in mock mode and with a Gemini key.
+* **Solvers**: SymPy analytical, SciPy BVP, and PyTorch PINN for 1D; FDM and PINN for 2D; generated Python scripts (`dynamic_script`) with a parameter sweep against an objective metric contract.
+* **Validation**: deterministic validator with derivative boundary checks, reliability score, recommended action, and automatic solver fallback.
+* **UI**: dashboard with prompt chips, assistant chat in the left rail, technical run reports rendered from Markdown, history, and developer JSON view/download.
+* **Tests**: `python -m unittest discover -s tests -t .` runs 29 tests (1 skipped live test) offline in a few seconds. `python -m vectornaut.benchmark` matches 3/3 cases. See `docs/TESTING.md`.
+
+### Recent maintenance (2026-09)
+* Trained PINN models are stored under `VECTORNAUT_DATA_DIR/saved_models` (previously always relative to the working directory, which also let separate test runs reuse each other's models).
+* `solver_dispatcher.py` was split into the `vectornaut/solvers/` package (pure refactor, behavior unchanged; old import paths still work).
+* Root-level tests and helper scripts were moved into `tests/`, `tests/live/`, `tests/manual/`, and `scripts/`.
+
+---
+
+## ⚠️ Known Limitations & Open Issues
+
+* **Security**: generated scripts run as plain subprocesses on the host, and the API has no authentication. Fine for local use; do not expose publicly before adding auth and a sandboxed worker (see `docs/OPERATIONS.md`).
+* **Model fidelity**: the physics models are simplified 1D/2D idealizations. Reported gains (e.g., drag reduction percentages) are indicative, not engineering values.
+* **AI model choice**: every Gemini stage uses `gemini-3.5-flash`, hardcoded in each module. There is no per-stage configuration yet, and no benchmark that measures the quality of the AI stages themselves (the current benchmark covers the validator/eval logic only).
+* **Parameter write-back bug**: `AuditorOutput.audited_parameters_dict` builds a new dict on every access, so auto-injected parameters written back to it are lost, and the 1D path's re-merge drops them. Left as-is during the refactor to keep behavior unchanged.
+* **Test runner**: the project uses `unittest`. Running `pytest tests` would also collect `tests/live/` and try to reach a server.
+* **Deletion candidates**: `scripts/read_transcript.py` and `scripts/search_log.py` (hardcoded to one Windows transcript file); several overlapping encoding probes in `tests/live/`.
 
 ---
 
 ## 🔮 Next Steps & Roadmap
 
-When starting a new session, the following tasks are planned:
-1. **Dynamic Test Script Generation**:
-   * Implement an automated routine where Vectornaut writes custom Python integration/validation test scripts *on the fly* to verify newly emerging physical scenarios or simulation parameters.
-2. **Further Extension of Physical Models**:
-   * Add more physical schemas (e.g., structural beam bending, acoustics, multiphase flows) to the default auditor rules.
-3. **Heatmap & Canvas Optimizations**:
-   * Optimize rendering for higher FDM/PINN grid resolutions (e.g., 100x100 points) on the HTML5 Canvas.
+1. **Configurable AI models per stage** (e.g., via environment variables), plus a small set of reference prompts to compare models on the Formulator, Auditor, and script generation stages.
+2. **Fix the parameter write-back bug** in `audited_parameters_dict`.
+3. **Port mock-mode live tests** (`test_api`, `test_chat`, `test_optimizer_live`, `test_remining_live`, `test_parameter_propagation`) to FastAPI `TestClient` so they join the stable suite.
+4. **More physical models**: structural beam bending, acoustics, multiphase flows in the auditor rules.
+5. **Heatmap & canvas performance** for higher FDM/PINN grid resolutions (e.g., 100x100).
+6. **Before any public deployment**: authentication, a job queue, and sandboxed execution of generated scripts.
