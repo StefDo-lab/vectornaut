@@ -1,3 +1,4 @@
+# Offline equivalent (no server needed): tests/test_static_files.py (StaticFilesTest)
 import urllib.request
 
 def test_static():
