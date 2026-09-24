@@ -589,10 +589,9 @@ class TwoDimensionalKnownBugsTest(_TempDataDirTestCase):
         self.assertEqual(run.sim.solver_method, "pinn", run.log)
         self.assertLess(run.errors()["rel_max"], 5e-2)
 
-    # BUG: same torch-printer issue as the 1D PINN (solvers_2d.py:172): a constant source
+    # FIXED (kept as regression test). Was: same torch-printer issue as the 1D PINN (solvers_2d.py:172): a constant source
     # "pi**2 / 4" is printed as pow(3.14159, 2) -> torch.pow(float, int) -> TypeError ->
     # silent FDM fallback. Exact solution u = pi^2 x^2 / 8.
-    @unittest.expectedFailure
     def test_pinn_numeric_constant_source(self):
         case = Case("poisson_pi_constant", "d2u_dx2 + d2u_dy2 = pi**2 / 4",
                     ["u(0, y) = 0", "u(1, y) = pi**2 / 8", "du_dy(x, 0) = 0", "du_dy(x, 1) = 0"], ["x", "y"], "u",
@@ -600,12 +599,11 @@ class TwoDimensionalKnownBugsTest(_TempDataDirTestCase):
         run = self.solve(case, "pinn", epochs=PINN_EPOCHS_2D)
         self.assertEqual(run.sim.solver_method, "pinn", run.log)
 
-    # BUG: parse_bc_2d_string only supports constant edge values (float(...) at
+    # FIXED (kept as regression test). Was: parse_bc_2d_string only supports constant edge values (float(...) at
     # solvers_2d.py:38-40). "u(x, 1) = sin(pi * x)" raises, the exception is swallowed at
     # solver_dispatcher.py:191-192 and the edge is replaced by the default homogeneous
     # Neumann BC (solver_dispatcher.py:194-201). Result: u == 0 everywhere instead of
     # sin(pi x) sinh(pi y)/sinh(pi), with relative_error 0 and no error surfaced.
-    @unittest.expectedFailure
     def test_non_constant_dirichlet_bc(self):
         case = Case("laplace_sin_top", "d2u_dx2 + d2u_dy2 = 0",
                     ["u(0, y) = 0", "u(1, y) = 0", "u(x, 0) = 0", "u(x, 1) = sin(pi * x)"], ["x", "y"], "u",
@@ -613,12 +611,11 @@ class TwoDimensionalKnownBugsTest(_TempDataDirTestCase):
         run = self.solve(case, "fdm")
         self.assertLess(run.errors()["rel_max"], 2e-2)
 
-    # BUG: the 2D solvers hard-code the unit square (solvers_2d.py:91-93, 166-189) and edge
+    # FIXED (kept as regression test). Was: the 2D solvers hard-code the unit square (solvers_2d.py:91-93, 166-189) and edge
     # detection only recognises coordinates 0 and 1 (solvers_2d.py:47-68). "T(2, y) = 2"
     # falls through to edge='left' (overwriting T(0, y) = 0), and the now-missing right
     # edge is filled with the default T = 273 K (solver_dispatcher.py:199). Exact: T = x on
     # [0, 2] x [0, 1]; the solver returns ~137 K on [0, 1]^2.
-    @unittest.expectedFailure
     def test_non_unit_domain(self):
         case = Case("laplace_wide_slab", "d2T_dx2 + d2T_dy2 = 0",
                     ["T(0, y) = 0", "T(2, y) = 2", "dT_dy(x, 0) = 0", "dT_dy(x, 1) = 0"], ["x", "y"], "T",
@@ -627,21 +624,19 @@ class TwoDimensionalKnownBugsTest(_TempDataDirTestCase):
         self.assertAlmostEqual(float(run.points[:, 0].max()), 2.0)
         self.assertLess(run.errors()["rel_max"], 1e-2)
 
-    # BUG (misleading metric): for solver_method='fdm' the primary solution *is* the
+    # FIXED (kept as regression test). Was: for solver_method='fdm' the primary solution *is* the
     # reference (solver_dispatcher.py:273-275), so relative_error is identically 0 however
     # wrong the field is -- here the O(h) Neumann edge leaves a 4 % L2 error vs the exact
     # solution, and in test_non_constant_dirichlet_bc a 100 % error, both reported as 0.
-    @unittest.expectedFailure
     def test_fdm_relative_error_reflects_discretisation_error(self):
         run = self.solve(CASES_2D["poisson_neumann_flux"], "fdm")
         true_err = run.errors()["rel_l1_like_app"]
         self.assertGreater(true_err, 0.01)
         self.assertGreaterEqual(run.sim.relative_error, 0.1 * true_err)
 
-    # BUG (fabricated metric): in 2D, performance_gain_pct = clamp(simulation_coefficient *
+    # FIXED (kept as regression test). Was: in 2D, performance_gain_pct = clamp(simulation_coefficient *
     # 100, 0, 99) (solver_dispatcher.py:279) regardless of the solution. The coefficient
     # does not appear in this problem, yet the "gain" goes 0 % -> 90 %.
-    @unittest.expectedFailure
     def test_performance_gain_independent_of_unused_coefficient(self):
         base = CASES_2D["laplace_linear_x"]
         gains = []
