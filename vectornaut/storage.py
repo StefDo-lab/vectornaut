@@ -26,6 +26,10 @@ def eval_runs_dir() -> str:
     return data_path("eval_runs")
 
 
+def models_dir() -> str:
+    return data_path("saved_models")
+
+
 def sqlite_path() -> str:
     return data_path("vectornaut.sqlite3")
 

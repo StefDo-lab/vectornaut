@@ -16,6 +16,7 @@ from scipy.interpolate import interp1d
 from typing import Dict, List, Tuple, Any
 
 from .config import SimulatorOutput, MinerOutput, AuditorOutput
+from .storage import models_dir
 
 
 def _dynamic_objective_contract(auditor_output: AuditorOutput) -> Dict[str, Any]:
@@ -1038,10 +1039,10 @@ def dispatch_and_solve(
             try:
                 pretrained_loaded = False
                 try:
-                    if os.path.exists("saved_models"):
-                        for f_name in sorted(os.listdir("saved_models"), reverse=True):
+                    if os.path.exists(models_dir()):
+                        for f_name in sorted(os.listdir(models_dir()), reverse=True):
                             if f_name.endswith(".json") and f_name.startswith("pinn2d_"):
-                                meta_path = os.path.join("saved_models", f_name)
+                                meta_path = os.path.join(models_dir(), f_name)
                                 try:
                                     with open(meta_path, "r", encoding="utf-8") as mf:
                                         meta = json.load(mf)
@@ -1055,7 +1056,7 @@ def dispatch_and_solve(
                                                 break
                                         if params_match:
                                             pth_name = f_name.replace(".json", ".pth")
-                                            pth_path = os.path.join("saved_models", pth_name)
+                                            pth_path = os.path.join(models_dir(), pth_name)
                                             if os.path.exists(pth_path):
                                                 print(f"[*] Found matching pre-trained 2D PINN model weights: {pth_path}")
                                                 model = GenericPINN(input_dim=2, hidden_dim=32)
@@ -1087,16 +1088,16 @@ def dispatch_and_solve(
                         solution_primary_2d = model(xy_tensor).view(-1).numpy().tolist()
                         
                     try:
-                        os.makedirs("saved_models", exist_ok=True)
+                        os.makedirs(models_dir(), exist_ok=True)
                         design_name = miner_output.design_name or "unknown_design"
                         slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                         
-                        model_path = os.path.join("saved_models", f"pinn2d_{timestamp}_{slug}.pth")
+                        model_path = os.path.join(models_dir(), f"pinn2d_{timestamp}_{slug}.pth")
                         torch.save(model.state_dict(), model_path)
                         print(f"[*] Saved trained 2D PINN model weights to: {model_path}")
                         
-                        meta_path = os.path.join("saved_models", f"pinn2d_{timestamp}_{slug}.json")
+                        meta_path = os.path.join(models_dir(), f"pinn2d_{timestamp}_{slug}.json")
                         meta_data = {
                             "governing_equation": gov_eq,
                             "boundary_conditions": bcs,
@@ -1224,11 +1225,11 @@ def dispatch_and_solve(
             pretrained_loaded = False
             # Check if we have a pre-trained model matching these exact conditions
             try:
-                if os.path.exists("saved_models"):
+                if os.path.exists(models_dir()):
                     # Find matching json files
-                    for f_name in sorted(os.listdir("saved_models"), reverse=True):
+                    for f_name in sorted(os.listdir(models_dir()), reverse=True):
                         if f_name.endswith(".json") and f_name.startswith("pinn_"):
-                            meta_path = os.path.join("saved_models", f_name)
+                            meta_path = os.path.join(models_dir(), f_name)
                             try:
                                 with open(meta_path, "r", encoding="utf-8") as mf:
                                     meta = json.load(mf)
@@ -1248,7 +1249,7 @@ def dispatch_and_solve(
                                     
                                     if params_match:
                                         pth_name = f_name.replace(".json", ".pth")
-                                        pth_path = os.path.join("saved_models", pth_name)
+                                        pth_path = os.path.join(models_dir(), pth_name)
                                         if os.path.exists(pth_path):
                                             print(f"[*] Found matching pre-trained PINN model weights: {pth_path}")
                                             model = GenericPINN()
@@ -1289,18 +1290,18 @@ def dispatch_and_solve(
 
                 # Save the trained PINN model weights and metadata
                 try:
-                    os.makedirs("saved_models", exist_ok=True)
+                    os.makedirs(models_dir(), exist_ok=True)
                     design_name = miner_output.design_name or "unknown_design"
                     slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     
                     # Save weights
-                    model_path = os.path.join("saved_models", f"pinn_{timestamp}_{slug}.pth")
+                    model_path = os.path.join(models_dir(), f"pinn_{timestamp}_{slug}.pth")
                     torch.save(model.state_dict(), model_path)
                     print(f"[*] Saved trained PINN model weights to: {model_path}")
                     
                     # Save metadata JSON for caching
-                    meta_path = os.path.join("saved_models", f"pinn_{timestamp}_{slug}.json")
+                    meta_path = os.path.join(models_dir(), f"pinn_{timestamp}_{slug}.json")
                     meta_data = {
                         "governing_equation": gov_eq,
                         "boundary_conditions": bcs,
