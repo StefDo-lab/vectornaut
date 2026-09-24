@@ -47,14 +47,32 @@ from .solvers.solvers_2d import (
 from .solvers.model_cache import load_cached_pinn, save_pinn_model
 
 
+# Names under which equations/BCs may refer to the simulation coefficient. They are
+# filled from simulation_coefficient only if the auditor did not provide them itself.
+_COEFFICIENT_ALIASES = ('slippage_coefficient', 'lambda', 'slip_length')
+
+
 def _merged_params(auditor_output: AuditorOutput) -> Dict[str, float]:
     # Merge audited parameters and simulation coefficient
     params = auditor_output.audited_parameters_dict.copy()
     params['simulation_coefficient'] = auditor_output.simulation_coefficient
-    params['slippage_coefficient'] = auditor_output.simulation_coefficient
-    params['lambda'] = auditor_output.simulation_coefficient
-    params['slip_length'] = auditor_output.simulation_coefficient
+    # An explicitly audited slip_length / lambda / slippage_coefficient wins over the
+    # derived simulation coefficient; the aliases are only filled in when missing.
+    for alias in _COEFFICIENT_ALIASES:
+        if alias not in params:
+            params[alias] = auditor_output.simulation_coefficient
     return params
+
+
+def _is_bionic_effect_param(name: str) -> bool:
+    """
+    True for the parameters that carry the bionic effect (slip length / slippage
+    coefficient aliases and the simulation coefficient). These are set to 0 for the
+    no-effect baseline; geometric lengths (film/coating thickness, heights, ...) and
+    material properties are never touched.
+    """
+    lowered = name.lower()
+    return name == 'simulation_coefficient' or name in _COEFFICIENT_ALIASES or "slip" in lowered
 
 
 def dispatch_and_solve(
@@ -324,6 +342,12 @@ def _solve_1d(
 
     # 3. Solver execution routing
     method_requested = auditor_output.solver_method.lower()
+    if method_requested not in ["pinn", "scipy", "analytical"]:
+        print(f"[*] Solver method '{method_requested}' is not available for 1D problems. Using analytical.")
+        method_requested = "analytical"
+    # The solver that actually produced solution_primary (differs from the requested
+    # one when a fallback is used); this is what solver_method reports.
+    method_used = method_requested
 
     # We will try to solve the system analytically as the absolute reference
     analytical_sol_expr = None
@@ -345,31 +369,36 @@ def _solve_1d(
     except Exception as e:
         print(f"[*] SciPy BVP solver failed: {e}")
 
-    # We also solve the baseline reference solution (where slip/insulation coefficient = 0)
-    # to evaluate performance gain
+    # We also solve the baseline reference solution without the bionic effect (slip
+    # length / slippage coefficient aliases and simulation coefficient = 0) to evaluate
+    # performance gain. Geometric lengths such as film or coating thicknesses are kept:
+    # they define the domain and the BC locations, not the bionic effect.
     baseline_params = params.copy()
     for k in baseline_params:
-        if any(term in k.lower() for term in ["slip", "lambda", "coeff", "insul", "thick"]):
-            if "film_thickness" in k.lower() or "pane_thickness" in k.lower() or "glass_thickness" in k.lower() or "wall_thickness" in k.lower() or "layer_thickness" in k.lower():
-                continue
+        if _is_bionic_effect_param(k):
             baseline_params[k] = 0.0
-    baseline_params["simulation_coefficient"] = 0.0
-    baseline_params["slippage_coefficient"] = 0.0
-    baseline_params["lambda"] = 0.0
 
-    baseline_deriv = 0.0
-    try:
-        _, baseline_deriv = solve_analytical(
-            pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, domain_min, domain_max
-        )
-    except Exception:
+    # None = no baseline available. If the effect parameters are already 0 (or absent),
+    # the baseline is the reference solution itself (set below, gain 0 up to solver error).
+    baseline_deriv = None
+    baseline_is_reference = baseline_params == params
+    if not baseline_is_reference:
         try:
-            _, baseline_deriv = solve_scipy_bvp(
+            _, baseline_deriv = solve_analytical(
                 pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, domain_min, domain_max
             )
         except Exception:
-            # Fallback baseline
-            baseline_deriv = params.get("u_free", params.get("free_stream_velocity", 1.5))
+            try:
+                _, baseline_deriv = solve_scipy_bvp(
+                    pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, domain_min, domain_max
+                )
+            except Exception as baseline_err:
+                print(f"[*] Baseline solve without the bionic effect failed: {baseline_err}. "
+                      "performance_gain_pct is reported as 0.")
+                baseline_deriv = None
+        if baseline_deriv is not None and not math.isfinite(baseline_deriv):
+            print(f"[*] Baseline wall derivative is not finite ({baseline_deriv}). performance_gain_pct is reported as 0.")
+            baseline_deriv = None
 
     # Solve primary & reference based on selection
     sample_grid = np.linspace(domain_min, domain_max, 20)
@@ -411,6 +440,7 @@ def _solve_1d(
                 build_model=lambda: GenericPINN(),
                 on_loaded=_use_cached_model,
                 domain=(domain_min, domain_max),
+                epochs=epochs,
             )
 
             if not pretrained_loaded:
@@ -437,11 +467,13 @@ def _solve_1d(
                     final_loss=final_loss,
                     loss_history=loss_history,
                     domain=(domain_min, domain_max),
+                    epochs=epochs,
                 )
 
         except Exception as e:
             print(f"[*] PINN solver failed: {e}. Falling back to SciPy BVP.")
             method_requested = "scipy" # fall back
+            method_used = "scipy"
 
     if method_requested == "scipy":
         # Primary is SciPy BVP
@@ -450,9 +482,11 @@ def _solve_1d(
             primary_metric = scipy_deriv
         elif analytical_sol_expr is not None:
             # Fallback to analytical
+            print("[*] SciPy BVP unavailable. Using the analytical solution as primary.")
             f_lambdified = sp.lambdify(x_sym, analytical_sol_expr, "numpy")
             solution_primary = [float(f_lambdified(pt)) for pt in sample_grid]
             primary_metric = analytical_deriv
+            method_used = "analytical"
         else:
             raise RuntimeError("All primary numerical solvers failed.")
 
@@ -464,8 +498,10 @@ def _solve_1d(
             primary_metric = analytical_deriv
         elif scipy_sol_func is not None:
             # Fallback to SciPy
+            print("[*] Analytical solution unavailable. Using SciPy BVP as primary.")
             solution_primary = [float(scipy_sol_func(pt)) for pt in sample_grid]
             primary_metric = scipy_deriv
+            method_used = "scipy"
         else:
             raise RuntimeError("All primary analytical solvers failed.")
 
@@ -484,7 +520,9 @@ def _solve_1d(
 
     # Calculate performance gain
     # E.g. drag reduction efficiency = (1.0 - (primary_deriv / baseline_deriv)) * 100
-    if abs(baseline_deriv) > 1e-8:
+    if baseline_is_reference:
+        baseline_deriv = reference_metric
+    if baseline_deriv is not None and abs(baseline_deriv) > 1e-8:
         performance_gain = (1.0 - (primary_metric / baseline_deriv)) * 100.0
     else:
         performance_gain = 0.0
@@ -495,7 +533,7 @@ def _solve_1d(
     relative_err = float(np.sum(abs_diff) / np.sum(ref_norm + 1e-8))
 
     return SimulatorOutput(
-        solver_method=method_requested,
+        solver_method=method_used,
         epochs_trained=epochs_trained,
         final_loss=final_loss,
         loss_history=loss_history,
