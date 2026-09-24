@@ -84,8 +84,6 @@ The scripts in `tests/manual/` run offline without an API key, but they are plai
 
 Contents: `test_solver.py` (1D fluid, thermal and electrostatic solvers), `test_2d_solver.py` (2D PINN/FDM heat conduction), `test_plastron.py` (PlastronGlide analytical case), `test_caret.py` (SymPy `^` parsing).
 
-`test_2d_solver.py` and `test_plastron.py` currently fail before solving, because they build `MinerOutput` without the now-required `svg_schematic` field.
-
 ## Runtime Data
 
 Runtime outputs are ignored by Git:

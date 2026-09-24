@@ -15,6 +15,7 @@ def test_plastron():
         inspiration_source="Collembola (Springtail) cuticle",
         domain="Fluid Dynamics",
         physical_mechanism="The springtail's skin possesses a hierarchical nanostructure...",
+        svg_schematic="<svg></svg>",
         parameters=[
             ParameterProposal(name="slip_length", value=0.00002, min_bound=0.000001, max_bound=0.0001, justification="..."),
             ParameterProposal(name="film_thickness", value=0.00001, min_bound=0.000001, max_bound=0.00005, justification="..."),

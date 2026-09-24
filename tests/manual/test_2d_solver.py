@@ -15,6 +15,7 @@ def test_2d_heat_conduction():
         inspiration_source="Emperor Penguin feather structure",
         domain="Thermodynamics",
         physical_mechanism="Multilayered thermal insulation utilizing trapped stagnant air gaps.",
+        svg_schematic="<svg></svg>",
         parameters=[
             ParameterProposal(name="T_hot", value=300.0, min_bound=273.0, max_bound=400.0, justification="Hot side temp"),
             ParameterProposal(name="T_cold", value=260.0, min_bound=200.0, max_bound=300.0, justification="Cold side temp")
