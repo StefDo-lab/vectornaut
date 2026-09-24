@@ -358,14 +358,7 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)
         self.assertAlmostEqual(run.sim.performance_gain_pct, 100.0 * 0.1 / 1.1, delta=1e-6)
 
-    # BUG: parameters auto-injected by auto_detect_and_inject_missing_params never reach the
-    # 1D solvers. solver_dispatcher.py:89-91 writes them into
-    # auditor_output.audited_parameters_dict, which is a @property that returns a fresh
-    # dict (config.py:137-139), so the write is lost; _solve_1d then rebuilds params
-    # from the auditor output (solver_dispatcher.py:311) without them, and both SymPy and
-    # SciPy fail ("Cannot convert expression to float") -> RuntimeError. The 2D path
-    # passes the injected params explicitly and works.
-    @unittest.expectedFailure
+    # Regression: auto-injected parameters used to be lost before reaching the 1D solvers.
     def test_auto_injected_parameters_reach_1d_solver(self):
         case = Case("poiseuille_no_params", "d2u_dy2 = -G / mu", ["u(0) = 0", "u(1) = 0"], ["y"], "u",
                     exact=lambda y: 0.5 * y * (1.0 - y))  # defaults G = mu = 1.0
