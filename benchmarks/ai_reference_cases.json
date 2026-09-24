@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "description": "Reference prompts for comparing AI model configurations with vectornaut.model_eval. Expectations are deliberately conservative: they check routing, structure and plausibility, not exact physics. Parameter ranges match audited parameter names by case-insensitive regex and only span orders of magnitude; a range that matches no parameter is reported as not applicable.",
+  "defaults": {
+    "outcome": "success",
+    "audit_passed": true,
+    "max_relative_error": 0.1,
+    "max_remines": 1
+  },
+  "cases": [
+    {
+      "id": "riblet_hose_de",
+      "title": "Riblet-Innenoberfläche für Wasserschläuche (UI-Beispiel 'Reibung reduzieren')",
+      "source": "static/app.js samplePrompts.friction",
+      "query": "Entwickle eine bionisch inspirierte Innenoberfläche für flexible Wasserschläuche, die den Strömungswiderstand reduziert, aber weiterhin hohe Druckfestigkeit, Abriebfestigkeit und einfache Herstellbarkeit bietet.",
+      "tags": ["fluid", "drag", "german"],
+      "expect": {
+        "domain_keywords": ["fluid", "strömung", "flow", "drag", "widerstand", "hydro", "rib"],
+        "dimensionality": 1,
+        "solver_methods": ["analytical", "scipy", "pinn"],
+        "parameter_ranges": [
+          {"match": "viscosity|viskosit", "min": 1e-7, "max": 10.0, "note": "dynamic (Pa s) or kinematic (m^2/s) viscosity of a liquid"},
+          {"match": "velocity|geschwindigkeit", "min": -100.0, "max": 100.0, "note": "hose flow velocity in m/s"},
+          {"match": "riblet_(height|spacing)", "min": 1e-7, "max": 0.1, "note": "riblet dimensions in m"}
+        ]
+      }
+    },
+    {
+      "id": "riblet_watercraft_en",
+      "title": "Drag-reducing microtexture for high-velocity water craft",
+      "source": "tests/live/test_api.py",
+      "query": "design a microtextured biomimetic drag reduction surface for high-velocity water craft",
+      "tags": ["fluid", "drag"],
+      "expect": {
+        "domain_keywords": ["fluid", "flow", "drag", "hydro", "rib", "boundary layer"],
+        "dimensionality": 1,
+        "solver_methods": ["analytical", "scipy", "pinn"],
+        "parameter_ranges": [
+          {"match": "viscosity", "min": 1e-7, "max": 10.0, "note": "water viscosity, dynamic or kinematic"},
+          {"match": "velocity", "min": -150.0, "max": 150.0, "note": "craft speed in m/s"},
+          {"match": "riblet_(height|spacing)", "min": 1e-7, "max": 0.1, "note": "riblet dimensions in m"}
+        ]
+      }
+    },
+    {
+      "id": "plastron_ski",
+      "title": "Collembola-inspired plastron / slip film ski base",
+      "source": "tests/live/test_chat.py",
+      "query": "design a hydrophobic ski base inspired by collembola cuticle",
+      "tags": ["fluid", "slip", "plastron"],
+      "expect": {
+        "domain_keywords": ["fluid", "flow", "slip", "plastron", "film", "lubric", "tribolog", "hydrophob"],
+        "dimensionality": 1,
+        "solver_methods": ["analytical", "scipy", "pinn"],
+        "parameter_ranges": [
+          {"match": "slip_length", "min": 0.0, "max": 1e-3, "note": "Navier slip length in m (plastron slip lengths are micrometres)"},
+          {"match": "film_thickness", "min": 1e-9, "max": 1e-2, "note": "meltwater film thickness in m"},
+          {"match": "viscosity", "min": 1e-7, "max": 10.0, "note": "water viscosity near 0 C"},
+          {"match": "velocity", "min": -60.0, "max": 60.0, "note": "ski speed in m/s"}
+        ]
+      }
+    },
+    {
+      "id": "thermal_drone_de",
+      "title": "Leichtes Isolationsmaterial für Drohnengehäuse (UI-Beispiel 'Wärme isolieren')",
+      "source": "static/app.js samplePrompts.thermal",
+      "query": "Entwickle ein leichtes bionisches Isolationsmaterial für Drohnengehäuse, das Wärmeverluste bei Kälte reduziert, wenig Gewicht hinzufügt und mechanisch robust gegen Vibrationen bleibt.",
+      "tags": ["thermal", "conduction", "german"],
+      "expect": {
+        "domain_keywords": ["therm", "heat", "wärme", "temperatur", "insulat", "isolat", "conduct"],
+        "dimensionality": 1,
+        "solver_methods": ["analytical", "scipy", "pinn"],
+        "parameter_ranges": [
+          {"match": "conductivity|leitf", "min": 1e-4, "max": 1000.0, "note": "thermal conductivity in W/(m K), aerogel to copper"},
+          {"match": "density|dichte", "min": 1e-3, "max": 25000.0, "note": "density in kg/m^3"}
+        ]
+      }
+    },
+    {
+      "id": "window_heat_2d",
+      "title": "2D steady heat conduction through a double-pane window (Laplace)",
+      "source": "tests/live/test_2d_e2e.py",
+      "query": "Determine the temperature distribution through a double-pane glass window under winter conditions using 2D heat conduction model",
+      "tags": ["thermal", "2d", "laplace"],
+      "expect": {
+        "domain_keywords": ["therm", "heat", "temperat", "conduct", "insulat"],
+        "dimensionality": 2,
+        "solver_methods": ["pinn", "fdm"],
+        "parameter_ranges": [
+          {"match": "conductivity", "min": 1e-4, "max": 1000.0, "note": "glass ~1 W/(m K), gas gap ~0.02 W/(m K)"}
+        ]
+      }
+    },
+    {
+      "id": "heat_spreader_poisson_2d",
+      "title": "Leaf-vein heat spreader plate with internal heat generation (2D Poisson)",
+      "source": "new reference case",
+      "query": "Design a leaf-vein-inspired heat spreader plate for power electronics and compute the steady 2D temperature field on a square plate with uniform internal heat generation (Poisson equation), cooled edges held at a fixed temperature.",
+      "tags": ["thermal", "2d", "poisson"],
+      "expect": {
+        "domain_keywords": ["therm", "heat", "temperat", "conduct"],
+        "dimensionality": 2,
+        "solver_methods": ["pinn", "fdm"],
+        "parameter_ranges": [
+          {"match": "conductivity", "min": 1e-4, "max": 5000.0, "note": "thermal conductivity in W/(m K), up to graphite/diamond"}
+        ]
+      }
+    },
+    {
+      "id": "myelin_shield",
+      "title": "Myelin-inspired coaxial electrostatic shield",
+      "source": "tests/live/test_myelin.py",
+      "query": "design a myelin-inspired coaxial electrostatic shield",
+      "tags": ["electromagnetics", "laplace"],
+      "expect": {
+        "domain_keywords": ["electr", "potential", "field", "dielectric", "shield", "capacit"],
+        "dimensionality": 1,
+        "solver_methods": ["analytical", "scipy", "pinn"],
+        "parameter_ranges": [
+          {"match": "permittivity", "min": 1e-12, "max": 1e4, "note": "absolute (F/m) or relative permittivity"}
+        ]
+      }
+    },
+    {
+      "id": "transient_heat_shield",
+      "title": "Transient heat shield with temperature-dependent conductivity (should route to dynamic_script)",
+      "source": "adapted from tests/live/test_live_dynamic.py without the explicit solver instruction",
+      "query": "Design a bio-inspired re-entry heat shield and simulate the time-dependent temperature evolution through its thickness during a heating pulse, with strongly temperature-dependent (non-linear) thermal conductivity.",
+      "tags": ["thermal", "transient", "nonlinear", "dynamic_script"],
+      "expect": {
+        "domain_keywords": ["therm", "heat", "temperat", "ablat", "conduct"],
+        "dimensionality": null,
+        "solver_methods": ["dynamic_script"],
+        "max_remines": 2,
+        "parameter_ranges": [
+          {"match": "conductivity", "min": 1e-4, "max": 1000.0, "note": "thermal conductivity in W/(m K)"},
+          {"match": "density", "min": 1e-3, "max": 25000.0, "note": "density in kg/m^3"}
+        ]
+      }
+    },
+    {
+      "id": "bone_beam_structural_de",
+      "title": "Knocheninspirierter Leichtbau-Biegeträger (Strukturmechanik)",
+      "source": "new reference case (inspired by static/app.js samplePrompts.impact)",
+      "query": "Entwickle einen knocheninspirierten Leichtbau-Biegeträger mit trabekulärer Innenstruktur und berechne die statische Durchbiegung unter gleichmäßiger Streckenlast bei beidseitig gelenkiger Lagerung.",
+      "tags": ["structural", "german"],
+      "expect": {
+        "domain_keywords": ["struct", "mechan", "solid", "beam", "träger", "biege", "deflect", "durchbieg", "elast", "stress", "spannung"],
+        "dimensionality": 1,
+        "solver_methods": ["analytical", "scipy", "pinn"],
+        "max_remines": 2,
+        "parameter_ranges": []
+      }
+    },
+    {
+      "id": "infeasible_perpetuum",
+      "title": "Thermodynamically impossible request (should be rejected)",
+      "source": "new reference case",
+      "query": "Entwickle eine bionische Heizoberfläche, die in einem vollständig geschlossenen, adiabaten System ohne jede Energiezufuhr dauerhaft mehr Wärme abgibt, als ihr zugeführt wird (Wirkungsgrad über 300 %), und damit ein Haus beheizt.",
+      "tags": ["infeasible", "german"],
+      "expect": {
+        "outcome": "rejected",
+        "audit_passed": false,
+        "domain_keywords": [],
+        "dimensionality": null,
+        "solver_methods": null,
+        "max_remines": 2,
+        "parameter_ranges": []
+      }
+    }
+  ]
+}
