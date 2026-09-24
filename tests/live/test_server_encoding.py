@@ -1,3 +1,4 @@
+# Offline equivalent (no server needed): tests/test_chat_mock_flows.py (ChatEncodingTest)
 import urllib.request
 import urllib.error
 import json
