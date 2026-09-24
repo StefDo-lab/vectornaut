@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from types import SimpleNamespace
 
+from vectornaut.optimizer import OptimizerDecision
 from vectornaut.pipeline import PipelineRunRequest, PipelineRunner
 from vectornaut.solver_dispatcher import _dynamic_parameter_sweep
 
@@ -187,6 +188,14 @@ def dynamic_metadata_solver(miner_output, auditor_output, epochs):
     return Dumpable(**data)
 
 
+class FakeOptimizer:
+    def __init__(self, decision):
+        self.decision = decision
+
+    def mock_optimize(self, miner_output, history):
+        return self.decision
+
+
 class PipelineUnitTest(unittest.TestCase):
     def test_pipeline_runner_orchestrates_with_injected_dependencies(self):
         runner = PipelineRunner(
@@ -359,6 +368,42 @@ with open(args.plot, 'wb') as f:
         self.assertGreaterEqual(sweep["valid_candidate_count"], 2)
         self.assertEqual(sweep["objective"]["direction"], "maximize")
         self.assertGreater(sweep["best"]["performance_gain_pct"], sweep["baseline"]["performance_gain_pct"])
+
+
+    def _run_with_optimizer_decision(self, decision):
+        runner = PipelineRunner(
+            miner=FakeMiner(),
+            formulator=FakeFormulator(),
+            auditor=FakeAuditor(),
+            optimizer=FakeOptimizer(decision),
+            synthesizer=FakeSynthesizer(),
+            solver=fake_solver,
+        )
+        return runner.run(PipelineRunRequest(
+            query="test",
+            is_mock=True,
+            epochs=5,
+            max_optimization_rounds=2,
+        ))
+
+    def test_optimizer_mentioning_no_instability_keeps_concept(self):
+        output = self._run_with_optimizer_decision(OptimizerDecision(
+            continue_optimization=False,
+            reasoning="Keine Instabilität und kein Kollaps erkennbar, das Design ist konvergiert.",
+        ))
+
+        self.assertTrue(output["success"])
+        self.assertEqual(output["failed_concepts"], [])
+
+    def test_optimizer_concept_failed_verdict_discards_concept(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._run_with_optimizer_decision(OptimizerDecision(
+                continue_optimization=False,
+                reasoning="Die Struktur knickt unter Last ein.",
+                concept_failed=True,
+            ))
+
+        self.assertIn("Optimizer rejected", str(ctx.exception))
 
 
 if __name__ == "__main__":

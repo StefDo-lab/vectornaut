@@ -12,6 +12,7 @@ class OptimizerDecision(BaseModel):
     continue_optimization: bool = Field(description="True, wenn eine weitere Simulationsrunde sinnvoll ist, um den Entwurf weiter zu verbessern")
     reasoning: str = Field(description="Kurze Erklärung der physikalischen Begründung für diese Entscheidung und Anpassungen (auf Deutsch, informelles 'du')")
     adjustments: List[ParameterAdjustment] = Field(description="Liste der vorgeschlagenen Parameter-Anpassungen. Kann leer sein, wenn continue_optimization=False ist.", default_factory=list)
+    concept_failed: bool = Field(default=False, description="True NUR, wenn das Konzept physikalisch oder strukturell versagt (z. B. Kollaps, Materialversagen, nicht behebbare Instabilität) und verworfen werden muss. Die bloße Feststellung, dass KEINE Instabilität vorliegt, ist kein Versagen.")
 
 class Optimizer:
     def __init__(self, client=None):
@@ -72,6 +73,7 @@ class Optimizer:
         3. **Grenzwerte**: Alle vorgeschlagenen Anpassungen MÜSSEN streng innerhalb der erlaubten Schranken liegen! Schlage niemals Werte außerhalb von [min_bound, max_bound] vor.
 
         Setze `continue_optimization` auf `True`, wenn wir eine weitere Runde drehen sollten, und liefere die Anpassungen in `adjustments`. Liefere andernfalls `False` und erkläre, warum das Design optimal ist oder nicht weiter verbessert werden kann.
+        Setze `concept_failed` nur dann auf `True`, wenn das Konzept grundsätzlich versagt (z. B. struktureller Kollaps oder Materialversagen) und durch ein neues Konzept ersetzt werden muss. In allen anderen Fällen bleibt es `False`.
         """
 
         client = self.client or get_client()
@@ -100,7 +102,8 @@ class Optimizer:
             return OptimizerDecision(
                 continue_optimization=False,
                 reasoning="Kritischer struktureller Kollaps: Die Geometrie ist unter den mechanischen Lasten eingeknickt. Konzept ist instabil.",
-                adjustments=[]
+                adjustments=[],
+                concept_failed=True
             )
 
         # Wenn wir Runde 1 abgeschlossen haben, schlagen wir eine Anpassung vor

@@ -357,8 +357,9 @@ class PipelineRunner:
                     round_data["optimizer_reasoning"] = opt_decision.reasoning
                     print(f"[+] Optimizer reasoning: {opt_decision.reasoning}")
 
-                    lower_reasoning = opt_decision.reasoning.lower()
-                    if "kollaps" in lower_reasoning or "instabil" in lower_reasoning or "versagen" in lower_reasoning:
+                    # Only an explicit verdict discards the concept; keyword matching on the
+                    # reasoning also fired on phrases like "keine Instabilität".
+                    if getattr(opt_decision, "concept_failed", False):
                         print("[-] Optimizer detected structural collapse/instability. Discarding concept.")
                         failed_concepts.append({
                             "design_name": miner_output.design_name,
