@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -67,6 +68,12 @@ WICHTIGE STRUKTURIERUNGS- UND FORMATIERUNGS-ANWEISUNGEN (Vermeidung von Textwüs
    - Ersetze Umlaute NIEMALS durch Sonderzeichen oder Symbole wie das Dollar-Zeichen ($) (schreibe z. B. immer "Erklärung" statt "Erkl$rung", "ermöglicht" statt "erm$glicht", "über" statt "$ber", "großer" statt "gro$er").
 """
 
+def _is_plastron_ski_design(design_name: str) -> bool:
+    # Match "ski" as a whole word only, so e.g. "Shark-Skin" is not treated as a ski design.
+    name = (design_name or "").lower()
+    return "plastron" in name or re.search(r"\bski\b", name) is not None
+
+
 @router.post("/chat")
 async def chat_with_assistant(req: ChatRequest):
     try:
@@ -112,7 +119,7 @@ async def chat_with_assistant(req: ChatRequest):
 
             query_lower = req.message.lower()
             if "opti" in query_lower or "verbesser" in query_lower or "reduzier" in query_lower:
-                if "plastron" in design_name.lower() or "ski" in design_name.lower():
+                if _is_plastron_ski_design(design_name):
                     # Check if already optimized
                     if abs(slip_length - 0.00004) < 1e-6 and abs(film_thickness - 0.000005) < 1e-6:
                         reply = (
@@ -181,7 +188,7 @@ async def chat_with_assistant(req: ChatRequest):
                 )
                 suggested_params = {}
             elif "warum" in query_lower or "wieso" in query_lower or "erklär" in query_lower or "ursache" in query_lower or "effekt" in query_lower or "reduktion" in query_lower or "reibungs" in query_lower or "66" in query_lower or "88" in query_lower or "1/3" in query_lower:
-                if "plastron" in design_name.lower() or "ski" in design_name.lower():
+                if _is_plastron_ski_design(design_name):
                     slip_um = slip_length * 1e6
                     film_um = film_thickness * 1e6
                     ratio_remaining = film_thickness / (film_thickness + slip_length)

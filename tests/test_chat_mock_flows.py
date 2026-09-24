@@ -107,16 +107,7 @@ class ChatAfterOverrideRunTest(OfflineApiTestCase):
         self.assertIn("reply", body)
         self.assertIn("Shark-Skin", body["reply"])
 
-    # BUG (documented, not fixed): the mock chat decides "ski design?" with
-    # `"ski" in design_name.lower()`, and "Shark-Skin ..." contains "ski". A
-    # riblet design (the default mock concept) therefore gets the PlastronGlide
-    # slip_length/film_thickness suggestion instead of the riblet branch, which
-    # scales the run's own height/thickness and spacing/length parameters.
-    # Repro: POST /api/run {"query": "design drag reducing surface", "is_mock": true}
-    # (-> "Shark-Skin Inspired Riblet Foil"), then POST /api/chat
-    # {"message": "Optimiere das Design", "current_run": <run>, "is_mock": true}
-    # -> suggested_params == {"slip_length": 4e-05, "film_thickness": 5e-06}.
-    @unittest.expectedFailure
+    # Regression: "Shark-Skin" contains "ski" and used to get the PlastronGlide suggestion.
     def test_riblet_design_gets_riblet_optimization(self):
         run = self.run_pipeline(query="design drag reducing surface", max_optimization_rounds=1)
         self.assertIn("Riblet", run["miner"]["design_name"])
@@ -128,11 +119,16 @@ class ChatAfterOverrideRunTest(OfflineApiTestCase):
         self.assertTrue(set(body["suggested_params"]) <= riblet_names)
 
 
+# Minimal run context that selects the PlastronGlide (ski) explanation, whose
+# text contains umlauts plus the Greek lambda and micro sign.
+PLASTRON_CONTEXT = {"miner": {"design_name": "PlastronGlide Hydrophobic Ski Base"}}
+
+
 class ChatEncodingTest(OfflineApiTestCase):
     """tests/live/test_server_encoding.py"""
 
     def test_chat_response_is_utf8_json_with_umlauts(self):
-        response = self.chat("Erkläre das bitte", current_run=None)
+        response = self.chat("Erkläre das bitte", current_run=PLASTRON_CONTEXT)
 
         self.assertEqual(response.headers["content-type"], "application/json; charset=utf-8")
         raw = response.content
@@ -150,7 +146,7 @@ class ChatEncodingTest(OfflineApiTestCase):
 
     def test_umlaut_in_request_is_understood(self):
         # "Erkläre" hits the explanation branch only if the ä survives decoding.
-        reply = self.chat("Erkläre das bitte", current_run=None).json()["reply"]
+        reply = self.chat("Erkläre das bitte", current_run=PLASTRON_CONTEXT).json()["reply"]
 
         self.assertIn("Reibungsreduktion", reply)
         self.assertIn("Formel für die Reibungskraft", reply)
