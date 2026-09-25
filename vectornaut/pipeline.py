@@ -34,6 +34,37 @@ class _AuditorSolverOverride:
         return data
 
 
+class ConceptsExhaustedError(ValueError):
+    """
+    Every concept attempt failed (audit, solver, validator or optimizer). The message is
+    readable text; the structured history is in ``failed_concepts``.
+    """
+
+    def __init__(self, failed_concepts: List[Dict[str, Any]], attempts: int):
+        self.failed_concepts = list(failed_concepts)
+        self.attempts = attempts
+        lines = [f"All bionic concepts failed validation ({attempts} attempts)."]
+        for idx, item in enumerate(self.failed_concepts, 1):
+            source = f" ({item.get('inspiration_source')})" if item.get("inspiration_source") else ""
+            lines.append(f"{idx}. {item.get('design_name') or 'Unnamed concept'}{source}: {item.get('reason') or 'no reason given'}")
+        super().__init__("\n".join(lines))
+
+
+def _dump(value: Any) -> Any:
+    if value is None:
+        return None
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    if isinstance(value, dict):
+        return dict(value)
+    return dict(getattr(value, "__dict__", {}))
+
+
+def _request_marked_infeasible(stage_output: Any) -> bool:
+    # Fakes and outputs recorded before the field existed have no attribute: feasible.
+    return getattr(stage_output, "request_feasible", True) is False
+
+
 class PipelineRunRequest(BaseModel):
     query: str
     epochs: int = 200
@@ -115,6 +146,7 @@ class PipelineRunner:
         auditor_output: Any,
         sim_output: Any,
         optimization_history: List[Dict[str, Any]],
+        user_query: Optional[str] = None,
     ) -> Any:
         return validate_run_output(
             miner_output=miner_output,
@@ -125,6 +157,7 @@ class PipelineRunner:
             },
             simulator_output=sim_output,
             optimization_history=optimization_history,
+            user_query=user_query,
         )
 
     def _fallback_solver_methods(self, miner_output: Any, auditor_output: Any) -> List[str]:
@@ -143,6 +176,7 @@ class PipelineRunner:
         optimization_history: List[Dict[str, Any]],
         epochs: int,
         effective_mock: bool,
+        user_query: Optional[str] = None,
     ) -> Tuple[Any, Any, Any, List[Dict[str, Any]]]:
         if validation_result.recommended_action != "rerun_solver":
             return auditor_output, sim_output, validation_result, []
@@ -170,6 +204,7 @@ class PipelineRunner:
                     auditor_output=fallback_auditor,
                     sim_output=candidate_sim,
                     optimization_history=optimization_history,
+                    user_query=user_query,
                 )
                 attempt.update({
                     "status": candidate_validation.status,
@@ -198,6 +233,54 @@ class PipelineRunner:
             fallback_attempts.append(attempt)
 
         return best_auditor, best_sim, best_validation, fallback_attempts
+
+    @staticmethod
+    def _rejected_result(
+        req: PipelineRunRequest,
+        *,
+        stage: str,
+        reason: str,
+        concept_attempt: int,
+        safe_epochs: int,
+        effective_mock: bool,
+        miner_output: Any,
+        auditor_output: Any = None,
+        sim_output: Any = None,
+        validation_result: Any = None,
+        optimization_history: Optional[List[Dict[str, Any]]] = None,
+        failed_concepts: Optional[List[Dict[str, Any]]] = None,
+        models: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Structured, non-exception result for a request that is physically impossible as
+        stated. Re-mining cannot fix such a request, so the run stops at the first stage
+        that says so.
+        """
+        auditor_data = _dump(auditor_output)
+        if auditor_data is not None and hasattr(auditor_output, "audited_parameters_dict"):
+            auditor_data["audited_parameters_dict"] = auditor_output.audited_parameters_dict
+            auditor_data["dimensionless_numbers_dict"] = auditor_output.dimensionless_numbers_dict
+        print(f"[-] Request rejected as physically infeasible by the {stage}: {reason}")
+        return {
+            "success": False,
+            "status": "rejected",
+            "query": req.query,
+            "epochs": safe_epochs,
+            "is_mock": effective_mock,
+            "rejection": {
+                "stage": stage,
+                "reason": reason,
+                "design_name": getattr(miner_output, "design_name", None),
+                "concept_attempt": concept_attempt,
+            },
+            "miner": _dump(miner_output),
+            "auditor": auditor_data,
+            "simulator": _dump(sim_output),
+            "validation": _dump(validation_result),
+            "optimization_history": optimization_history or [],
+            "failed_concepts": failed_concepts or [],
+            "models": models or {},
+        }
 
     def run(self, req: PipelineRunRequest) -> Dict[str, Any]:
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -239,11 +322,29 @@ class PipelineRunner:
                         concept.design_name = f"Alternative {concept.design_name} (Attempt {concept_attempt})"
                         concept.inspiration_source = "Nelumbo nucifera (Lotus leaf)"
                         concept.physical_mechanism = "Superhydrophobic surface structures reduce the wetted contact area."
-                    miner_output = self.formulator.mock_formulate_model(req.query, concept)
                 else:
                     concept = self.miner.mine_design(req.query, failed_concepts=failed_concepts)
+                    _record_live_stage("miner")
+
+                if _request_marked_infeasible(concept):
+                    return self._rejected_result(
+                        req,
+                        stage="miner",
+                        reason=(getattr(concept, "infeasibility_reason", None) or "").strip()
+                        or "The miner marked the request as physically infeasible.",
+                        concept_attempt=concept_attempt,
+                        safe_epochs=safe_epochs,
+                        effective_mock=effective_mock,
+                        miner_output=concept,
+                        failed_concepts=failed_concepts,
+                        models={stage: get_model_name(stage) for stage in live_stages},
+                    )
+
+                if effective_mock:
+                    miner_output = self.formulator.mock_formulate_model(req.query, concept)
+                else:
                     miner_output = self.formulator.formulate_model(req.query, concept)
-                    _record_live_stage("miner", "formulator")
+                    _record_live_stage("formulator")
 
             print(f"[+] Concept Mined & Formulated: {miner_output.design_name}")
 
@@ -268,12 +369,30 @@ class PipelineRunner:
                     )
                     _record_live_stage("auditor")
 
+                if _request_marked_infeasible(auditor_output):
+                    return self._rejected_result(
+                        req,
+                        stage="auditor",
+                        reason=(getattr(auditor_output, "infeasibility_reason", None) or "").strip()
+                        or auditor_output.audit_notes,
+                        concept_attempt=concept_attempt,
+                        safe_epochs=safe_epochs,
+                        effective_mock=effective_mock,
+                        miner_output=miner_output,
+                        auditor_output=auditor_output,
+                        optimization_history=optimization_history,
+                        failed_concepts=failed_concepts,
+                        models={stage: get_model_name(stage) for stage in live_stages},
+                    )
+
                 if not auditor_output.audit_passed:
+                    # Concept-level failure (request_feasible stays true): try another concept.
                     print(f"[-] Auditor failed at round {round_idx}: {auditor_output.audit_notes}")
                     failed_concepts.append({
                         "design_name": miner_output.design_name,
                         "inspiration_source": miner_output.inspiration_source,
                         "reason": f"Audit failed: {auditor_output.audit_notes}",
+                        "stage": "auditor",
                     })
                     concept_failed = True
                     break
@@ -298,6 +417,7 @@ class PipelineRunner:
                         "design_name": miner_output.design_name,
                         "inspiration_source": miner_output.inspiration_source,
                         "reason": f"Simulation solver error: {solve_err}",
+                        "stage": "solver",
                     })
                     concept_failed = True
                     break
@@ -315,6 +435,7 @@ class PipelineRunner:
                     auditor_output=auditor_output,
                     sim_output=sim_output,
                     optimization_history=optimization_history,
+                    user_query=req.query,
                 )
                 auditor_output, sim_output, validation_result, fallback_attempts = self._try_solver_fallbacks(
                     miner_output=miner_output,
@@ -324,12 +445,36 @@ class PipelineRunner:
                     optimization_history=optimization_history,
                     epochs=safe_epochs,
                     effective_mock=effective_mock,
+                    user_query=req.query,
                 )
                 if fallback_attempts:
                     round_data["solver_fallbacks"] = fallback_attempts
                     round_data["simulator"] = sim_output.model_dump()
                     round_data["parameters"] = auditor_output.audited_parameters_dict
                 round_data["validation"] = validation_result.model_dump()
+
+                if validation_result.recommended_action == "reject_request":
+                    # A deterministic physics check found the request impossible as stated
+                    # (e.g. efficiency > 100 % in a closed adiabatic system).
+                    return self._rejected_result(
+                        req,
+                        stage="validator",
+                        reason="; ".join(
+                            check.detail
+                            for check in validation_result.checks
+                            if check.severity == "error" and not check.passed
+                        ),
+                        concept_attempt=concept_attempt,
+                        safe_epochs=safe_epochs,
+                        effective_mock=effective_mock,
+                        miner_output=miner_output,
+                        auditor_output=auditor_output,
+                        sim_output=sim_output,
+                        validation_result=validation_result,
+                        optimization_history=optimization_history,
+                        failed_concepts=failed_concepts,
+                        models={stage: get_model_name(stage) for stage in live_stages},
+                    )
 
                 if validation_result.status == "fail":
                     failed_detail = "; ".join(
@@ -342,6 +487,7 @@ class PipelineRunner:
                         "design_name": miner_output.design_name,
                         "inspiration_source": miner_output.inspiration_source,
                         "reason": f"Validator failed: {failed_detail}",
+                        "stage": "validator",
                     })
                     concept_failed = True
                     break
@@ -365,6 +511,7 @@ class PipelineRunner:
                             "design_name": miner_output.design_name,
                             "inspiration_source": miner_output.inspiration_source,
                             "reason": f"Optimizer rejected: {opt_decision.reasoning}",
+                            "stage": "optimizer",
                         })
                         concept_failed = True
                         break
@@ -387,7 +534,7 @@ class PipelineRunner:
             print(f"[-] Concept {miner_output.design_name} failed. Attempting Re-Mining...")
 
         if concept_failed and concept_attempt == max_concept_attempts:
-            raise ValueError(f"All bionic concepts failed validation. Failed history: {failed_concepts}")
+            raise ConceptsExhaustedError(failed_concepts, concept_attempt)
 
         print("[*] Generating Practical & Commercial Synthesis Report...")
         if effective_mock:
@@ -407,10 +554,12 @@ class PipelineRunner:
                 auditor_output=auditor_output,
                 sim_output=sim_output,
                 optimization_history=optimization_history,
+                user_query=req.query,
             )
 
         return {
             "success": True,
+            "status": "completed",
             "query": req.query,
             "epochs": safe_epochs,
             "is_mock": effective_mock,

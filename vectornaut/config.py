@@ -118,6 +118,9 @@ class MinerConceptOutput(BaseModel):
     physical_mechanism: str = Field(description="Explanation of the physical mechanism being mimicked")
     parameters: List[ParameterProposal] = Field(description="List of proposed physical parameters")
     svg_schematic: str = Field(description="Self-contained responsive 2D SVG markup illustrating the micro/nanostructure of the proposed material, scaled dynamically according to the parameter values. Uses dark-mode aligned accent colors (neon purple, neon cyan, dark fills) and technical labels.")
+    # Optional with defaults so that recorded answers without these fields still parse.
+    request_feasible: bool = Field(default=True, description="False only if the user's request itself is physically impossible as stated (e.g. violates energy conservation or the second law of thermodynamics, or contains mutually contradictory requirements), so that no concept can fulfil it. True if at least one physically valid concept can fulfil the request.")
+    infeasibility_reason: Optional[str] = Field(default=None, description="If request_feasible is false: a short explanation for the user naming the violated physical law or the contradictory requirements. Otherwise null.")
 
     @property
     def proposed_parameters(self) -> Dict[str, float]:
@@ -202,6 +205,9 @@ class ObjectiveMetricContract(BaseModel):
 class AuditorOutput(BaseModel):
     audit_passed: bool = Field(description="True if the parameters are physically plausible and safe for simulator execution")
     audit_notes: str = Field(description="Detailed notes explaining the checks performed, reasons for success/failure, or adjustments made")
+    # Optional with defaults so that recorded answers without these fields still parse.
+    request_feasible: bool = Field(default=True, description="False only if the user's request itself is physically impossible as stated (e.g. violates energy conservation or the second law of thermodynamics, or contains mutually contradictory requirements), so that no other concept could pass either. A concept that merely fails (unsafe, unrealistic parameters) keeps this true and sets audit_passed=false.")
+    infeasibility_reason: Optional[str] = Field(default=None, description="If request_feasible is false: a short explanation for the user naming the violated physical law or the contradictory requirements. Otherwise null.")
     audited_parameters: List[AuditedParameter] = Field(description="The finalized, sanitized parameters to be passed to the simulator")
     dimensionless_numbers: List[DimensionlessNumber] = Field(description="Calculated key dimensionless values for verification")
     simulation_coefficient: float = Field(description="Derived core coefficient (e.g., slip length, heat transfer coefficient) used directly in the simulator boundary/PDE equations")

@@ -13,11 +13,15 @@ def archive_run_data(response_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
         os.makedirs(history_dir(), exist_ok=True)
         os.makedirs(reports_dir(), exist_ok=True)
 
-        design_name = response_data.get("miner", {}).get("design_name") or "unknown_design"
+        is_rejected = response_data.get("status") == "rejected"
+        design_name = (response_data.get("miner") or {}).get("design_name") or ("rejected_request" if is_rejected else "unknown_design")
         slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        md_content = generate_markdown_report_content(response_data, timestamp)
+        if is_rejected:
+            md_content = generate_rejection_report_content(response_data, timestamp)
+        else:
+            md_content = generate_markdown_report_content(response_data, timestamp)
         response_data["report_md"] = md_content
 
         md_filename = f"report_{timestamp}_{slug}.md"
@@ -37,6 +41,57 @@ def archive_run_data(response_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
     except Exception as archive_err:
         print(f"[*] Archiving failed: {archive_err}")
         return None
+
+
+_REJECTION_STAGE_LABELS = {
+    "miner": "Konzeptsuche (Miner)",
+    "auditor": "Physik-Audit (Auditor)",
+    "validator": "Deterministische Physikprüfung (Validator)",
+}
+
+
+def generate_rejection_report_content(data: dict, timestamp_str: str) -> str:
+    """Report for a run that stopped because the request is physically impossible as stated."""
+    rejection = data.get("rejection") or {}
+    miner = data.get("miner") or {}
+    auditor = data.get("auditor") or {}
+    try:
+        readable_time = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        readable_time = timestamp_str
+
+    stage = rejection.get("stage", "unknown")
+    md = [
+        "# Anfrage abgelehnt: physikalisch nicht umsetzbar",
+        f"*Erstellt am: {readable_time} (Vectornaut Engine)*\n",
+        "## Begründung",
+        f"> {rejection.get('reason') or 'Keine Begründung angegeben.'}\n",
+        f"- **Abgelehnt durch:** {_REJECTION_STAGE_LABELS.get(stage, stage)}",
+        f"- **Konzeptversuch:** {rejection.get('concept_attempt', 'N/A')}",
+        f"- **Anfrage:** {data.get('query') or 'N/A'}",
+        "",
+        "Die Pipeline hat nach dieser Feststellung keine weiteren Konzepte gesucht und keine Ergebnisse als Lösung der Anfrage ausgegeben, "
+        "weil kein Konzept eine physikalisch unmögliche Anforderung erfüllen kann.",
+    ]
+    if miner.get("design_name"):
+        md.append("\n## Zuletzt betrachtetes Konzept (nicht als Lösung zu verstehen)")
+        md.append(f"- **Konzept:** {miner.get('design_name')}")
+        if miner.get("inspiration_source"):
+            md.append(f"- **Vorbild:** {miner.get('inspiration_source')}")
+        if miner.get("domain"):
+            md.append(f"- **Domäne:** {miner.get('domain')}")
+        if miner.get("physical_mechanism"):
+            md.append(f"- **Mechanismus:**\n  > {miner.get('physical_mechanism')}")
+    if auditor.get("audit_notes"):
+        md.append("\n## Audit-Notizen")
+        md.append(f"> {auditor.get('audit_notes')}")
+    failed_c = data.get("failed_concepts") or []
+    if failed_c:
+        md.append("\n## Vorher verworfene Konzepte")
+        for idx, fc in enumerate(failed_c, 1):
+            md.append(f"* **Ansatz {idx}: {fc.get('design_name')}** ({fc.get('inspiration_source')}): {fc.get('reason')}")
+    return "\n".join(md)
+
 
 def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     miner = data.get("miner", {})

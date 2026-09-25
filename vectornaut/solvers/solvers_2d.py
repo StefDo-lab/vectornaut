@@ -7,7 +7,7 @@ import scipy.sparse as sparse
 from scipy.sparse.linalg import spsolve
 import torch
 import torch.optim as optim
-from typing import Dict, List, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 
 from .pinn_model import GenericPINN
 
@@ -20,13 +20,294 @@ EDGES_2D = ("left", "right", "bottom", "top")
 UNIT_BOUNDS = (0.0, 1.0)
 
 
-def parse_rhs_2d(rhs_str: str, x_name: str, y_name: str, params: Dict[str, float]) -> sp.Expr:
+_TRANSFORMATIONS = standard_transformations + (convert_xor,)
+
+# Terms of the general linear second-order operator, in this order:
+#   c_xx*u_xx + c_yy*u_yy + c_xy*u_xy + c_x*u_x + c_y*u_y + c_u*u = f(x, y)
+PDE_TERMS_2D = ("u_xx", "u_yy", "u_xy", "u_x", "u_y", "u")
+_DERIVATIVE_ORDERS = {(2, 0): "u_xx", (0, 2): "u_yy", (1, 1): "u_xy", (1, 0): "u_x", (0, 1): "u_y"}
+
+
+def _term_label(term: str, dep: str, x: str, y: str) -> str:
+    return {
+        "u_xx": f"d2{dep}_d{x}2", "u_yy": f"d2{dep}_d{y}2", "u_xy": f"d2{dep}_d{x}d{y}",
+        "u_x": f"d{dep}_d{x}", "u_y": f"d{dep}_d{y}", "u": dep,
+    }[term]
+
+
+class LinearPDE2D:
+    """
+    A linear second-order 2D PDE
+
+        c_xx*u_xx + c_yy*u_yy + c_xy*u_xy + c_x*u_x + c_y*u_y + c_u*u = rhs
+
+    with coefficients and right-hand side given as SymPy expressions in x and y (parameters
+    already substituted). Built by parse_pde_2d; solve_fdm_2d and solve_pytorch_pinn_2d accept
+    it in place of a bare source term (a bare expression f means u_xx + u_yy = f).
+    """
+
+    def __init__(self, coeffs: Dict[str, sp.Expr], rhs: sp.Expr, x_sym: sp.Symbol, y_sym: sp.Symbol,
+                 equation: str = ""):
+        self.coeffs = {term: sp.sympify(coeffs.get(term, 0)) for term in PDE_TERMS_2D}
+        self.rhs = sp.sympify(rhs)
+        self.x_sym = x_sym
+        self.y_sym = y_sym
+        self.equation = equation
+        if self.coeffs["u_xx"] == 0 or self.coeffs["u_yy"] == 0:
+            missing = [t for t in ("u_xx", "u_yy") if self.coeffs[t] == 0]
+            raise ValueError(
+                f"2D governing equation {equation!r} has no {' / '.join(missing)} term; the 2D solvers "
+                "need both second derivatives (elliptic equation a*u_xx + b*u_yy + ... = f with a, b of the same sign)."
+            )
+        # Constant coefficients: check ellipticity right away (varying ones are checked on the grid).
+        principal = [self.coeffs[t] for t in ("u_xx", "u_yy", "u_xy")]
+        if not any(c.free_symbols for c in principal):
+            a, b, c = (float(v) for v in principal)
+            _check_elliptic(np.array([a]), np.array([b]), np.array([c]), equation)
+
+    @classmethod
+    def laplacian(cls, rhs: sp.Expr, x_sym: sp.Symbol, y_sym: sp.Symbol) -> "LinearPDE2D":
+        return cls({"u_xx": sp.Integer(1), "u_yy": sp.Integer(1)}, rhs, x_sym, y_sym, equation="u_xx + u_yy = f")
+
+    @property
+    def is_laplacian(self) -> bool:
+        """True for u_xx + u_yy = f (the form the 2D solvers handled before the general operator)."""
+        return (self.coeffs["u_xx"] == 1 and self.coeffs["u_yy"] == 1 and
+                all(self.coeffs[t] == 0 for t in ("u_xy", "u_x", "u_y", "u")))
+
+    def evaluate(self, X: np.ndarray, Y: np.ndarray) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+        """
+        Evaluates the coefficients and the right-hand side on the points (X, Y) and normalises
+        them pointwise by s = sign(c_xx) * max(|c_xx|, |c_yy|), so that the returned equation has
+        positive second-derivative coefficients of order one (the equation is unchanged; this
+        only scales the PINN residual and the FDM rows). Returns (coefficients, rhs); terms whose
+        coefficient is identically zero are omitted. For u_xx + u_yy = f this returns exactly
+        ({'u_xx': 1, 'u_yy': 1}, f).
+        Raises ValueError if a value is not finite or the equation is not elliptic somewhere.
+        """
+        X = np.asarray(X, dtype=float)
+        Y = np.asarray(Y, dtype=float)
+        values = {
+            term: _eval_field_2d(coeff, self.x_sym, self.y_sym, X, Y, f"coefficient of {term}")
+            for term, coeff in self.coeffs.items() if coeff != 0
+        }
+        rhs = _eval_field_2d(self.rhs, self.x_sym, self.y_sym, X, Y, "source term")
+        a = values["u_xx"]
+        b = values["u_yy"]
+        c = values.get("u_xy", np.zeros_like(a))
+        _check_elliptic(a, b, c, self.equation)
+        scale = np.sign(a) * np.maximum(np.abs(a), np.abs(b))
+        if np.all(scale == 1.0):
+            return values, rhs
+        return {term: v / scale for term, v in values.items()}, rhs / scale
+
+    def __repr__(self) -> str:
+        terms = " + ".join(f"({c})*{t}" for t, c in self.coeffs.items() if c != 0)
+        return f"LinearPDE2D({terms} = {self.rhs})"
+
+
+def _check_elliptic(a: np.ndarray, b: np.ndarray, c: np.ndarray, equation: str) -> None:
+    # a*u_xx + b*u_yy + c*u_xy is elliptic iff a*b - c^2/4 > 0 (then a and b have the same sign).
+    disc = a * b - 0.25 * c * c
+    if np.any(disc <= 0.0):
+        k = int(np.argmin(disc))
+        raise ValueError(
+            f"2D governing equation {equation!r} is not elliptic (coefficients of u_xx, u_yy, u_xy = "
+            f"{float(a.flat[k]):g}, {float(b.flat[k]):g}, {float(c.flat[k]):g}); the 2D solvers need "
+            "a*u_xx + b*u_yy + ... with a, b of the same sign (and a*b > c^2/4 for a mixed term c*u_xy)."
+        )
+
+
+def _eval_field_2d(expr: sp.Expr, x_sym: sp.Symbol, y_sym: sp.Symbol, X: np.ndarray, Y: np.ndarray,
+                   what: str) -> np.ndarray:
+    """Evaluates a SymPy expression in x, y on the given points (numpy)."""
+    expr = sp.sympify(expr)
+    unknown = expr.free_symbols - {x_sym, y_sym}
+    if unknown or expr.atoms(AppliedUndef):
+        raise ValueError(f"2D {what} may only depend on {x_sym} and {y_sym}: {expr}")
+    X = np.asarray(X, dtype=float)
+    f = sp.lambdify((x_sym, y_sym), expr, "numpy")
+    try:
+        with np.errstate(all="ignore"):
+            F = np.asarray(f(X, Y), dtype=float) * np.ones_like(X, dtype=float)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"2D {what} cannot be evaluated as a real number: {expr} ({e})") from e
+    if not np.all(np.isfinite(F)):
+        raise ValueError(f"2D {what} is not finite on the domain: {expr}")
+    return F
+
+
+def _as_pde_2d(pde: Union[LinearPDE2D, sp.Expr, float], x_sym: sp.Symbol, y_sym: sp.Symbol) -> LinearPDE2D:
+    if isinstance(pde, LinearPDE2D):
+        return pde
+    return LinearPDE2D.laplacian(sp.sympify(pde), x_sym, y_sym)
+
+
+def _rewrite_derivative_notation(s: str, dep: str, x: str, y: str, params: Dict[str, float]) -> str:
+    """
+    Rewrites the derivative notations of the governing equation into SymPy calls on dep(x, y):
+    d2u_dx2, d2u_dy2, d2u_dxdy / d2u_dydx, du_dx, du_dy (optionally followed by '(x, y)'),
+    subscripts u_xx, u_yy, u_xy / u_yx, u_x, u_y (unless such a name is a parameter),
+    and a bare u (-> u(x, y)). diff(...), Derivative(...) and laplacian(u) are handled by SymPy.
+    """
+    d, X, Y = re.escape(dep), re.escape(x), re.escape(y)
+    args = rf"(?:\s*\(\s*{X}\s*,\s*{Y}\s*\))?"
+    u = f"{dep}({x}, {y})"
+
+    def deriv(*variables: str) -> str:
+        return f"Derivative({u}, {', '.join(variables)})"
+
+    patterns = [
+        (rf"\bd2{d}_d{X}2\b{args}", deriv(x, x)),
+        (rf"\bd2{d}_d{Y}2\b{args}", deriv(y, y)),
+        (rf"\bd2{d}_d{X}d{Y}\b{args}", deriv(x, y)),
+        (rf"\bd2{d}_d{Y}d{X}\b{args}", deriv(x, y)),
+        (rf"\bd{d}_d{X}\b{args}", deriv(x)),
+        (rf"\bd{d}_d{Y}\b{args}", deriv(y)),
+    ]
+    for pattern, replacement in patterns:
+        s = re.sub(pattern, lambda m, r=replacement: r, s)
+
+    subscripts = {x + x: (x, x), y + y: (y, y), x + y: (x, y), y + x: (x, y), x: (x,), y: (y,)}
+
+    def subscript(m: "re.Match") -> str:
+        if m.group(0).split("(")[0].strip() in params:
+            return m.group(0)
+        return deriv(*subscripts[m.group(1)])
+
+    alternatives = "|".join(re.escape(k) for k in sorted(subscripts, key=len, reverse=True))
+    s = re.sub(rf"\b{d}_({alternatives})\b{args}", subscript, s)
+    # A bare dependent variable ("- k**2 * u") means u(x, y).
+    s = re.sub(rf"\b{d}\b(?!\s*\()", lambda m: u, s)
+    return s
+
+
+def _infer_dependent_2d(equation: str, x: str, y: str, params: Dict[str, float]) -> str:
+    """Finds the dependent variable of a 2D equation from its second-derivative terms."""
+    X, Y = re.escape(x), re.escape(y)
+    candidates = set(re.findall(rf"\bd2([A-Za-z_]\w*?)_d(?:{X}2|{Y}2|{X}d{Y}|{Y}d{X})\b", equation))
+    candidates |= set(re.findall(r"\b(?:laplacian|Laplacian|diff|Derivative)\(\s*([A-Za-z_]\w*)", equation))
+    candidates |= (set(re.findall(rf"\b([A-Za-z_]\w*?)_{X}{X}\b", equation)) &
+                   set(re.findall(rf"\b([A-Za-z_]\w*?)_{Y}{Y}\b", equation)))
+    candidates -= set(params) | {x, y}
+    if len(candidates) != 1:
+        raise ValueError(
+            f"Cannot identify the dependent variable of the 2D governing equation {equation!r} "
+            f"(candidates: {sorted(candidates) or 'none'})."
+        )
+    return candidates.pop()
+
+
+def parse_pde_2d(
+    equation: str,
+    dep_name: Optional[str],
+    x_name: str,
+    y_name: str,
+    params: Dict[str, float]
+) -> LinearPDE2D:
+    """
+    Parses a whole 2D governing equation ('lhs = rhs'), moves all terms to one side and
+    extracts the linear operator
+
+        c_xx*u_xx + c_yy*u_yy + c_xy*u_xy + c_x*u_x + c_y*u_y + c_u*u = f(x, y)
+
+    Coefficients may be numbers, parameter expressions or functions of x and y. Recognised
+    notations: d2u_dx2, d2u_dy2, d2u_dxdy, du_dx, du_dy, u_xx/u_yy/u_xy/u_x/u_y, diff(u, x, 2),
+    Derivative(u, x), laplacian(u) and u itself (reaction terms such as -k**2*u).
+    Raises ValueError for anything the 2D solvers cannot represent: no '=' or several, nonlinear
+    terms (u*u_x, u**2, sin(u), ...), third or higher derivatives, unknown symbols or functions,
+    or a non-elliptic principal part.
+    """
+    from .parsing import escape_keywords, safe_symbol_name
+
+    if equation.count("=") != 1:
+        raise ValueError(f"2D governing equation must contain exactly one '=': {equation!r}")
+    if dep_name is None:
+        dep_name = _infer_dependent_2d(equation, x_name, y_name, params)
+
+    x = sp.Symbol(x_name)
+    y = sp.Symbol(y_name)
+    u_func = sp.Function(dep_name)
+    u = u_func(x, y)
+
+    def laplacian(f):
+        return sp.diff(f, x, 2) + sp.diff(f, y, 2)
+
+    local_ns: Dict[str, Any] = {safe_symbol_name(p): v for p, v in params.items()}
+    local_ns.update({"laplacian": laplacian, "Laplacian": laplacian,
+                     safe_symbol_name(x_name): x, safe_symbol_name(y_name): y,
+                     safe_symbol_name(dep_name): u_func})
+
+    sides = []
+    for side in equation.split("="):
+        text = _rewrite_derivative_notation(side.strip(), dep_name, x_name, y_name, params)
+        try:
+            sides.append(sp.sympify(sp.parse_expr(escape_keywords(text), local_dict=local_ns,
+                                                  transformations=_TRANSFORMATIONS)))
+        except Exception as e:
+            raise ValueError(f"Could not parse 2D governing equation {equation!r}: {e}") from e
+    expr = sides[0] - sides[1]
+
+    # Replace the derivatives of u (and u itself) by placeholder symbols.
+    placeholders = {term: sp.Dummy(term) for term in PDE_TERMS_2D}
+    replacements = {}
+    for der in expr.atoms(sp.Derivative):
+        counts = dict(der.variable_count)
+        order = (int(counts.pop(x, 0)), int(counts.pop(y, 0)))
+        term = _DERIVATIVE_ORDERS.get(order)
+        if der.expr != u or counts or term is None:
+            raise ValueError(
+                f"2D governing equation {equation!r} contains the unsupported derivative {der}; "
+                f"only first and second derivatives of {dep_name}({x_name}, {y_name}) are supported."
+            )
+        replacements[der] = placeholders[term]
+    expr = expr.xreplace(replacements).xreplace({u: placeholders["u"]})
+    undefined = expr.atoms(AppliedUndef)
+    if undefined:
+        raise ValueError(
+            f"2D governing equation {equation!r} uses unsupported function(s) {sorted(map(str, undefined))}; "
+            f"{dep_name} may only appear as {dep_name}({x_name}, {y_name}) or through its derivatives."
+        )
+
+    unknown_symbols = set(placeholders.values())
+    coeffs = {}
+    for term, sym in placeholders.items():
+        coeff = sp.diff(expr, sym)
+        if coeff.free_symbols & unknown_symbols:
+            raise ValueError(
+                f"2D governing equation {equation!r} is nonlinear in {_term_label(term, dep_name, x_name, y_name)}; "
+                "the 2D solvers support only linear equations "
+                "a*u_xx + b*u_yy + c*u_xy + d*u_x + e*u_y + g*u = f(x, y)."
+            )
+        coeffs[term] = sp.sympify(coeff)
+    rhs = sp.sympify(-expr.xreplace({sym: 0 for sym in placeholders.values()}))
+
+    for what, value in list(coeffs.items()) + [("rhs", rhs)]:
+        unknown = value.free_symbols - {x, y}
+        if unknown:
+            raise ValueError(
+                f"2D governing equation {equation!r}: the {'right-hand side' if what == 'rhs' else 'coefficient of ' + _term_label(what, dep_name, x_name, y_name)} "
+                f"depends on unknown symbol(s) {sorted(map(str, unknown))}."
+            )
+    if not any(coeffs[t] != 0 for t in _DERIVATIVE_ORDERS.values()):
+        raise ValueError(f"2D governing equation {equation!r} contains no derivative of {dep_name}.")
+    return LinearPDE2D(coeffs, rhs, x, y, equation=equation)
+
+
+def parse_rhs_2d(rhs_str: str, x_name: str, y_name: str, params: Dict[str, float]) -> Union[sp.Expr, LinearPDE2D]:
+    """
+    Parses a source term f(x, y) (the right-hand side of u_xx + u_yy = f). A whole equation
+    ('lhs = rhs') is parsed with parse_pde_2d instead (dependent variable inferred) and returned
+    as a LinearPDE2D; both are accepted by solve_fdm_2d and solve_pytorch_pinn_2d.
+    """
+    if "=" in rhs_str:
+        return parse_pde_2d(rhs_str, None, x_name, y_name, params)
     x = sp.Symbol(x_name)
     y = sp.Symbol(y_name)
     local_ns = {x_name: x, y_name: y}
     for p_name, p_val in params.items():
         local_ns[p_name] = p_val
-    expr = sp.parse_expr(rhs_str.strip(), local_dict=local_ns, transformations=(standard_transformations + (convert_xor,)))
+    expr = sp.parse_expr(rhs_str.strip(), local_dict=local_ns, transformations=_TRANSFORMATIONS)
     return expr
 
 
@@ -266,21 +547,8 @@ def _bc_values(bc: Dict[str, Any], coords: np.ndarray) -> np.ndarray:
     return values
 
 
-def _eval_source_2d(rhs_expr: sp.Expr, x_sym: sp.Symbol, y_sym: sp.Symbol, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
-    """Evaluates the source term f(x, y) on the given points (numpy, no autograd needed)."""
-    rhs_expr = sp.sympify(rhs_expr)
-    unknown = rhs_expr.free_symbols - {x_sym, y_sym}
-    if unknown or rhs_expr.atoms(AppliedUndef):
-        raise ValueError(f"2D source term may only depend on {x_sym} and {y_sym}: {rhs_expr}")
-    f_rhs = sp.lambdify((x_sym, y_sym), rhs_expr, "numpy")
-    F = np.asarray(f_rhs(X, Y), dtype=float) * np.ones_like(X, dtype=float)
-    if not np.all(np.isfinite(F)):
-        raise ValueError(f"2D source term is not finite on the domain: {rhs_expr}")
-    return F
-
-
 def solve_fdm_2d(
-    rhs_expr: sp.Expr,
+    rhs_expr: Union[LinearPDE2D, sp.Expr],
     bcs_parsed: Dict[str, Dict[str, Any]],
     x_sym: sp.Symbol,
     y_sym: sp.Symbol,
@@ -291,20 +559,41 @@ def solve_fdm_2d(
     y_bounds: Tuple[float, float] = UNIT_BOUNDS
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Solves u_xx + u_yy = RHS on the rectangle x_bounds x y_bounds using the Finite Difference
-    Method (5-point stencil, first-order one-sided Neumann edges) with a direct sparse solve.
+    Solves a linear elliptic PDE on the rectangle x_bounds x y_bounds using the Finite
+    Difference Method with a direct sparse solve. rhs_expr is either a LinearPDE2D
+    (a*u_xx + b*u_yy + c*u_xy + d*u_x + e*u_y + g*u = f, see parse_pde_2d) or a bare source
+    term f for u_xx + u_yy = f.
+    Interior: central differences (5-point stencil, plus the 4 diagonal neighbours for u_xy).
+    A first-derivative term switches to a one-sided upwind difference at nodes where the
+    central one would violate the discrete maximum principle (cell Peclet number |d|*h/a > 2).
+    Edges: Dirichlet or first-order one-sided Neumann.
     max_iter and tol are kept for backwards compatibility (the former Jacobi iteration) and
     are no longer used.
     """
+    pde = _as_pde_2d(rhs_expr, x_sym, y_sym)
     nx = ny = grid_size
     x_vals = np.linspace(x_bounds[0], x_bounds[1], nx)
     y_vals = np.linspace(y_bounds[0], y_bounds[1], ny)
     hx = (x_bounds[1] - x_bounds[0]) / (nx - 1)
     hy = (y_bounds[1] - y_bounds[0]) / (ny - 1)
 
-    # Evaluate RHS on the grid
+    # Evaluate the (normalised) coefficients and the RHS on the grid
     X, Y = np.meshgrid(x_vals, y_vals, indexing='ij')
-    F = _eval_source_2d(rhs_expr, x_sym, y_sym, X, Y)
+    coeffs, F = pde.evaluate(X, Y)
+    zeros = np.zeros_like(X)
+    A = coeffs['u_xx']
+    B = coeffs['u_yy']
+    C = coeffs.get('u_xy', zeros)
+    Dx = coeffs.get('u_x', zeros)
+    Dy = coeffs.get('u_y', zeros)
+    E = coeffs.get('u', zeros)
+    upwind_x = np.abs(Dx) * hx > 2.0 * A
+    upwind_y = np.abs(Dy) * hy > 2.0 * B
+    interior = np.zeros_like(X, dtype=bool)
+    interior[1:-1, 1:-1] = True
+    if np.any((upwind_x | upwind_y) & interior):
+        print("[*] 2D FDM: advection dominates on this grid (cell Peclet number > 2); "
+              "using upwind differences for the first-derivative terms there.")
 
     edge_values = {
         'left': _bc_values(bcs_parsed['left'], y_vals),
@@ -347,12 +636,42 @@ def solve_fdm_2d(
             k = idx(i, j)
             edge = owner.get((i, j))
             if edge is None:
-                # Interior: (u[i+1,j] - 2u + u[i-1,j]) / hx^2 + (u[i,j+1] - 2u + u[i,j-1]) / hy^2 = F
-                add(k, k, -2.0 * cx - 2.0 * cy)
-                add(k, idx(i + 1, j), cx)
-                add(k, idx(i - 1, j), cx)
-                add(k, idx(i, j + 1), cy)
-                add(k, idx(i, j - 1), cy)
+                # Interior: a (u[i+1,j] - 2u + u[i-1,j]) / hx^2 + b (u[i,j+1] - 2u + u[i,j-1]) / hy^2
+                #   + c u_xy + d u_x + e u_y + g u = F
+                a_ij, b_ij, d_ij, e_ij = A[i, j], B[i, j], Dx[i, j], Dy[i, j]
+                diag = -2.0 * a_ij * cx - 2.0 * b_ij * cy + E[i, j]
+                east, west = a_ij * cx, a_ij * cx
+                north, south = b_ij * cy, b_ij * cy
+                if not upwind_x[i, j]:
+                    east += 0.5 * d_ij / hx
+                    west -= 0.5 * d_ij / hx
+                elif d_ij > 0.0:        # forward difference (u[i+1,j] - u) / hx
+                    east += d_ij / hx
+                    diag -= d_ij / hx
+                else:                   # backward difference (u - u[i-1,j]) / hx
+                    west -= d_ij / hx
+                    diag += d_ij / hx
+                if not upwind_y[i, j]:
+                    north += 0.5 * e_ij / hy
+                    south -= 0.5 * e_ij / hy
+                elif e_ij > 0.0:
+                    north += e_ij / hy
+                    diag -= e_ij / hy
+                else:
+                    south -= e_ij / hy
+                    diag += e_ij / hy
+                add(k, k, diag)
+                add(k, idx(i + 1, j), east)
+                add(k, idx(i - 1, j), west)
+                add(k, idx(i, j + 1), north)
+                add(k, idx(i, j - 1), south)
+                if C[i, j] != 0.0:
+                    # u_xy ~ (u[i+1,j+1] - u[i+1,j-1] - u[i-1,j+1] + u[i-1,j-1]) / (4 hx hy)
+                    cxy = C[i, j] / (4.0 * hx * hy)
+                    add(k, idx(i + 1, j + 1), cxy)
+                    add(k, idx(i - 1, j - 1), cxy)
+                    add(k, idx(i + 1, j - 1), -cxy)
+                    add(k, idx(i - 1, j + 1), -cxy)
                 b[k] = F[i, j]
                 continue
 
@@ -385,7 +704,7 @@ def solve_fdm_2d(
     return x_vals, y_vals, u
 
 def solve_pytorch_pinn_2d(
-    rhs_expr: sp.Expr,
+    rhs_expr: Union[LinearPDE2D, sp.Expr],
     bcs_parsed: Dict[str, Dict[str, Any]],
     x_sym: sp.Symbol,
     y_sym: sp.Symbol,
@@ -394,8 +713,12 @@ def solve_pytorch_pinn_2d(
     y_bounds: Tuple[float, float] = UNIT_BOUNDS
 ) -> Tuple[GenericPINN, List[float]]:
     """
-    Trains a 2D PINN model to solve u_xx + u_yy = RHS on the rectangle x_bounds x y_bounds.
+    Trains a 2D PINN model on the rectangle x_bounds x y_bounds for a linear elliptic PDE:
+    rhs_expr is a LinearPDE2D (a*u_xx + b*u_yy + c*u_xy + d*u_x + e*u_y + g*u = f, see
+    parse_pde_2d) or a bare source term f for u_xx + u_yy = f. The PDE residual uses the
+    coefficients normalised by LinearPDE2D.evaluate.
     """
+    pde = _as_pde_2d(rhs_expr, x_sym, y_sym)
     torch.manual_seed(42)
     model = GenericPINN(input_dim=2, hidden_dim=32)
 
@@ -446,7 +769,18 @@ def solve_pytorch_pinn_2d(
 
     # The source term does not depend on the network, so it is evaluated once with numpy on the
     # collocation points and kept as a constant tensor (no autograd graph, no torch printer).
-    rhs_val = torch.tensor(_eval_source_2d(rhs_expr, x_sym, y_sym, X, Y).reshape(-1, 1), dtype=torch.float32)
+    # The same holds for the coefficients of the operator; a coefficient that is 1 everywhere is
+    # not multiplied (u_xx + u_yy = f is trained exactly as before the general operator).
+    coeff_np, rhs_np = pde.evaluate(X, Y)
+    rhs_val = torch.tensor(rhs_np.reshape(-1, 1), dtype=torch.float32)
+    coeff_vals = {
+        term: (None if np.all(values == 1.0) else torch.tensor(values.reshape(-1, 1), dtype=torch.float32))
+        for term, values in coeff_np.items() if np.any(values != 0.0)
+    }
+
+    def _term(term, value):
+        coeff = coeff_vals[term]
+        return value if coeff is None else coeff * value
 
     boundary_sets = [
         ('left', xy_left, 0),
@@ -460,16 +794,26 @@ def solve_pytorch_pinn_2d(
     for epoch in range(epochs):
         optimizer.zero_grad()
 
-        # 1. PDE Loss: u_xx + u_yy - RHS = 0
+        # 1. PDE Loss: a*u_xx + b*u_yy [+ c*u_xy + d*u_x + e*u_y + g*u] - RHS = 0
         u = model(xy_pde)
         grads = torch.autograd.grad(u, xy_pde, torch.ones_like(u), create_graph=True)[0]
         u_x = grads[:, 0:1]
         u_y = grads[:, 1:2]
 
-        u_xx = torch.autograd.grad(u_x, xy_pde, torch.ones_like(u_x), create_graph=True)[0][:, 0:1]
+        grads_x = torch.autograd.grad(u_x, xy_pde, torch.ones_like(u_x), create_graph=True)[0]
+        u_xx = grads_x[:, 0:1]
         u_yy = torch.autograd.grad(u_y, xy_pde, torch.ones_like(u_y), create_graph=True)[0][:, 1:2]
 
-        pde_loss = torch.mean((u_xx + u_yy - rhs_val) ** 2)
+        residual = _term('u_xx', u_xx) + _term('u_yy', u_yy)
+        if 'u_xy' in coeff_vals:
+            residual = residual + _term('u_xy', grads_x[:, 1:2])
+        if 'u_x' in coeff_vals:
+            residual = residual + _term('u_x', u_x)
+        if 'u_y' in coeff_vals:
+            residual = residual + _term('u_y', u_y)
+        if 'u' in coeff_vals:
+            residual = residual + _term('u', u)
+        pde_loss = torch.mean((residual - rhs_val) ** 2)
 
         # 2. BC Loss (left, right, bottom, top edges)
         bc_loss = 0.0

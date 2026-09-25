@@ -24,6 +24,8 @@ class Miner:
         Deine Aufgabe:
         Schlage ein VOLLKOMMEN NEUES bionisches Konzept vor, das sich grundlegend von den gescheiterten Entwürfen unterscheidet und deren Schwachstellen (z. B. struktureller Kollaps unter Last, unzureichende thermische Leistung, Materialversagen etc.) gezielt behebt!
         Erkläre in der Beschreibung des physikalischen Mechanismus, warum dieses neue Konzept robuster oder besser geeignet ist.
+
+        Ausnahme: Wenn die Gründe für das Scheitern zeigen, dass nicht das Konzept, sondern die Anfrage selbst physikalisch unmöglich ist (z. B. Verletzung der Energieerhaltung), dann schlage KEIN weiteres Konzept vor, sondern setze request_feasible=false und begründe es in infeasibility_reason.
         """
 
         prompt = f"""
@@ -47,7 +49,15 @@ class Miner:
 
         Identify a specific natural or physical inspiration source, describe the underlying physical mechanism, and extract concrete physical parameters that can be modeled.
         Propose key parameters (such as height, spacing, viscosity, velocity, conductivity, density, etc.) with suggested initial values and reasonable physical bounds [min, max] that can be audited.
-        
+
+        FEASIBILITY OF THE REQUEST ITSELF (request_feasible, infeasibility_reason):
+        - First check whether the request as stated is physically possible at all. Set request_feasible=false only if NO concept could fulfil it, because it
+          (a) violates a conservation law, e.g. more energy out than in, a heater with an efficiency above 100 % in a closed or adiabatic system without energy input, perpetual motion of the first kind;
+          (b) violates the second law of thermodynamics, e.g. heat flowing on its own from cold to hot, an engine exceeding the Carnot efficiency, perpetual motion of the second kind; or
+          (c) contains requirements that contradict each other, so that meeting one makes the other impossible.
+        - Then write infeasibility_reason: one or two sentences for the user that name the violated law or the contradiction, and, if there is one, the closest physically possible alternative (e.g. an open system with an external energy source). Still fill the other fields with your best related concept, but do not present it as fulfilling the request.
+        - Do NOT use this for requests that are merely difficult, ambitious, expensive or unusual, or when only a particular concept or parameter set would fail. In those cases keep request_feasible=true (the default), leave infeasibility_reason empty and propose the best concept.
+
         {failed_prompt_part}
 
         svg_schematic:

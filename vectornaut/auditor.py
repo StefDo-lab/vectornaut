@@ -7,6 +7,139 @@ def extract_param(params_dict, keys, default):
             return params_dict[key]
     return default
 
+
+def _close(a, b, rel=1e-9) -> bool:
+    try:
+        a, b = float(a), float(b)
+    except (TypeError, ValueError):
+        return a == b
+    return a == b or abs(a - b) <= rel * max(abs(a), abs(b))
+
+
+def _fmt(value) -> str:
+    try:
+        return f"{float(value):.6g}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+# UI default domain -> keywords in the model's domain name (checked in this order, so
+# "Fluid Mechanics" is fluid and "Structural Mechanics" structural).
+_UI_DOMAIN_KEYWORDS = (
+    ("fluid", ("fluid", "flow", "hydrodynam", "aerodynam", "strömung", "stroemung")),
+    ("thermal", ("thermo", "thermal", "heat", "wärme", "waerme", "temperat")),
+    ("electro", ("electr", "elektr", "magnet", "dielectric")),
+    ("structural", ("struct", "solid", "elastic", "mechanic", "mechanik", "beam", "bending", "biege", "statik")),
+)
+
+_UI_DEFAULT_METADATA = {
+    "fluid": {
+        "domain_name": "Fluid Dynamics",
+        "independent_var": { "label": "Channel Height", "unit": "m" },
+        "dependent_var": { "label": "Flow Velocity", "unit": "m/s" },
+        "primary_metric": { "label": "PINN Wall Shear Stress" },
+        "reference_metric": { "label": "Analytical Wall Shear Stress" },
+        "performance_gain": { "label": "Drag Reduction Efficiency" }
+    },
+    "thermal": {
+        "domain_name": "Thermodynamics",
+        "independent_var": { "label": "Plate Position (x)", "unit": "m" },
+        "dependent_var": { "label": "Temperature (T)", "unit": "K" },
+        "primary_metric": { "label": "PINN Thermal Gradient" },
+        "reference_metric": { "label": "Analytical Thermal Gradient" },
+        "performance_gain": { "label": "Thermal Insulation Efficiency" }
+    },
+    "electro": {
+        "domain_name": "Electromagnetics",
+        "independent_var": { "label": "Gap Distance (y)", "unit": "m" },
+        "dependent_var": { "label": "Electrostatic Potential (V)", "unit": "V" },
+        "primary_metric": { "label": "PINN Electric Field" },
+        "reference_metric": { "label": "Analytical Electric Field" },
+        "performance_gain": { "label": "Field Attenuation Efficiency" }
+    },
+    "structural": {
+        "domain_name": "Structural Mechanics",
+        "independent_var": { "label": "Position along the Member (x)", "unit": "m" },
+        "dependent_var": { "label": "Deflection (w)", "unit": "m" },
+        "primary_metric": { "label": "Numerical Deflection" },
+        "reference_metric": { "label": "Analytical Deflection" },
+        "performance_gain": { "label": "Structural Performance Gain" }
+    },
+}
+
+
+def match_ui_domain(*domain_texts):
+    """Returns 'fluid', 'thermal', 'electro' or 'structural' for the first text that names one, else None."""
+    for text in domain_texts:
+        lowered = str(text or "").lower()
+        if not lowered:
+            continue
+        for key, keywords in _UI_DOMAIN_KEYWORDS:
+            if any(keyword in lowered for keyword in keywords):
+                return key
+    return None
+
+
+def _default_ui_metadata(matched_domain, miner_output) -> dict:
+    if matched_domain in _UI_DEFAULT_METADATA:
+        return {k: (dict(v) if isinstance(v, dict) else v) for k, v in _UI_DEFAULT_METADATA[matched_domain].items()}
+    # Unknown domain: neutral labels instead of pretending it is a fluid problem.
+    independent = (getattr(miner_output, "independent_variables", None) or ["x"])[0]
+    dependent = (getattr(miner_output, "dependent_variables", None) or ["u"])[0]
+    return {
+        "domain_name": getattr(miner_output, "domain", None) or "Scientific Domain",
+        "independent_var": { "label": independent, "unit": "" },
+        "dependent_var": { "label": dependent, "unit": "" },
+        "primary_metric": { "label": "Primary Metric" },
+        "reference_metric": { "label": "Reference Metric" },
+        "performance_gain": { "label": "Performance Gain" },
+    }
+
+
+def _tracked_parameter(coefficient, params):
+    """Name of the single parameter whose value equals the coefficient, else None."""
+    matches = [name for name, value in params.items() if _close(value, coefficient)]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _is_reynolds_name(name) -> bool:
+    lowered = str(name or "").strip().lower()
+    return "reynolds" in lowered or lowered == "re" or lowered.startswith("re_")
+
+
+_VELOCITY_KEYS = ["free_stream_velocity", "design_flow_velocity", "flow_velocity", "mean_velocity", "inlet_velocity", "velocity", "U_ski", "ski_velocity"]
+_LENGTH_KEYS = ["characteristic_length", "length", "hydraulic_diameter", "diameter", "pipe_diameter", "hose_diameter", "channel_height", "channel_width", "film_thickness", "gap_height", "chord_length"]
+_KINEMATIC_VISCOSITY_KEYS = ["kinematic_viscosity", "nu"]
+_DYNAMIC_VISCOSITY_KEYS = ["viscosity", "dynamic_viscosity", "mu"]
+_DENSITY_KEYS = ["density", "fluid_density", "rho"]
+
+
+def _positive_param(params, keys):
+    for key in keys:
+        value = params.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value != 0:
+            return key, abs(float(value))
+    return None
+
+
+def compute_reynolds_number(params):
+    """
+    Re = v L / nu (kinematic viscosity) or rho v L / mu (dynamic viscosity and density),
+    only from parameters that are actually present. Returns (value, description) or None.
+    """
+    velocity = _positive_param(params, _VELOCITY_KEYS)
+    length = _positive_param(params, _LENGTH_KEYS)
+    if not velocity or not length:
+        return None
+    nu = _positive_param(params, _KINEMATIC_VISCOSITY_KEYS)
+    if nu:
+        return velocity[1] * length[1] / nu[1], f"{velocity[0]}, {length[0]}, {nu[0]}"
+    mu = _positive_param(params, _DYNAMIC_VISCOSITY_KEYS)
+    rho = _positive_param(params, _DENSITY_KEYS)
+    if mu and rho:
+        return rho[1] * velocity[1] * length[1] / mu[1], f"{rho[0]}, {velocity[0]}, {length[0]}, {mu[0]}"
+    return None
+
 class Auditor:
     def __init__(self, client=None):
         self.client = client
@@ -19,6 +152,20 @@ class Auditor:
         """
         from google.genai import types
 
+        # The values to audit this round: the Miner's proposal with the user's or the
+        # optimizer's overrides applied. Without this the model would audit (and derive the
+        # simulation coefficient and dimensionless numbers from) the previous parameters.
+        overrides = {k: v for k, v in (override_parameters or {}).items()}
+        proposed_parameters = {**miner_output.proposed_parameters, **overrides}
+        override_block = ""
+        if overrides:
+            override_block = f"""
+        PARAMETER VALUES TO AUDIT THIS ROUND:
+        The following values were set by the user or by the optimizer after the previous round. They replace the Miner's proposal and are already included in "Proposed Parameters" above:
+        {overrides}
+        Audit exactly these values. Base audited_parameters, the dimensionless numbers, the simulation_coefficient and your audit_notes on them, not on the Miner's original values.
+"""
+
         prompt = f"""
         You are a senior physical auditor verifying design specifications for a biomimetic material.
         Here is the proposal from the Miner stage:
@@ -28,11 +175,17 @@ class Auditor:
         Inspiration Source: {miner_output.inspiration_source}
         Domain: {miner_output.domain}
         Physical Mechanism: {miner_output.physical_mechanism}
-        Proposed Parameters: {miner_output.proposed_parameters}
+        Proposed Parameters: {proposed_parameters}
         Suggested Bounds: {miner_output.suggested_bounds}
         Parameter Justifications: {miner_output.parameter_justifications}
         Governing Equation: {miner_output.governing_equation}
         Boundary Conditions: {miner_output.boundary_conditions}
+{override_block}
+        FEASIBILITY OF THE REQUEST ITSELF (request_feasible, infeasibility_reason):
+        Distinguish two kinds of failure:
+        - The CONCEPT fails (unsafe, structurally unstable, parameters unrealistic and not fixable, model unsuitable): set audit_passed=false and keep request_feasible=true. The pipeline will then search for a different concept.
+        - The REQUEST itself is physically impossible as stated, so that no other concept could pass either: it violates a conservation law (e.g. more energy out than in, efficiency above 100 % in a closed or adiabatic system without energy input, perpetual motion), the second law of thermodynamics (e.g. heat flowing on its own from cold to hot, exceeding the Carnot efficiency), or its requirements contradict each other. Then set request_feasible=false, audit_passed=false, and explain in infeasibility_reason, in one or two sentences for the user, which law or requirement is violated and, if there is one, the closest physically possible alternative. The pipeline stops and shows this reason instead of searching for new concepts.
+        Do not set request_feasible=false for requests that are merely difficult or ambitious, or when only this concept's parameters are the problem.
 
         Perform a rigorous audit of these parameters:
         1. Check if the parameter ranges make physical sense (e.g., density, viscosity, spacing, height must be positive).
@@ -88,13 +241,17 @@ class Auditor:
         )
         audited: AuditorOutput = response.parsed
 
-        # Programmatic safety guardrails applied on top of LLM outputs:
-        sanitized_params = audited.audited_parameters_dict.copy()
-        
-        # Explicitly apply user overrides if provided
-        if override_parameters:
-            for k, v in override_parameters.items():
-                sanitized_params[k] = v
+        # Programmatic safety guardrails applied on top of LLM outputs. Every change is
+        # recorded in `changes` and reported in the audit notes.
+        model_params = audited.audited_parameters_dict
+        sanitized_params = model_params.copy()
+        changes = []
+
+        # Explicitly apply user/optimizer overrides (the model saw them in the prompt)
+        for k, v in overrides.items():
+            if k in model_params and not _close(model_params[k], v):
+                changes.append(f"{k}: {_fmt(model_params[k])} -> {_fmt(v)} (Vorgabe aus Override übernommen)")
+            sanitized_params[k] = v
 
         suggested_bounds = miner_output.suggested_bounds
         for param, val in sanitized_params.items():
@@ -102,34 +259,41 @@ class Auditor:
                 bounds = suggested_bounds[param]
                 if len(bounds) == 2:
                     min_val, max_val = bounds[0], bounds[1]
+                    original = val
                     if val < min_val:
                         val = min_val
                     elif val > max_val:
                         val = max_val
+                    if val != original:
+                        changes.append(f"{param}: {_fmt(original)} -> {_fmt(val)} (auf Grenzen [{_fmt(min_val)}, {_fmt(max_val)}] begrenzt)")
                     sanitized_params[param] = val
         
         # Enforce positive values for key dimensions
         for key in ["viscosity", "kinematic_viscosity", "riblet_height", "riblet_spacing", "free_stream_velocity", "design_flow_velocity", "conductivity"]:
             if key in sanitized_params:
-                sanitized_params[key] = max(1e-6, sanitized_params[key])
+                positive = max(1e-6, sanitized_params[key])
+                if positive != sanitized_params[key]:
+                    changes.append(f"{key}: {_fmt(sanitized_params[key])} -> {_fmt(positive)} (muss positiv sein)")
+                sanitized_params[key] = positive
 
-        # Domain-aware recalculations and fallbacks
-        domain = miner_output.domain.lower()
+        # Domain-aware recalculations. "Thermodynamics", "Heat Transfer", "Structural
+        # Mechanics", "Electrostatics" etc. map to the UI default domains by keyword.
+        matched_domain = match_ui_domain(
+            miner_output.domain,
+            audited.ui_metadata.domain_name if audited.ui_metadata else None,
+        )
         recalculated_coeff = audited.simulation_coefficient
-        re = 100.0 # Default dimensionless number placeholder
+        coeff_source = None
         
-        if "fluid" in domain:
-            v = extract_param(sanitized_params, ["free_stream_velocity", "design_flow_velocity", "velocity", "U_ski"], 1.5)
-            mu = extract_param(sanitized_params, ["viscosity", "kinematic_viscosity"], 0.001)
-
+        if matched_domain == "fluid":
             # Check if slip length is explicitly overridden
             slip_keys = ["slip_length", "slippage_coefficient", "lambda", "simulation_coefficient"]
             overridden_slip = None
-            if override_parameters:
-                for k in slip_keys:
-                    if k in override_parameters:
-                        overridden_slip = override_parameters[k]
-                        break
+            for k in slip_keys:
+                if k in overrides:
+                    overridden_slip = overrides[k]
+                    coeff_source = f"Override {k}"
+                    break
 
             if overridden_slip is not None:
                 recalculated_coeff = overridden_slip
@@ -146,60 +310,42 @@ class Auditor:
                 if s < 0.005:
                     char_height = 10.0 * s
                     recalculated_coeff = recalculated_coeff / char_height
+                coeff_source = "Riblet-Geometrie (lambda = 0.2 s (1 - exp(-2 h / s)))"
             else:
                 recalculated_coeff = extract_param(sanitized_params, ["slip_length", "slippage_coefficient"], audited.simulation_coefficient)
+                coeff_source = "slip_length"
+        elif "simulation_coefficient" in overrides:
+            recalculated_coeff = overrides["simulation_coefficient"]
+            coeff_source = "Override simulation_coefficient"
+        else:
+            # A coefficient that is simply one of the audited parameters follows that
+            # parameter when an override or bound clamp changed it.
+            tracked = _tracked_parameter(audited.simulation_coefficient, model_params)
+            if tracked and not _close(sanitized_params.get(tracked, model_params[tracked]), model_params[tracked]):
+                recalculated_coeff = sanitized_params[tracked]
+                coeff_source = f"Parameter {tracked}"
+        if not _close(recalculated_coeff, audited.simulation_coefficient):
+            changes.append(
+                f"simulation_coefficient: {_fmt(audited.simulation_coefficient)} -> {_fmt(recalculated_coeff)} (neu berechnet aus {coeff_source})"
+            )
 
-            # Calculate Reynolds number dynamically based on viscosity type
-            if mu < 1e-4:
-                re = (v * 1.0) / mu
-            else:
-                re = (1000.0 * v * 1.0) / mu
-                
         # Reconstruct list counterparts for output validation
         audited_params_list = [
             AuditedParameter(name=k, value=v) for k, v in sanitized_params.items()
         ]
-        dimensionless_list = [
-            DimensionlessNumber(name="ReynoldsNumber" if "fluid" in domain else "DimensionlessParameter", value=re)
-        ]
+        # Keep the model's dimensionless numbers. A Reynolds number is only added when it
+        # can be computed from actual parameters and the model did not give one.
+        dimensionless_list = list(audited.dimensionless_numbers or [])
+        if not any(_is_reynolds_name(item.name) for item in dimensionless_list):
+            reynolds = compute_reynolds_number(sanitized_params)
+            if reynolds is not None:
+                re_value, re_inputs = reynolds
+                dimensionless_list.append(DimensionlessNumber(name="ReynoldsNumber", value=re_value))
+                changes.append(f"ReynoldsNumber = {_fmt(re_value)} ergänzt (aus {re_inputs})")
 
         # Dynamic UI metadata fallback
         ui_meta = audited.ui_metadata.model_dump() if audited.ui_metadata else {}
-        default_meta = {
-            "fluid": {
-                "domain_name": "Fluid Dynamics",
-                "independent_var": { "label": "Channel Height", "unit": "m" },
-                "dependent_var": { "label": "Flow Velocity", "unit": "m/s" },
-                "primary_metric": { "label": "PINN Wall Shear Stress" },
-                "reference_metric": { "label": "Analytical Wall Shear Stress" },
-                "performance_gain": { "label": "Drag Reduction Efficiency" }
-            },
-            "thermal": {
-                "domain_name": "Thermodynamics",
-                "independent_var": { "label": "Plate Position (x)", "unit": "m" },
-                "dependent_var": { "label": "Temperature (T)", "unit": "K" },
-                "primary_metric": { "label": "PINN Thermal Gradient" },
-                "reference_metric": { "label": "Analytical Thermal Gradient" },
-                "performance_gain": { "label": "Thermal Insulation Efficiency" }
-            },
-            "electro": {
-                "domain_name": "Electromagnetics",
-                "independent_var": { "label": "Gap Distance (y)", "unit": "m" },
-                "dependent_var": { "label": "Electrostatic Potential (V)", "unit": "V" },
-                "primary_metric": { "label": "PINN Electric Field" },
-                "reference_metric": { "label": "Analytical Electric Field" },
-                "performance_gain": { "label": "Field Attenuation Efficiency" }
-            }
-        }
-        
-        # Match domain for fallback
-        matched_domain = "fluid"
-        for k in default_meta:
-            if k in domain:
-                matched_domain = k
-                break
-                
-        final_ui_meta = default_meta[matched_domain].copy()
+        final_ui_meta = _default_ui_metadata(matched_domain, miner_output)
         if ui_meta:
             for k, v in ui_meta.items():
                 if isinstance(v, dict) and k in final_ui_meta:
@@ -212,10 +358,20 @@ class Auditor:
         solver_method = audited.solver_method or "pinn"
         if user_query and any(k in user_query.lower() for k in ["script", "skript", "dynamic solver", "custom solver"]):
             solver_method = "dynamic_script"
+        if solver_method != (audited.solver_method or ""):
+            changes.append(f"solver_method: {audited.solver_method or 'leer'} -> {solver_method}")
+
+        request_feasible = audited.request_feasible is not False
+        audit_notes = audited.audit_notes or ""
+        # Only a passed audit reports corrections; for a rejected one they are irrelevant.
+        if changes and audited.audit_passed and request_feasible:
+            audit_notes = f"{audit_notes}\nProgrammatische Korrekturen: " + "; ".join(changes)
 
         return AuditorOutput(
-            audit_passed=audited.audit_passed,
-            audit_notes=audited.audit_notes + " (Programmatic safety checks applied.)",
+            audit_passed=audited.audit_passed and request_feasible,
+            audit_notes=audit_notes,
+            request_feasible=request_feasible,
+            infeasibility_reason=audited.infeasibility_reason if not request_feasible else None,
             audited_parameters=audited_params_list,
             dimensionless_numbers=dimensionless_list,
             simulation_coefficient=recalculated_coeff,
