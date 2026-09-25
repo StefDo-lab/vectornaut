@@ -171,6 +171,89 @@ def _primary_reference_deviation(primary: List[float], reference: List[float]) -
     return rms / scale, max(abs(d) for d in diffs) / scale
 
 
+# Failed error checks that mean the request itself is physically impossible as stated;
+# the pipeline answers reject_request by stopping with a rejection instead of re-mining.
+_REQUEST_REJECTION_CHECKS = {"physics_closed_system_efficiency"}
+
+# Phrases that describe a closed or adiabatic system without energy input. Deliberately
+# narrow: "adiabatic tip", "closed loop" or "closed refrigerant circuit" do not match.
+_CLOSED_SYSTEM_PATTERNS = (
+    re.compile(r"adiabat\w*\s+(?:\w+\s+)?(?:system|gehäuse|gehaeuse|enclosure|housing|container|behälter|behaelter)", re.IGNORECASE),
+    re.compile(r"(?:isolated|abgeschlossen\w*)\s+(?:\w+\s+)?system", re.IGNORECASE),
+    re.compile(r"(?:ohne|without|no)\s+(?:jede\w*\s+|any\s+|external\s+|externe\w*\s+)?(?:energiezufuhr|energieeintrag|energy\s+input|energy\s+supply|power\s+input)", re.IGNORECASE),
+)
+_EFFICIENCY_NAME = re.compile(r"efficien|wirkungsgrad|(?:^|_)cop(?:$|_)|coefficient_of_performance|leistungszahl", re.IGNORECASE)
+_AMPLIFICATION_NAME = re.compile(r"amplif|verstärk|verstaerk|multiplication|multiplier|(?:^|_)gain_(?:factor|ratio)", re.IGNORECASE)
+_PERCENT_NAME = re.compile(r"pct|percent|prozent", re.IGNORECASE)
+_RATIO_NAME = re.compile(r"ratio|factor|faktor|fraction|(?:^|_)cop(?:$|_)|coefficient_of_performance|leistungszahl", re.IGNORECASE)
+_ENERGY_CONTEXT = re.compile(r"therm|heat|wärm|waerm|energ|temperat", re.IGNORECASE)
+
+
+def _run_parameters(miner: Dict[str, Any], auditor: Dict[str, Any]) -> Dict[str, Any]:
+    params = auditor.get("audited_parameters_dict")
+    if isinstance(params, dict) and params:
+        return params
+    listed = auditor.get("audited_parameters") or miner.get("parameters") or []
+    return {
+        item.get("name"): item.get("value")
+        for item in (_as_dict(entry) for entry in listed)
+        if item.get("name")
+    }
+
+
+def check_closed_system_efficiency(
+    miner_output: Any,
+    auditor_output: Any,
+    user_query: Optional[str] = None,
+) -> Optional[ValidationCheck]:
+    """
+    Energy-conservation guard: an efficiency, COP or heat amplification factor above 1
+    (above 100 for percent values) is impossible in a closed/adiabatic system without
+    energy input. Returns a failed error check when the request or concept describes
+    such a system and a parameter violates it; otherwise None (no check recorded).
+    """
+    miner = _as_dict(miner_output)
+    auditor = _as_dict(auditor_output)
+    text = " ".join(str(part or "") for part in (
+        user_query,
+        miner.get("design_name"),
+        miner.get("domain"),
+        miner.get("physical_mechanism"),
+    ))
+    closed_match = next((m for m in (p.search(text) for p in _CLOSED_SYSTEM_PATTERNS) if m), None)
+    if closed_match is None:
+        return None
+    energy_context = bool(_ENERGY_CONTEXT.search(text))
+
+    violations = []
+    for name, value in _run_parameters(miner, auditor).items():
+        if not _is_finite_number(value):
+            continue
+        name_text = str(name)
+        if _EFFICIENCY_NAME.search(name_text):
+            limit = 100.0 if _PERCENT_NAME.search(name_text) or not _RATIO_NAME.search(name_text) else 1.0
+        elif _AMPLIFICATION_NAME.search(name_text) and energy_context:
+            limit = 100.0 if _PERCENT_NAME.search(name_text) else 1.0
+        else:
+            continue
+        if float(value) > limit * (1.0 + 1e-9):
+            violations.append(f"{name_text}={float(value):g} > {limit:g}")
+
+    if not violations:
+        return None
+    return ValidationCheck(
+        name="physics_closed_system_efficiency",
+        passed=False,
+        severity="error",
+        score=0.0,
+        detail=(
+            f"The system is described as closed/adiabatic without energy input (\"{closed_match.group(0)}\"), "
+            f"but {', '.join(violations)}: more energy out than in violates energy conservation "
+            "(first law of thermodynamics). The request is not physically feasible as stated."
+        ),
+    )
+
+
 # Failed warning checks that indicate the solver (not the model) produced a bad result;
 # the pipeline answers rerun_solver by trying the other deterministic solvers.
 _RERUN_SOLVER_WARNINGS = {"numeric_primary_reference_agreement", "solver_pinn_divergence"}
@@ -202,6 +285,8 @@ def _score_status(checks: List[ValidationCheck]) -> tuple[str, str, float, str]:
         for check in failed_warnings
     ):
         recommended_action = "rerun_solver"
+    if any(check.name in _REQUEST_REJECTION_CHECKS for check in failed_errors):
+        recommended_action = "reject_request"
 
     if not checks:
         return "fail", "low", 0.0, "inspect"
@@ -230,6 +315,7 @@ def validate_run_output(
     simulator_output: Any,
     optimization_history: Optional[List[Dict[str, Any]]] = None,
     criteria: Optional[Dict[str, Any]] = None,
+    user_query: Optional[str] = None,
 ) -> ValidationResult:
     criteria = criteria or {}
     miner = _as_dict(miner_output)
@@ -469,6 +555,10 @@ def validate_run_output(
             f"Auditor status is {auditor.get('audit_passed')!r}.",
         )
 
+    closed_system_check = check_closed_system_efficiency(miner, auditor, user_query=user_query or criteria.get("user_query"))
+    if closed_system_check is not None:
+        checks.append(closed_system_check)
+
     if optimization_history is not None:
         add(
             "optimization_history_present",
@@ -497,4 +587,5 @@ def validate_run_data(run_data: Dict[str, Any], criteria: Optional[Dict[str, Any
         simulator_output=run_data.get("simulator", {}),
         optimization_history=run_data.get("optimization_history"),
         criteria=criteria,
+        user_query=run_data.get("query"),
     )

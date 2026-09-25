@@ -77,9 +77,11 @@ REASON_CATEGORIES = (
     ("Validator failed", "validator_fail"),
     ("Optimizer rejected", "optimizer_rejected"),
 )
-PIPELINE_REJECTION_CATEGORIES = {"audit_rejected", "solver_error", "validator_fail", "optimizer_rejected"}
+# "request_rejected": the pipeline returned status="rejected" (miner, auditor or the
+# deterministic physics check declared the request physically infeasible).
+PIPELINE_REJECTION_CATEGORIES = {"request_rejected", "audit_rejected", "solver_error", "validator_fail", "optimizer_rejected"}
 # Rejections that reflect a judgement by an AI stage (full credit for infeasible cases).
-JUDGEMENT_REJECTION_CATEGORIES = {"audit_rejected", "optimizer_rejected"}
+JUDGEMENT_REJECTION_CATEGORIES = {"request_rejected", "audit_rejected", "optimizer_rejected"}
 EXHAUSTED_PREFIX = "All bionic concepts failed validation"
 _API_ERROR_PATTERN = re.compile(
     r"api[ _]?key|quota|resource[_ ]exhausted|rate limit|\b429\b|\b401\b|\b403\b|\b500\b|\b503\b|"
@@ -289,12 +291,17 @@ def extract_run_facts(
     error_type: Optional[str] = None,
     error_message: Optional[str] = None,
     log_text: str = "",
+    error_failed_concepts: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Reduces a pipeline result (or failure) to the deterministic facts that are scored."""
     result = result if isinstance(result, dict) else None
     success = bool(result and result.get("success"))
+    rejected = bool(result and result.get("status") == "rejected")
     if result is not None:
         failed_concepts = list(result.get("failed_concepts") or [])
+    elif error_failed_concepts is not None:
+        # ConceptsExhaustedError carries the structured history.
+        failed_concepts = list(error_failed_concepts)
     else:
         failed_concepts = parse_failed_history(error_message or "")
 
@@ -341,6 +348,8 @@ def extract_run_facts(
 
     if success:
         category = "ok"
+    elif rejected:
+        category = "request_rejected"
     elif result is not None:
         category = "unsuccessful_result"
     else:
@@ -357,6 +366,7 @@ def extract_run_facts(
         "remines": None if concept_attempts is None else max(0, concept_attempts - 1),
         "remine_reasons": remine_reasons,
         "audit_failures": remine_reasons.count("audit_rejected"),
+        "rejection_stage": ((result or {}).get("rejection") or {}).get("stage") if rejected else None,
         "audit_passed": auditor.get("audit_passed") if result is not None else None,
         "auditor_solver_method": str(auditor.get("solver_method") or "").lower() or None,
         "solver_method": solver_method,
@@ -433,8 +443,8 @@ def score_run(expect: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str, Any]:
         checks.append(_check("rejected", rejected, detail))
         checks.append(_check(
             "audit_rejected",
-            1.0 if facts["audit_failures"] else 0.0,
-            f"audit rejections={facts['audit_failures']}",
+            1.0 if facts["audit_failures"] or facts["category"] == "request_rejected" else 0.0,
+            f"audit rejections={facts['audit_failures']}, rejection stage={facts.get('rejection_stage')!r}",
         ))
         outcome_met = not facts["success"] and facts["category"] in PIPELINE_REJECTION_CATEGORIES
     else:
@@ -588,6 +598,7 @@ def run_case(
     buffer = io.StringIO()
     result: Optional[Dict[str, Any]] = None
     error_type = error_message = error_trace = None
+    error_failed_concepts = None
     # Each run gets its own data dir so that cached PINN models, generated scripts
     # and history from one config cannot leak into another.
     with env_overrides({**config.overrides, "VECTORNAUT_DATA_DIR": run_dir}):
@@ -600,6 +611,7 @@ def run_case(
         except Exception as exc:  # the harness records failures instead of aborting
             error_type = type(exc).__name__
             error_message = str(exc)
+            error_failed_concepts = getattr(exc, "failed_concepts", None)
             error_trace = traceback.format_exc()
         duration_s = round(time.perf_counter() - start, 3)
 
@@ -612,7 +624,7 @@ def run_case(
         with open(os.path.join(run_dir, "result.json"), "w", encoding="utf-8") as fh:
             json.dump(result, fh, indent=2, ensure_ascii=False, default=str)
 
-    facts = extract_run_facts(result, error_type, error_message, log_text)
+    facts = extract_run_facts(result, error_type, error_message, log_text, error_failed_concepts=error_failed_concepts)
     if not mock and facts["is_mock"]:
         # The pipeline silently falls back to mock mode without an API key.
         facts["category"] = "mock_fallback"

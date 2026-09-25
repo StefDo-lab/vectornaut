@@ -266,12 +266,31 @@ async function runDiscoveryLoop(overrideParams = null) {
         });
         
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || "Server error running pipeline.");
+            const err = await response.json().catch(() => ({}));
+            // 422: every concept failed; the body lists them (error.failed_concepts).
+            const failedConcepts = (err.error && err.error.failed_concepts) || [];
+            if (failedConcepts.length) {
+                writeLog(`[PIPELINE] Alle ${failedConcepts.length} Konzeptversuche sind gescheitert:`, "error-log");
+                failedConcepts.forEach((fc, idx) => {
+                    writeLog(`  ${idx + 1}. ${fc.design_name || "Konzept"}: ${fc.reason || "ohne Begründung"}`, "warning-log");
+                });
+                throw new Error("Kein Konzept hat Audit, Simulation und Validierung bestanden.");
+            }
+            const detail = typeof err.detail === "string" ? err.detail : (err.detail ? JSON.stringify(err.detail) : "");
+            throw new Error(detail || "Server error running pipeline.");
         }
-        
+
         const data = await response.json();
-        
+
+        if (data.status === "rejected") {
+            // The request is physically impossible as stated: not a crash, show the reason.
+            renderRejectedRun(data);
+            loadHistoryList();
+            runBtn.disabled = false;
+            runBtn.querySelector(".btn-text").innerText = "Analyse starten";
+            return;
+        }
+
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
         if (overrideParams) {
@@ -387,7 +406,62 @@ function completeAllSteps(statusText = "Complete") {
     });
 }
 
+const REJECTION_STAGE_LABELS = { miner: "MINER", auditor: "AUDITOR", validator: "VALIDATOR" };
+const REJECTION_STAGE_STEPS = { miner: "step-miner", auditor: "step-auditor", validator: "step-validator" };
+
+function renderRejectedRun(data) {
+    const rejection = data.rejection || {};
+    const stage = rejection.stage || "auditor";
+    const label = REJECTION_STAGE_LABELS[stage] || String(stage).toUpperCase();
+    const reason = rejection.reason || "Die Anfrage ist physikalisch nicht umsetzbar.";
+
+    // No follow-up chat or parameter tuning on a rejected request.
+    lastRunData = null;
+    clearResults();
+    updateWorkbenchMode("run");
+
+    const order = ["step-miner", "step-formulator", "step-auditor", "step-simulator", "step-validator", "step-report"];
+    const stageIdx = order.indexOf(REJECTION_STAGE_STEPS[stage] || "step-auditor");
+    order.forEach((id, idx) => {
+        if (id === "step-report") {
+            setStepState(id, "completed", "Rejection report");
+        } else if (idx < stageIdx) {
+            setStepState(id, "completed", "Done");
+        } else if (idx === stageIdx) {
+            setStepState(id, "error", "Request rejected");
+        } else {
+            setStepState(id, "", "Skipped");
+        }
+    });
+
+    writeLog(`[${label}] Anfrage abgelehnt: physikalisch nicht umsetzbar.`, "error-log");
+    writeLog(`[${label}] Begründung: ${reason}`, "warning-log");
+
+    const overviewEmpty = document.querySelector("#tab-overview .empty-state p");
+    if (overviewEmpty) {
+        if (!overviewEmpty.dataset.defaultText) overviewEmpty.dataset.defaultText = overviewEmpty.innerText;
+        overviewEmpty.innerText = `Anfrage abgelehnt (${label}): ${reason}`;
+    }
+
+    try {
+        const mdEl = document.getElementById("markdown-report");
+        if (mdEl && data.report_md && typeof marked !== "undefined") {
+            mdEl.innerHTML = marked.parse(data.report_md);
+            mdEl.classList.remove("hidden");
+            const reportEmpty = document.querySelector("#tab-report .empty-state");
+            if (reportEmpty) reportEmpty.classList.add("hidden");
+        }
+    } catch (mdErr) {
+        console.error("Failed to render rejection report:", mdErr);
+    }
+    openResultTab("tab-overview");
+}
+
 function clearResults() {
+    const overviewEmpty = document.querySelector("#tab-overview .empty-state p");
+    if (overviewEmpty && overviewEmpty.dataset.defaultText) {
+        overviewEmpty.innerText = overviewEmpty.dataset.defaultText;
+    }
     document.querySelectorAll(".empty-state").forEach(el => el.classList.remove("hidden"));
     document.querySelectorAll(".overview-grid, .table-container, .simulation-view, #raw-json-report, #markdown-report, #report-actions-container, #assistant-wrapper, #run-decision-bar, #solver-compare-panel, #dynamic-script-card").forEach(el => el.classList.add("hidden"));
     const rawReport = document.getElementById("raw-json-report");
@@ -412,7 +486,8 @@ function formatValidationAction(action) {
         accept: "Ergebnis übernehmen",
         inspect: "Warnungen prüfen",
         rerun_solver: "Mit anderem Solver erneut versuchen",
-        remine: "Neues Konzept suchen"
+        remine: "Neues Konzept suchen",
+        reject_request: "Anfrage ist physikalisch nicht umsetzbar"
     };
     return labels[action] || action || "Keine Aktion verfügbar";
 }
@@ -790,6 +865,11 @@ function applyDynamicSweepBest() {
 }
 
 function renderResults(data) {
+    if (data && data.status === "rejected") {
+        // e.g. a rejected run loaded from history
+        renderRejectedRun(data);
+        return;
+    }
     lastRunData = data;
     
     // 1. Render Markdown report if available
