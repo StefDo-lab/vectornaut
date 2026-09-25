@@ -233,37 +233,34 @@ for _args in PASSING_1D:
 class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
     """Each test asserts the correct behaviour; the BUG comment explains why it currently fails."""
 
-    # BUG: a bare dependent variable in the equation ("... * u" instead of "u(y)") crashes
+    # FIXED (kept as regression test). Was: a bare dependent variable in the equation ("... * u" instead of "u(y)") crashes
     # every 1D solver with TypeError("unsupported operand type(s) for *: 'Mul' and
     # 'UndefinedFunction'"). parsing.py:43 binds the name `u` to the *class*
     # sp.Function('u') and clean_expr_str (parsing.py:26-33) only rewrites derivatives,
     # so "k**2 * u" multiplies by an undefined function class. Natural LLM output for
     # reaction-diffusion / fin equations ("d2T_dx2 = m**2 * (T - T_inf)") hits this.
-    @unittest.expectedFailure
     def test_bare_dependent_variable_in_equation(self):
         case = Case("helmholtz_bare_u", "d2u_dy2 = -k**2 * u", ["u(0) = 0", "u(1) = 1"], ["y"], "u",
                     exact=lambda y: np.sin(2.0 * y) / SIN2, params={"k": 2.0}, exact_metric=2.0 / SIN2)
         run = self.solve(case, "analytical")
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)
 
-    # BUG: the slip BC used as the example in config.py:62/73 ("u(0) = lambda * du_dy(0)")
+    # FIXED (kept as regression test). Was: the slip BC used as the example in config.py:62/73 ("u(0) = lambda * du_dy(0)")
     # cannot be parsed: `lambda` is a Python keyword, so sp.parse_expr in
     # solvers_1d.py:191/279/378 raises "Starred arguments in lambda not supported" and
     # dispatch_and_solve raises RuntimeError("All primary analytical solvers failed.") --
     # even though _merged_params (solver_dispatcher.py:55) injects a 'lambda' parameter.
-    @unittest.expectedFailure
     def test_lambda_slip_bc_from_schema_example(self):
         case = Case("couette_lambda_slip", "d2u_dy2 = 0", ["u(0) = lambda * du_dy(0)", "u(1) = u_free"], ["y"], "u",
                     exact=lambda y: 2.0 * (y + 0.25) / 1.25, params={"u_free": 2.0}, coefficient=0.25)
         run = self.solve(case, "analytical")
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)
 
-    # BUG: get_domain_bounds (parsing.py:132) matches *any* "name(number)" in the BC text,
+    # FIXED (kept as regression test). Was: get_domain_bounds (parsing.py:132) matches *any* "name(number)" in the BC text,
     # so the value "exp(-2)" in "c(1) = exp(-2)" is taken as a BC location and the domain
     # becomes [-2, 1]. The analytical profile is then sampled on the wrong interval, the
     # wall metric is evaluated at y=-2 (-109.2 instead of -2), and scipy/PINN fail
     # (both BCs map to the same end -> singular Jacobian).
-    @unittest.expectedFailure
     def test_domain_not_polluted_by_function_calls_in_bc_values(self):
         case = Case("decay_exp_bc", "d2c_dx2 = c(x) / Lc**2", ["c(0) = 1", "c(1) = exp(-2)"], ["x"], "c",
                     exact=lambda x: np.exp(-2.0 * x), params={"Lc": 0.5}, exact_metric=-2.0)
@@ -271,12 +268,11 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         self.assertEqual((run.sim.sample_points[0], run.sim.sample_points[-1]), (0.0, 1.0))
         self.assertAlmostEqual(run.sim.primary_metric_value, -2.0, delta=1e-6)
 
-    # BUG: get_domain_bounds (parsing.py:137) silently falls back to [0, 1] when the
+    # FIXED (kept as regression test). Was: get_domain_bounds (parsing.py:137) silently falls back to [0, 1] when the
     # domain length is <= 1e-6, i.e. for sub-micron films (here 500 nm). The profile is
     # sampled on [0, 1] (values down to -5e6 m/s), and scipy fails because both BCs map
     # to the lower end (solvers_1d.py:260) -- the analytical fallback is then used but
     # still reported as 'scipy' (solver_dispatcher.py:447-451).
-    @unittest.expectedFailure
     def test_submicron_domain_is_respected(self):
         case = Case("nano_film_poiseuille", "d2u_dy2 = -G / mu", ["u(0) = 0", "u(h) = 0"], ["y"], "u",
                     exact=lambda y: 1.0e4 / 2.0e-3 * y * (5.0e-7 - y), params={"G": 1.0e4, "mu": 1.0e-3, "h": 5.0e-7},
@@ -285,18 +281,17 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         self.assertAlmostEqual(run.sim.sample_points[-1], 5.0e-7, delta=1e-15)
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)
 
-    # BUG: solve_scipy_bvp estimates the wall derivative with a forward difference of fixed
+    # FIXED (kept as regression test). Was: solve_scipy_bvp estimates the wall derivative with a forward difference of fixed
     # absolute step dx = 1e-5 (solvers_1d.py:311-312). On a 10 um film this step spans the
     # whole domain, so the "wall shear rate" is the secant slope across the channel:
     # ~-2e-11 instead of 50, and performance_gain_pct reports 100 % drag reduction for a
     # no-slip channel. The profile itself is correct (see test_thin_film_poiseuille_scipy_profile_only).
-    @unittest.expectedFailure
     def test_scipy_wall_derivative_on_thin_film(self):
         run = self.solve(CASES_1D["thin_film_poiseuille"], "scipy")
         self.assertAlmostEqual(run.sim.primary_metric_value, 50.0, delta=0.05)
         self.assertAlmostEqual(run.sim.performance_gain_pct, 0.0, delta=0.1)
 
-    # BUG: solve_analytical treats every free symbol whose name starts with 'C' as an
+    # FIXED (kept as regression test). Was: solve_analytical treats every free symbol whose name starts with 'C' as an
     # integration constant (solvers_1d.py:171), so a parameter such as 'Cf' (or C_p, Cd,
     # C0) is solved for as an unknown and float() fails ("Cannot convert expression to
     # float"). The dispatcher then silently uses scipy while still reporting
@@ -306,7 +301,6 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
     # sp.solve(2 equations, [C1, C2, Cf]) only works when C1 and C2 come first ('Cf' fails
     # for PYTHONHASHSEED=1,3,5,9 and works for 0,2,4,6,7,8 on CPython 3.11). The order is
     # fixed within a process, so the check runs in subprocesses with pinned hash seeds.
-    @unittest.expectedFailure
     def test_parameter_named_like_integration_constant(self):
         import subprocess
         import sys
@@ -376,22 +370,20 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)  # the solution itself is right
         self.assertAlmostEqual(run.sim.performance_gain_pct, 0.0, delta=1e-6)
 
-    # BUG: SymPy's torch printer emits the builtin names pow/exp for purely numeric
+    # FIXED (kept as regression test). Was: SymPy's torch printer emits the builtin names pow/exp for purely numeric
     # sub-expressions (pi**2 -> pow(3.14159..., 2), exp(-2)), which the torch namespace
     # maps to torch.pow/torch.exp; these reject Python floats. solve_pytorch_pinn
     # (solvers_1d.py:342/385) therefore raises for any equation or BC with such a constant
     # and the dispatcher silently falls back to scipy (reported as 'scipy').
-    @unittest.expectedFailure
     def test_pinn_handles_numeric_constants(self):
         run = self.solve(CASES_1D["sine_source"], "pinn", epochs=PINN_EPOCHS_1D)
         self.assertEqual(run.sim.solver_method, "pinn", run.log)
 
-    # BUG (accuracy): the 1D PINN has no input/output scaling. For a temperature field of
+    # FIXED (kept as regression test). Was: the 1D PINN has no input/output scaling. For a temperature field of
     # 260-310 K it starts at ~0 and after 300 epochs is off by ~175 K (1000 epochs: ~39 K),
     # reporting a 100 % "insulation gain" for plain conduction. The 2D PINN initialises the
     # output bias to the mean Dirichlet value (solvers_2d.py:157-161); the 1D one does not
     # (solvers_1d.py:331-333). Tolerance here: 5 K.
-    @unittest.expectedFailure
     def test_pinn_offset_temperature(self):
         run = self.solve(CASES_1D["offset_temperature"], "pinn", epochs=PINN_EPOCHS_1D)
         self.assertLess(run.errors()["max_abs"], 5.0)

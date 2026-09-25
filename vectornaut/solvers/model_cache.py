@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import re
 from datetime import datetime
 import torch
@@ -8,8 +9,21 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from ..storage import models_dir
 
 
+# Bump when the PINN model/training changes in a way that makes older cached models
+# unsuitable (version 2: 1D output scaling). Models without this version are not reused.
+CACHE_VERSION = 2
+
+
 def _models_dir() -> str:
     return models_dir()
+
+
+def _values_match(a: Any, b: Any) -> bool:
+    # Relative comparison: an absolute tolerance would treat e.g. 1e-6 m and 5e-6 m as equal.
+    try:
+        return math.isclose(float(a), float(b), rel_tol=1e-6, abs_tol=1e-15)
+    except (TypeError, ValueError):
+        return False
 
 
 def _cached_epochs(meta: Dict[str, Any]) -> Optional[int]:
@@ -63,17 +77,18 @@ def load_cached_pinn(
                         with open(meta_path, "r", encoding="utf-8") as mf:
                             meta = json.load(mf)
                         # Check if PDE, BCs and domain boundaries match
-                        if (meta.get("governing_equation") == gov_eq and
+                        if (meta.get("cache_version") == CACHE_VERSION and
+                            meta.get("governing_equation") == gov_eq and
                             meta.get("boundary_conditions") == bcs and
                             (domain is None or (
-                                abs(meta.get("domain_min", 0.0) - domain[0]) < 1e-5 and
-                                abs(meta.get("domain_max", 1.0) - domain[1]) < 1e-5))):
+                                _values_match(meta.get("domain_min", 0.0), domain[0]) and
+                                _values_match(meta.get("domain_max", 1.0), domain[1])))):
 
                             # Check params match within tolerance
                             params_match = True
                             meta_params = meta.get("params", {})
                             for k, v in params.items():
-                                if k not in meta_params or abs(meta_params[k] - v) > 1e-5:
+                                if k not in meta_params or not _values_match(meta_params[k], v):
                                     params_match = False
                                     break
 
@@ -133,6 +148,7 @@ def save_pinn_model(
         # Save metadata JSON for caching
         meta_path = os.path.join(cache_dir, f"{prefix}{timestamp}_{slug}.json")
         meta_data = {
+            "cache_version": CACHE_VERSION,
             "governing_equation": gov_eq,
             "boundary_conditions": bcs,
             "params": params,

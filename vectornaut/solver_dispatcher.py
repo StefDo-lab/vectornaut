@@ -378,7 +378,7 @@ def _solve_1d(
     params = params.copy()
 
     # Identify domain bounds
-    domain_min, domain_max = get_domain_bounds(bcs, params)
+    domain_min, domain_max = get_domain_bounds(bcs, params, dependent_var=y_name)
 
     # 2. Parse symbols & expressions
     pde_rhs, _, x_sym, y_func, sym_dict = parse_equation_and_bcs(
