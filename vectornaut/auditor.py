@@ -220,6 +220,29 @@ class Auditor:
            - hard_constraints: include relative error, finite outputs, parameter bounds, and any domain-specific safety limits.
            - design_variables: names of the audited parameters that are free design choices (geometry, material) and may be varied by sweeps/optimization; exclude operating conditions, loads and environment (e.g. heat flux, pulse duration, inlet velocity, ambient temperature).
 
+        7b. Define metric (what the solver measures) and baseline_parameters (what the design is compared with):
+           Without a metric the solver reports du/dx at the lower boundary (1D) or the mean of the field (2D), which is rarely the quantity the user asked for.
+           - metric.kind: one of "value_at", "derivative_at", "max", "min", "max_abs", "mean", "integral" of the dependent variable.
+           - metric.location: in the coordinates of the boundary conditions (usually normalized to [0, 1]).
+             1D: a coordinate such as "0", "1" or a parameter name. 2D: a line/edge such as "x=1" or "y=0" (values and derivatives are averaged along it,
+             derivatives are taken normal to it) or a point "(0.5, 0.5)" for value_at. Leave empty for max/min/max_abs/mean/integral over the whole domain.
+           - metric.scale: optional expression in parameter names that turns the normalized result into the physical quantity (empty = 1).
+           - metric.unit and metric.label: unit and short name of the scaled metric; ui_metadata.primary_metric/reference_metric must describe the same quantity.
+           Examples:
+             Wall shear stress on the lower wall of a channel normalized by its half height: {{"kind": "derivative_at", "location": "0", "scale": "viscosity/channel_half_height", "unit": "Pa", "label": "Wall shear stress"}}
+             Maximum deflection of a beam whose deflection w is already in metres: {{"kind": "max_abs", "unit": "m", "label": "Maximum deflection"}}
+             Heat flux into the room through a wall normalized by its thickness L (outdoor side at x=0, room at x=1, q = k dT/dx / L): {{"kind": "derivative_at", "location": "1", "scale": "thermal_conductivity/L", "unit": "W/m^2", "label": "Heat flux to the room"}}
+           - baseline_parameters: the parameter values of the conventional (non-bionic) reference design, as a list of {{"name": ..., "value": ...}} pairs that override
+             the audited parameters (list only the ones that differ), plus a short baseline_description. The solver solves the same equations again with them and
+             computes performance_gain_pct as the relative improvement of the metric: (baseline - design) / |baseline| * 100 if objective_metric.lower_is_better,
+             otherwise (design - baseline) / |baseline| * 100. Only parameters used in the equations, boundary conditions or metric.scale change the result.
+             Example: low-e coated glazing compared with uncoated glazing: baseline_parameters [{{"name": "coating_emissivity", "value": 0.84}}], baseline_description "uncoated double glazing".
+           - If there is no sensible conventional baseline, leave baseline_parameters empty: the gain is then reported as not available (n/a), not as 0 %.
+             (For slip-flow models whose equations use the slip length or simulation_coefficient, the design without slip is used as baseline automatically.)
+           - Benefits outside the solved field (mass, cost, manufacturability) cannot be computed by the solver. Describe them in audit_notes and choose metric and
+             baseline for what the field shows (e.g. deflection against the solid beam), then set objective_metric.lower_is_better to match the metric
+             (true for heat loss, deflection, drag, stress) and acceptance_threshold in percent of that improvement (it may be negative if a loss is acceptable).
+
          8. Perform a structural and material stress check:
             - Identify likely operational stresses and load conditions from the user query (e.g. pressure, compression, bending, friction, shear, thermal load).
             - Estimate the material limits (e.g. yield strength, maximum temperature) of the bionic material.
@@ -367,7 +390,7 @@ class Auditor:
         if changes and audited.audit_passed and request_feasible:
             audit_notes = f"{audit_notes}\nProgrammatische Korrekturen: " + "; ".join(changes)
 
-        return AuditorOutput(
+        result = AuditorOutput(
             audit_passed=audited.audit_passed and request_feasible,
             audit_notes=audit_notes,
             request_feasible=request_feasible,
@@ -379,6 +402,7 @@ class Auditor:
             ui_metadata=final_ui_meta,
             objective_metric=objective_contract
         )
+        return _with_metric_and_baseline(result, audited)
 
     def mock_audit_design(self, miner_output: MinerOutput, override_parameters: dict = None, user_query: str = None) -> AuditorOutput:
         """
@@ -455,6 +479,14 @@ class Auditor:
             ui_metadata=final_ui_meta,
             objective_metric=build_objective_contract(final_ui_meta)
         )
+
+
+def _with_metric_and_baseline(result: AuditorOutput, audited: AuditorOutput) -> AuditorOutput:
+    """Carries the model's metric spec and baseline design over to the post-processed output unchanged."""
+    result.metric = getattr(audited, "metric", None)
+    result.baseline_parameters = getattr(audited, "baseline_parameters", None)
+    result.baseline_description = getattr(audited, "baseline_description", None)
+    return result
 
 
 def build_objective_contract(ui_metadata: dict) -> ObjectiveMetricContract:

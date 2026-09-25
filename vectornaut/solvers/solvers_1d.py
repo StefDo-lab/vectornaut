@@ -178,7 +178,9 @@ def solve_scipy_bvp(
         raise ValueError(f"SciPy BVP solver failed to converge: {res.message}")
         
     f_interp = interp1d(res.x, res.y[0], kind='cubic', fill_value='extrapolate')
-    
+    # The BVP's own C1 solution (returns [u, u']) for metrics that need u' away from the wall.
+    f_interp.bvp_sol = res.sol
+
     # Derivative at domain_min: the second component of the first-order system is y'.
     # (A fixed finite-difference step would span the whole domain for thin films.)
     deriv_val = float(res.sol(domain_min)[1])

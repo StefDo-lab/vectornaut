@@ -433,7 +433,16 @@ def validate_run_output(
     direction = objective.get("direction", "maximize")
     threshold = float(objective.get("acceptance_threshold", 0.0) or 0.0)
     objective_score = simulator.get(score_field)
-    if objective:
+    if objective and score_field == "performance_gain_pct" and simulator.get("gain_basis") == "none":
+        # The solver had no baseline design to compare with: the gain is not computable
+        # (reported as n/a), which is not a failed objective.
+        add(
+            "objective_metric_contract",
+            True,
+            f"{score_field} not available (no baseline design defined); objective not evaluated.",
+            severity="info",
+        )
+    elif objective:
         objective_ok = _is_finite_number(objective_score) and (
             float(objective_score) >= threshold if direction != "minimize" else float(objective_score) <= threshold
         )

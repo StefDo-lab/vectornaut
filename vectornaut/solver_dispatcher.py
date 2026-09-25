@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.optim as optim
 from scipy.integrate import solve_bvp
 from scipy.interpolate import interp1d
-from typing import Dict, List, Tuple, Any
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .config import SimulatorOutput, MinerOutput, AuditorOutput
 
@@ -45,6 +45,23 @@ from .solvers.solvers_2d import (
     solve_pytorch_pinn_2d,
 )
 from .solvers.model_cache import load_cached_pinn, save_pinn_model
+from .solvers.metrics import (
+    GAIN_BASIS_BASELINE,
+    GAIN_BASIS_BIONIC,
+    GAIN_BASIS_NONE,
+    MetricSpecError,
+    apply_baseline_overrides,
+    baseline_overrides,
+    callables_from_bvp,
+    callables_from_expr,
+    callables_from_pinn,
+    lower_is_better,
+    metric_1d,
+    metric_2d,
+    references_any,
+    relative_gain,
+    resolve_metric_spec,
+)
 
 
 # Names under which equations/BCs may refer to the simulation coefficient. They are
@@ -73,6 +90,104 @@ def _is_bionic_effect_param(name: str) -> bool:
     """
     lowered = name.lower()
     return name == 'simulation_coefficient' or name in _COEFFICIENT_ALIASES or "slip" in lowered
+
+
+def _join_notes(*notes: Optional[str]) -> Optional[str]:
+    joined = "; ".join(note for note in notes if note)
+    return joined or None
+
+
+def _resolve_metric_spec(auditor_output: Any) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """The auditor's metric spec (None = default metric) and a note if it had to be ignored."""
+    try:
+        return resolve_metric_spec(auditor_output), None
+    except MetricSpecError as err:
+        print(f"[*] Metric spec ignored: {err}")
+        return None, f"metric spec ignored: {err}"
+
+
+def _baseline_setup(
+    params: Dict[str, float],
+    auditor_output: Any,
+    problem_texts: List[str],
+    is_effect_param: Callable[[str], bool],
+) -> Tuple[Optional[Dict[str, float]], str, Optional[str]]:
+    """
+    Parameters of the baseline design the performance gain is measured against.
+    Returns (baseline_params, gain_basis, note):
+    - the auditor's baseline_parameters applied to the design parameters ('baseline_parameters');
+    - otherwise the design with the bionic-effect parameters set to 0, if the equation or BCs
+      use one of them ('bionic_effect'; equal to params if they are already 0);
+    - otherwise (None, 'none', None): no baseline, the gain is not computable.
+    """
+    overrides = baseline_overrides(auditor_output)
+    if overrides:
+        audited = getattr(auditor_output, "audited_parameters_dict", {}) or {}
+        baseline = apply_baseline_overrides(params, overrides, list(audited), _COEFFICIENT_ALIASES)
+        note = None
+        unknown = [name for name in overrides if name not in params]
+        if unknown:
+            note = f"baseline parameters not used by the model: {', '.join(unknown)}"
+        return baseline, GAIN_BASIS_BASELINE, note
+
+    effect_names = [name for name in params if is_effect_param(name)]
+    used = references_any(effect_names, problem_texts)
+    if not used:
+        return None, GAIN_BASIS_NONE, None
+    if not any(params[name] != 0.0 for name in used):
+        # The effect parameter is used but already 0: the baseline is the design itself.
+        return dict(params), GAIN_BASIS_BIONIC, None
+    baseline = dict(params)
+    for name in effect_names:
+        baseline[name] = 0.0
+    return baseline, GAIN_BASIS_BIONIC, None
+
+
+def _performance_gain(
+    design_metric: float,
+    baseline_metric: Optional[float],
+    gain_basis: str,
+    note: Optional[str],
+    legacy: bool,
+    lower_better: bool,
+) -> Tuple[float, str, Optional[str]]:
+    """
+    Returns (performance_gain_pct, gain_basis, note). Without a usable baseline the gain is
+    0.0 with gain_basis 'none' (reported as n/a). The legacy formula (1 - design / baseline)
+    * 100 is kept for the default metric against the no-bionic-effect baseline; otherwise the
+    gain is the relative improvement of the metric, honouring lower_is_better.
+    """
+    if gain_basis == GAIN_BASIS_NONE:
+        return 0.0, GAIN_BASIS_NONE, note
+    if baseline_metric is None:
+        return 0.0, GAIN_BASIS_NONE, _join_notes(note, "no baseline metric available")
+    if legacy:
+        if abs(baseline_metric) > 1e-8:
+            return (1.0 - (design_metric / baseline_metric)) * 100.0, gain_basis, note
+        return 0.0, GAIN_BASIS_NONE, _join_notes(note, "baseline metric is zero")
+    gain = relative_gain(design_metric, baseline_metric, lower_better)
+    if gain is None:
+        return 0.0, GAIN_BASIS_NONE, _join_notes(note, "baseline metric is zero or not finite")
+    return gain, gain_basis, note
+
+
+def _metric_fields(
+    metric_spec: Optional[Dict[str, Any]],
+    baseline_metric: Optional[float],
+    gain_basis: str,
+    gain_note: Optional[str],
+) -> Dict[str, Any]:
+    """The metric/gain provenance fields of SimulatorOutput."""
+    baseline_value = None
+    if gain_basis != GAIN_BASIS_NONE and baseline_metric is not None and math.isfinite(baseline_metric):
+        baseline_value = float(baseline_metric)
+    return {
+        "metric_spec": metric_spec,
+        "metric_unit": (metric_spec or {}).get("unit"),
+        "baseline_metric_value": baseline_value,
+        "gain_basis": gain_basis,
+        "gain_note": gain_note,
+    }
 
 
 def dispatch_and_solve(
@@ -226,9 +341,8 @@ def _solve_2d(
     # The whole equation is parsed (all terms moved to one side) into the linear operator
     # a*u_xx + b*u_yy + c*u_xy + d*u_x + e*u_y + g*u = f that the FDM and PINN solve (see
     # parse_pde_2d). Unsupported forms (nonlinear, non-elliptic, unknown symbols) raise, so
-    # the pipeline treats them as a solver failure. rhs_str is the whole equation, because
-    # parse_rhs_2d (used for the baseline solve below) parses whole equations the same way.
-    rhs_str = gov_eq
+    # the pipeline treats them as a solver failure. The baseline solve below re-parses the
+    # whole equation with the baseline parameters.
     rhs_expr = parse_pde_2d(gov_eq, dep_name, x_name, y_name, params)
 
     # Parses all edge BCs (constant or varying along the edge) and derives the rectangular
@@ -336,40 +450,61 @@ def _solve_2d(
             float(u_fine_at_samples[i, j]) for i in range(grid_size) for j in range(grid_size)
         ]
 
+    # Metric: the auditor's metric spec evaluated on the sampled fields, or (default) the
+    # mean of the sampled field values.
+    metric_spec, gain_note = _resolve_metric_spec(auditor_output)
     primary_metric = float(np.mean(solution_primary_2d))
     reference_metric = float(np.mean(solution_reference_2d))
-
-    # Performance gain, as in 1D: change of the primary metric (mean field value) relative to a
-    # baseline solve without the bionic effect, i.e. with the simulation coefficient and its
-    # aliases set to 0: gain = (1 - primary / baseline) * 100. If the equation and BCs do not
-    # use the coefficient, the baseline is the same problem and the gain is 0 by definition.
-    coefficient_names = ["simulation_coefficient", "slippage_coefficient", "lambda", "slip_length"]
-    problem_text = " ".join([gov_eq] + list(bcs))
-    used_coefficients = [
-        name for name in coefficient_names
-        if params.get(name, 0.0) != 0.0 and re.search(rf"\b{re.escape(name)}\b", problem_text)
-    ]
-    performance_gain = 0.0
-    if used_coefficients:
+    if metric_spec is not None:
         try:
-            baseline_params = params.copy()
-            for name in coefficient_names:
-                if name in baseline_params:
-                    baseline_params[name] = 0.0
-            baseline_rhs = parse_rhs_2d(rhs_str, x_name, y_name, baseline_params)
+            spec_primary = metric_2d(metric_spec, x_vals, y_vals,
+                                     np.reshape(solution_primary_2d, (grid_size, grid_size)), params, x_name, y_name)
+            spec_reference = metric_2d(metric_spec, x_vals, y_vals,
+                                       np.reshape(solution_reference_2d, (grid_size, grid_size)), params, x_name, y_name)
+            primary_metric, reference_metric = spec_primary, spec_reference
+        except Exception as spec_err:
+            print(f"[*] Metric spec {metric_spec} could not be evaluated: {spec_err}. Using the field mean.")
+            gain_note = _join_notes(gain_note, f"metric spec not evaluable ({spec_err}); default metric field mean used")
+            metric_spec = None
+
+    # Performance gain: change of the primary metric relative to a baseline FDM solve of the
+    # conventional design (auditor's baseline_parameters) or, without those, of the design
+    # without the bionic effect (simulation coefficient and its aliases set to 0). If the
+    # equation and BCs do not use the coefficient either, there is no baseline (gain n/a).
+    coefficient_names = ["simulation_coefficient", "slippage_coefficient", "lambda", "slip_length"]
+    baseline_params, gain_basis, baseline_note = _baseline_setup(
+        params, auditor_output, [gov_eq] + list(bcs), lambda name: name in coefficient_names
+    )
+    gain_note = _join_notes(gain_note, baseline_note)
+    baseline_metric = None
+    if baseline_params is not None and baseline_params == params:
+        # The coefficient is used but already 0 (or the baseline equals the design).
+        baseline_metric = primary_metric
+    elif baseline_params is not None:
+        try:
+            baseline_rhs = parse_pde_2d(gov_eq, dep_name, x_name, y_name, baseline_params)
             baseline_bcs, baseline_x_bounds, baseline_y_bounds = parse_bcs_2d(
                 bcs, dep_name, miner_output.independent_variables, baseline_params
             )
-            _, _, u_baseline = solve_fdm_2d(
+            baseline_x_vals, baseline_y_vals, u_baseline = solve_fdm_2d(
                 baseline_rhs, baseline_bcs, x_sym, y_sym, grid_size=grid_size,
                 x_bounds=baseline_x_bounds, y_bounds=baseline_y_bounds
             )
-            baseline_metric = float(np.mean(u_baseline))
-            if abs(baseline_metric) > 1e-8:
-                performance_gain = (1.0 - (primary_metric / baseline_metric)) * 100.0
+            if metric_spec is None:
+                baseline_metric = float(np.mean(u_baseline))
+            else:
+                baseline_metric = metric_2d(metric_spec, baseline_x_vals, baseline_y_vals, u_baseline,
+                                            baseline_params, x_name, y_name)
         except Exception as e:
-            print(f"[*] 2D baseline solve (coefficient = 0) failed: {e}. Performance gain set to 0.")
-            performance_gain = 0.0
+            print(f"[*] 2D baseline solve failed: {e}. Performance gain reported as n/a (0).")
+            gain_note = _join_notes(gain_note, f"baseline solve failed: {e}")
+            baseline_metric = None
+
+    performance_gain, gain_basis, gain_note = _performance_gain(
+        primary_metric, baseline_metric, gain_basis, gain_note,
+        legacy=metric_spec is None and gain_basis == GAIN_BASIS_BIONIC,
+        lower_better=lower_is_better(auditor_output),
+    )
 
     abs_diff = np.abs(np.array(solution_primary_2d) - np.array(solution_reference_2d))
     ref_norm = np.abs(np.array(solution_reference_2d))
@@ -386,7 +521,8 @@ def _solve_2d(
         solution_primary=solution_primary_2d,
         solution_reference=solution_reference_2d,
         primary_metric_value=primary_metric,
-        reference_metric_value=reference_metric
+        reference_metric_value=reference_metric,
+        **_metric_fields(metric_spec, baseline_metric, gain_basis, gain_note),
     )
 
 
@@ -442,36 +578,47 @@ def _solve_1d(
     except Exception as e:
         print(f"[*] SciPy BVP solver failed: {e}")
 
-    # We also solve the baseline reference solution without the bionic effect (slip
-    # length / slippage coefficient aliases and simulation coefficient = 0) to evaluate
-    # performance gain. Geometric lengths such as film or coating thicknesses are kept:
-    # they define the domain and the BC locations, not the bionic effect.
-    baseline_params = params.copy()
-    for k in baseline_params:
-        if _is_bionic_effect_param(k):
-            baseline_params[k] = 0.0
+    # Metric spec (None = historical default: du/dx at domain_min) and baseline design.
+    metric_spec, gain_note = _resolve_metric_spec(auditor_output)
+    baseline_params, gain_basis, baseline_note = _baseline_setup(
+        params, auditor_output, [gov_eq] + list(bcs), _is_bionic_effect_param
+    )
+    gain_note = _join_notes(gain_note, baseline_note)
 
-    # None = no baseline available. If the effect parameters are already 0 (or absent),
-    # the baseline is the reference solution itself (set below, gain 0 up to solver error).
+    # Baseline solve. Without baseline_parameters the baseline is the design without the
+    # bionic effect (slip length / slippage coefficient aliases and simulation coefficient
+    # = 0). Geometric lengths such as film or coating thicknesses are kept: they define the
+    # domain and the BC locations, not the bionic effect. None = no baseline available.
+    # If the baseline equals the design, it is the reference solution itself (set below).
     baseline_deriv = None
-    baseline_is_reference = baseline_params == params
-    if not baseline_is_reference:
+    baseline_callables = None
+    baseline_domain = (domain_min, domain_max)
+    baseline_is_reference = baseline_params is not None and baseline_params == params
+    if baseline_params is not None and not baseline_is_reference:
+        if gain_basis == GAIN_BASIS_BASELINE:
+            # The reference design may have other lengths, so the domain is derived again.
+            baseline_domain = get_domain_bounds(bcs, baseline_params, dependent_var=y_name)
+        b_min, b_max = baseline_domain
         try:
-            _, baseline_deriv = solve_analytical(
-                pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, domain_min, domain_max
+            baseline_expr, baseline_deriv = solve_analytical(
+                pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, b_min, b_max
             )
+            baseline_callables = callables_from_expr(baseline_expr, x_sym)
         except Exception:
             try:
-                _, baseline_deriv = solve_scipy_bvp(
-                    pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, domain_min, domain_max
+                baseline_interp, baseline_deriv = solve_scipy_bvp(
+                    pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, b_min, b_max
                 )
+                baseline_callables = callables_from_bvp(baseline_interp)
             except Exception as baseline_err:
-                print(f"[*] Baseline solve without the bionic effect failed: {baseline_err}. "
-                      "performance_gain_pct is reported as 0.")
+                print(f"[*] Baseline solve failed: {baseline_err}. performance_gain_pct is reported as n/a (0).")
+                gain_note = _join_notes(gain_note, f"baseline solve failed: {baseline_err}")
                 baseline_deriv = None
         if baseline_deriv is not None and not math.isfinite(baseline_deriv):
-            print(f"[*] Baseline wall derivative is not finite ({baseline_deriv}). performance_gain_pct is reported as 0.")
+            print(f"[*] Baseline wall derivative is not finite ({baseline_deriv}). performance_gain_pct is reported as n/a (0).")
+            gain_note = _join_notes(gain_note, "baseline solution is not finite")
             baseline_deriv = None
+            baseline_callables = None
 
     # Solve primary & reference based on selection
     sample_grid = np.linspace(domain_min, domain_max, 20)
@@ -483,12 +630,15 @@ def _solve_1d(
     solution_reference = []
     primary_metric = 0.0
     reference_metric = 0.0
+    # (u, du/dx) callables of the primary and reference solutions, for the metric spec.
+    primary_callables = None
+    reference_callables = None
 
     if method_requested == "pinn":
         # 1. Primary: PyTorch PINN-lite
         try:
             def _use_cached_model(model, meta):
-                nonlocal final_loss, loss_history, epochs_trained, solution_primary, primary_metric
+                nonlocal final_loss, loss_history, epochs_trained, solution_primary, primary_metric, primary_callables
                 # Evaluate derivative at wall using autograd
                 x_a_eval = torch.tensor([[domain_min]], requires_grad=True)
                 u_a_eval = model(x_a_eval)
@@ -502,6 +652,7 @@ def _solve_1d(
                     torch_grid = torch.tensor(sample_grid, dtype=torch.float32).view(-1, 1)
                     solution_primary = model(torch_grid).view(-1).numpy().tolist()
                 primary_metric = pinn_deriv
+                primary_callables = callables_from_pinn(model)
 
             pretrained_loaded = load_cached_pinn(
                 prefix="pinn_",
@@ -527,6 +678,7 @@ def _solve_1d(
                     torch_grid = torch.tensor(sample_grid, dtype=torch.float32).view(-1, 1)
                     solution_primary = model(torch_grid).view(-1).numpy().tolist()
                 primary_metric = pinn_deriv
+                primary_callables = callables_from_pinn(model)
 
                 # Save the trained PINN model weights and metadata
                 save_pinn_model(
@@ -553,12 +705,14 @@ def _solve_1d(
         if scipy_sol_func is not None:
             solution_primary = [float(scipy_sol_func(pt)) for pt in sample_grid]
             primary_metric = scipy_deriv
+            primary_callables = callables_from_bvp(scipy_sol_func)
         elif analytical_sol_expr is not None:
             # Fallback to analytical
             print("[*] SciPy BVP unavailable. Using the analytical solution as primary.")
             f_lambdified = sp.lambdify(x_sym, analytical_sol_expr, "numpy")
             solution_primary = [float(f_lambdified(pt)) for pt in sample_grid]
             primary_metric = analytical_deriv
+            primary_callables = callables_from_expr(analytical_sol_expr, x_sym)
             method_used = "analytical"
         else:
             raise RuntimeError("All primary numerical solvers failed.")
@@ -569,11 +723,13 @@ def _solve_1d(
             f_lambdified = sp.lambdify(x_sym, analytical_sol_expr, "numpy")
             solution_primary = [float(f_lambdified(pt)) for pt in sample_grid]
             primary_metric = analytical_deriv
+            primary_callables = callables_from_expr(analytical_sol_expr, x_sym)
         elif scipy_sol_func is not None:
             # Fallback to SciPy
             print("[*] Analytical solution unavailable. Using SciPy BVP as primary.")
             solution_primary = [float(scipy_sol_func(pt)) for pt in sample_grid]
             primary_metric = scipy_deriv
+            primary_callables = callables_from_bvp(scipy_sol_func)
             method_used = "scipy"
         else:
             raise RuntimeError("All primary analytical solvers failed.")
@@ -583,22 +739,46 @@ def _solve_1d(
         f_lambdified = sp.lambdify(x_sym, analytical_sol_expr, "numpy")
         solution_reference = [float(f_lambdified(pt)) for pt in sample_grid]
         reference_metric = analytical_deriv
+        reference_callables = callables_from_expr(analytical_sol_expr, x_sym)
     elif scipy_sol_func is not None:
         solution_reference = [float(scipy_sol_func(pt)) for pt in sample_grid]
         reference_metric = scipy_deriv
+        reference_callables = callables_from_bvp(scipy_sol_func)
     else:
         # Fallback reference = same as primary
         solution_reference = solution_primary
         reference_metric = primary_metric
+        reference_callables = primary_callables
 
-    # Calculate performance gain
-    # E.g. drag reduction efficiency = (1.0 - (primary_deriv / baseline_deriv)) * 100
+    # Metric spec: evaluate the requested quantity on the primary, reference and baseline
+    # solutions. If it cannot be evaluated, the default wall-derivative metric is kept.
+    if metric_spec is not None:
+        try:
+            spec_primary = metric_1d(metric_spec, *primary_callables, domain_min, domain_max, params)
+            spec_reference = metric_1d(metric_spec, *reference_callables, domain_min, domain_max, params)
+            primary_metric, reference_metric = spec_primary, spec_reference
+        except Exception as spec_err:
+            print(f"[*] Metric spec {metric_spec} could not be evaluated: {spec_err}. Using du/dx at the lower boundary.")
+            gain_note = _join_notes(gain_note, f"metric spec not evaluable ({spec_err}); default metric du/dx at the lower boundary used")
+            metric_spec = None
+
+    baseline_metric = baseline_deriv
     if baseline_is_reference:
-        baseline_deriv = reference_metric
-    if baseline_deriv is not None and abs(baseline_deriv) > 1e-8:
-        performance_gain = (1.0 - (primary_metric / baseline_deriv)) * 100.0
-    else:
-        performance_gain = 0.0
+        baseline_metric = reference_metric
+    elif metric_spec is not None and baseline_callables is not None:
+        try:
+            baseline_metric = metric_1d(metric_spec, *baseline_callables, baseline_domain[0], baseline_domain[1], baseline_params)
+        except Exception as spec_err:
+            gain_note = _join_notes(gain_note, f"metric spec not evaluable on the baseline ({spec_err})")
+            baseline_metric = None
+    elif metric_spec is not None:
+        baseline_metric = None
+
+    performance_gain, gain_basis, gain_note = _performance_gain(
+        primary_metric, baseline_metric, gain_basis, gain_note,
+        legacy=metric_spec is None and gain_basis == GAIN_BASIS_BIONIC,
+        lower_better=lower_is_better(auditor_output),
+    )
 
     # Calculate relative error
     abs_diff = np.abs(np.array(solution_primary) - np.array(solution_reference))
@@ -616,5 +796,6 @@ def _solve_1d(
         solution_primary=solution_primary,
         solution_reference=solution_reference,
         primary_metric_value=primary_metric,
-        reference_metric_value=reference_metric
+        reference_metric_value=reference_metric,
+        **_metric_fields(metric_spec, baseline_metric, gain_basis, gain_note),
     )

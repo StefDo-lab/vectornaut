@@ -11,6 +11,23 @@ class SynthesisReport(BaseModel):
     validation_experiments: str = Field(description="Vorschläge für konkrete Labor- und Feldtests zur Validierung der bionischen Leistung (auf Deutsch, informelles 'du').")
     industry_partners: str = Field(description="Mögliche Industriebranchen, Partnertypen oder reale Lösungsanbieter für die Umsetzung (auf Deutsch, informelles 'du').")
 
+def _result_lines(simulator_output) -> str:
+    """Metric (with unit) and gain for the prompt; the gain is n/a when the solver had no baseline."""
+    spec = getattr(simulator_output, "metric_spec", None) or {}
+    unit = getattr(simulator_output, "metric_unit", None) or ""
+    metric_name = spec.get("label") or "Primärmetrik"
+    metric = float(getattr(simulator_output, "primary_metric_value", 0.0) or 0.0)
+    lines = f"{metric_name}: {metric:.6g} {unit}".rstrip()
+    baseline = getattr(simulator_output, "baseline_metric_value", None)
+    if baseline is not None:
+        lines += f"\n        Vergleichsdesign (Baseline): {float(baseline):.6g} {unit}".rstrip()
+    if getattr(simulator_output, "gain_basis", None) == "none":
+        lines += "\n        Effizienz (Performance Gain): n/a (kein Vergleichsdesign definiert, nicht berechenbar)"
+    else:
+        lines += f"\n        Effizienz (Performance Gain): {float(simulator_output.performance_gain_pct):.2f}%"
+    return lines
+
+
 class Synthesizer:
     def __init__(self, client=None):
         self.client = client
@@ -42,7 +59,7 @@ class Synthesizer:
 
         ### Simulations- und Testergebnisse
         Lösungsmethode: {simulator_output.solver_method}
-        Effizienz (Performance Gain): {simulator_output.performance_gain_pct:.2f}%
+        {_result_lines(simulator_output)}
         Auditor Notizen (Belastung): {auditor_output.audit_notes}
 
         Erstelle basierend auf diesen Daten einen detaillierten Bericht, der für einen Industriepartner die praktische Umsetzung beschreibt. Halte dich an den informellen 'du'-Stil auf Deutsch. Liefere präzise, ingenieurwissenschaftliche Beschreibungen für jedes Feld im geforderten JSON-Schema.
