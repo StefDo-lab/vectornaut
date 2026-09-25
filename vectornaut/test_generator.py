@@ -1,14 +1,32 @@
 # -*- coding: utf-8 -*-
 import os
-import sys
 import json
-import subprocess
 import re
 from datetime import datetime
 from pydantic import BaseModel, Field
 from google.genai import types
 from .config import get_client, get_model_name, get_thinking_config, MinerOutput, AuditorOutput
 from .storage import data_path
+from .sandbox import (
+    check_generated_code,
+    copy_if_exists,
+    format_rejection,
+    run_generated_script,
+    sandbox_workdir,
+    script_timeout_seconds,
+    SANDBOX_RULES_TEXT,
+)
+
+# Trusted runner that imports the generated tests and derives pass/fail from unittest.
+_RUNNER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_test_runner.py")
+
+
+def validation_timeout_seconds() -> int:
+    """Wall-clock budget for the whole test script (it runs the solver several times)."""
+    try:
+        return max(1, int(os.environ["VECTORNAUT_TEST_SCRIPT_TIMEOUT_SECONDS"]))
+    except (KeyError, ValueError):
+        return 5 * script_timeout_seconds()
 
 class GeneratedTestScriptResponse(BaseModel):
     explanation: str = Field(description="Kurze Erklärung der gewählten Validierungstests und physikalischen Invarianten.")
@@ -44,18 +62,29 @@ class TestScriptGenerator:
         
         # Generierungs-Prompt entwerfen
         prompt = f"""
-        Schreibe ein eigenständiges Python-Testskript unter Verwendung des `unittest` Moduls, um das simulierte physikalische System und dessen Solver-Skript zu validieren.
-        
-        Das Solver-Skript befindet sich an dem Pfad, der über den CLI-Parameter `--solver` übergeben wird.
-        Das Solver-Skript akzeptiert folgende Argumente:
-          --params: Pfad zu einer JSON-Datei mit Eingangsparametern.
-          --output: Pfad, an den das Skript eine JSON-Datei mit den Ergebnissen schreibt.
-          --plot: Pfad, an den das Skript ein PNG-Diagramm speichert.
+        Schreibe ein Python-Testmodul unter Verwendung des `unittest` Moduls, um das simulierte physikalische System und dessen Solver-Skript zu validieren.
 
-        Das Testskript MUSS folgende CLI-Parameter per argparse akzeptieren:
-          --solver: Pfad zum zu testenden Python-Solver-Skript.
-          --params: Pfad zur JSON-Datei mit den nominellen Eingangsparametern (wird genutzt, um Standardwerte zu ermitteln).
-          --output: Pfad, an den das Testskript eine JSON-Datei mit dem Testergebnis schreiben MUSS.
+        ### AUSFÜHRUNGSMODELL (verbindlich):
+        Das Testmodul wird NICHT direkt ausgeführt. Ein vertrauenswürdiger Test-Runner importiert es in einer Sandbox,
+        führt alle `unittest.TestCase`-Klassen darin aus und bestimmt Bestanden/Fehlgeschlagen selbst aus dem unittest-Ergebnis.
+        Deshalb:
+          - KEIN argparse, KEIN `if __name__ == "__main__":`-Block, KEINE eigene JSON-Ergebnisdatei.
+          - Das Testmodul startet KEINE Prozesse selbst (kein subprocess, kein os.system). Der Solver wird ausschließlich über das
+            vom Runner bereitgestellte Modul `solver_harness` aufgerufen:
+
+              from solver_harness import run_solver, nominal_params, is_finite_number
+
+              nominal_params() -> dict
+                  Frische Kopie der nominellen Parameter (siehe unten).
+              run_solver(params: dict | None = None, timeout: float | None = None) -> SolverRun
+                  Führt das Solver-Skript mit den übergebenen Parametern aus (None = nominelle Parameter).
+                  Rückgabe: benanntes Tupel SolverRun(returncode: int, output: dict | None, stderr: str);
+                  `output` ist das geparste Ergebnis-JSON des Solvers (oder None, falls keines geschrieben wurde).
+                  Temporäre Dateien verwaltet der Runner.
+              is_finite_number(x) -> bool
+
+        Das Ergebnis-JSON des Solvers enthält mindestens: success, performance_gain_pct, relative_error, sample_points,
+        solution_primary, solution_reference, primary_metric_value, reference_metric_value.
 
         ### Zu testendes System:
         Design Name: {miner_output.design_name}
@@ -66,40 +95,24 @@ class TestScriptGenerator:
         Nominelle Parameter: {json.dumps(audited_params)}
         Simulationskoeffizient: {auditor_output.simulation_coefficient}
 
-        ### ANFORDERUNGEN AN DAS TESTSKRIPT:
+        ### ANFORDERUNGEN AN DAS TESTMODUL:
         1. STRUKTUR:
-           Verwende das standardmäßige Python `unittest` Modul. Definiere eine Testklasse, z. B. `class SolverPhysicalValidation(unittest.TestCase)`.
-           Am Ende des Skripts (im `if __name__ == "__main__":` Block) MUSS die Testsuite ausgeführt werden und das Ergebnis in eine strukturierte JSON-Datei an `--output` geschrieben werden.
-           
-           Die JSON-Datei MUSS exakt folgende Struktur haben:
-           {{
-             "success": bool (True, wenn ALLE Tests bestanden wurden, andernfalls False),
-             "total_run": int (Anzahl der ausgeführten Tests),
-             "total_failures": int,
-             "total_errors": int,
-             "test_results": [
-               {{
-                 "name": str (Name der Testmethode, z.B. "test_nominal_run"),
-                 "passed": bool (True/False),
-                 "message": str (Fehlermeldung bei Fehlschlag oder leerer String "")
-               }},
-               ...
-             ]
-           }}
+           Definiere eine Testklasse, z. B. `class SolverPhysicalValidation(unittest.TestCase)`, mit mindestens 3 Testmethoden.
+           Fehlschläge werden über normale unittest-Assertions ausgedrückt (self.assertEqual, self.assertTrue, ...).
 
         2. IMPLEMENTIERUNG DER TESTMETHODEN (Mindestens 3 Testfälle):
-           
+
            - Test 1: `test_nominal_run`
-             Führe das Solver-Skript per `subprocess.run` mit den nominellen Parametern aus.
+             Führe den Solver per `run_solver(nominal_params())` aus.
              Verifiziere:
                * Der Exit-Code ist 0.
-               * Die Ausgabedatei (JSON) wird erfolgreich erzeugt.
-               * Die JSON enthält `"success": true`.
+               * `output` ist nicht None.
+               * `output["success"]` ist True.
                * Alle Pflichtfelder (z. B. `performance_gain_pct`, `solution_primary`, `primary_metric_value`) sind vorhanden und enthalten numerische Werte.
 
            - Test 2: `test_parameter_limits_and_safety`
              Wähle ein oder zwei Hauptparameter aus den nominellen Parametern (z.B. slip_length, viscosity, conductivity, thickness) und setze sie auf extreme Werte (sehr klein, z.B. 0.0 oder 1e-8, oder sehr groß).
-             Führe das Solver-Skript mit diesen geänderten Parametern aus.
+             Führe den Solver mit diesen geänderten Parametern aus.
              Verifiziere:
                * Das Skript stürzt nicht ab (Exit-Code 0).
                * Die Ergebnisse enthalten keine NaN- oder unendlichen Werte.
@@ -114,10 +127,11 @@ class TestScriptGenerator:
                  - Wenn die thermische Leitfähigkeit des bionischen Materials gesenkt wird, sollte der Wärmestrom sinken (Isolationswirkung steigt).
                * Wähle die Invarianten passend für: "{miner_output.domain}"!
 
-        3. DATEI-KODIERUNG:
-           Alle Lese- und Schreiboperationen auf Dateien (wie das Einlesen von --params und Schreiben von --output) MÜSSEN explizit mit `encoding="utf-8"` geöffnet werden (z.B. open(..., 'w', encoding='utf-8') oder open(..., 'r', encoding='utf-8')). Das ist zwingend erforderlich, um Codierungsfehler auf Windows-Systemen zu vermeiden.
+        3. SANDBOX:
+           {SANDBOX_RULES_TEXT}
+           Der gesamte Testlauf hat ein Zeitbudget von {validation_timeout_seconds()} Sekunden; halte die Zahl der Solver-Aufrufe klein.
+           Falls du selbst Dateien öffnest, verwende explizit `encoding="utf-8"`.
 
-        Verwende für die Subprocess-Aufrufe `sys.executable` als Python-Interpreter, um Kompatibilität zu gewährleisten. Erstelle temporäre JSON- und PNG-Dateien für die Testdurchläufe und lösche sie nach jedem Testlauf (im `tearDown` oder per try-finally).
         Schreibe sauberen, robusten Python 3.13 Code.
         """
 
@@ -151,63 +165,50 @@ class TestScriptGenerator:
             # Skript auf Festplatte schreiben
             with open(test_script_path, "w", encoding="utf-8") as tf:
                 tf.write(code)
-            
-            # Ausführen des Testskripts
-            print(f"[*] Executing generated test script at: {test_script_path}")
-            try:
-                result = subprocess.run(
-                    [sys.executable, test_script_path, "--solver", solver_script_path, "--params", params_json_path, "--output", test_output_path],
-                    capture_output=True,
-                    encoding="utf-8",
-                    env={**os.environ, "PYTHONUTF8": "1"},
-                    timeout=int(os.environ.get("VECTORNAUT_SCRIPT_TIMEOUT_SECONDS", "60")),
+
+            violations = check_generated_code(code)
+            if violations:
+                error_msg = format_rejection(violations)
+                headline = "Das zuvor generierte Testmodul wurde von der Sandbox-Vorprüfung abgelehnt und nicht ausgeführt!"
+                print(f"[-] Test script rejected by sandbox pre-check on iteration {correction_iteration + 1}!")
+                print(f"[-] {error_msg}")
+            else:
+                print(f"[*] Executing generated test script at: {test_script_path}")
+                test_results_data, error_msg = self._execute(
+                    test_script_path, solver_script_path, params_json_path, test_output_path
                 )
-            except subprocess.TimeoutExpired as timeout_err:
-                error_msg = f"Generated test script timed out after {timeout_err.timeout} seconds."
-                result = None
-            
-            # Überprüfen ob das Testskript selbst fehlerfrei durchgelaufen ist (unabhängig davon ob Tests fehlschlagen)
-            # Das Testskript sollte exit code 0 haben, auch wenn Tests fehlschlagen, da unittest.main(exit=False) verwendet wird,
-            # oder zumindest die Ausgabedatei geschrieben wurde.
-            if os.path.exists(test_output_path):
-                try:
-                    with open(test_output_path, "r", encoding="utf-8") as rf:
-                        test_results_data = json.load(rf)
-                    test_results_data["test_script_path"] = test_script_path
-                    test_results_data["test_output_path"] = test_output_path
+                if test_results_data is not None:
                     print(f"[+] Test script execution succeeded on iteration {correction_iteration + 1}!")
                     return test_results_data
-                except Exception as read_err:
-                    error_msg = f"Failed to read test results JSON: {str(read_err)}"
-                    print(f"[-] Failed to read test output JSON: {read_err}")
-            else:
-                if result is not None:
-                    error_msg = result.stderr or result.stdout or "Test script did not produce output JSON"
-                print(f"[-] Test script crashed or failed to write JSON on iteration {correction_iteration + 1}!")
+                headline = "Das zuvor generierte Testmodul konnte nicht importiert/ausgeführt werden oder enthielt keine Tests!"
+                print(f"[-] Test script could not be run on iteration {correction_iteration + 1}!")
                 print(f"[-] Error: {error_msg}")
-            
+
             # Vorbereitung der Korrekturschleife
             correction_iteration += 1
             if correction_iteration < max_iterations:
                 print(f"[*] Initiating test-correction. Sending error details back to Gemini...")
                 current_prompt = f"""
-                Das zuvor generierte Python-Testskript ist beim Ausführen abgestürzt oder hat das erwartete JSON nicht erzeugt!
-                
+                {headline}
+
                 ### Zuvor generierter Testcode:
                 ```python
                 {code}
                 ```
-                
-                ### Fehlermeldung (Traceback / Stderr / Stdout):
+
+                ### Fehlermeldung (Traceback / Stderr / Prüfergebnis):
                 ```text
                 {error_msg}
                 ```
-                
+
                 ### Aufgabe:
-                Analysiere den Fehler, korrigiere den Code und liefere ein repariertes, vollständig lauffähiges Testskript zurück.
-                Halte dich strikt an die CLI-Parameter (--solver, --params, --output) und stelle sicher, dass am Ende des Skripts die Ergebnisse korrekt als JSON exportiert werden.
+                Analysiere den Fehler, korrigiere den Code und liefere ein repariertes Testmodul zurück.
+                Vertrag: ein unittest-Modul ohne argparse, ohne __main__-Block und ohne eigene Ergebnisdatei; der Solver wird nur über
+                `from solver_harness import run_solver, nominal_params, is_finite_number` aufgerufen
+                (run_solver(params) -> SolverRun(returncode, output, stderr)). Der Runner wertet die unittest-Ergebnisse selbst aus.
+                {SANDBOX_RULES_TEXT}
                 """
-        
+
         # Falls alle Iterationen fehlgeschlagen sind
         return {
             "success": False,
@@ -224,3 +225,68 @@ class TestScriptGenerator:
                 }
             ]
         }
+
+
+    @staticmethod
+    def _execute(test_script_path: str, solver_script_path: str, params_json_path: str, test_output_path: str):
+        """
+        Run the generated tests through the trusted runner in the sandbox. Returns
+        (results, error_msg); results is None when the tests could not be run at all
+        (import error, no tests, timeout, no summary), which triggers self-correction.
+        Pass/fail comes from the unittest result collected by the runner.
+        """
+        with sandbox_workdir("vectornaut_tests_") as workdir:
+            copy_if_exists(_RUNNER_PATH, os.path.join(workdir, "_vectornaut_test_runner.py"))
+            copy_if_exists(test_script_path, os.path.join(workdir, "generated_tests.py"))
+            copy_if_exists(solver_script_path, os.path.join(workdir, "solver.py"))
+            copy_if_exists(params_json_path, os.path.join(workdir, "params.json"))
+            summary_name = f"summary_{os.urandom(8).hex()}.json"
+            run = run_generated_script(
+                ["_vectornaut_test_runner.py",
+                 "--tests", "generated_tests.py",
+                 "--solver", "solver.py",
+                 "--params", "params.json",
+                 "--summary", summary_name,
+                 "--solver-timeout", str(script_timeout_seconds())],
+                timeout=validation_timeout_seconds(),
+                workdir=workdir,
+            )
+            summary = None
+            summary_path = os.path.join(workdir, summary_name)
+            if os.path.exists(summary_path):
+                try:
+                    with open(summary_path, "r", encoding="utf-8") as rf:
+                        summary = json.load(rf)
+                except Exception as read_err:
+                    return None, f"Failed to read the test runner summary: {read_err}"
+
+        if run.timed_out:
+            return None, (
+                f"Test script timed out after {run.duration_s:.0f} seconds (process group killed). "
+                "Reduce the number or size of solver runs."
+            )
+        if not isinstance(summary, dict):
+            return None, run.error_text() or f"Test runner exited with code {run.returncode} without a summary."
+        if not summary.get("collected"):
+            return None, summary.get("import_error") or run.error_text() or "The test module could not be loaded."
+        expected_code = 0 if summary.get("success") else 1
+        if run.returncode != expected_code:
+            return None, (
+                f"Test runner exit code {run.returncode} does not match the unittest result "
+                f"(success={summary.get('success')}); the test module must not exit the interpreter.\n{run.error_text(2000)}"
+            )
+
+        test_results_data = {
+            "success": bool(summary.get("success")),
+            "total_run": int(summary.get("total_run", 0)),
+            "total_failures": int(summary.get("total_failures", 0)),
+            "total_errors": int(summary.get("total_errors", 0)),
+            "total_skipped": int(summary.get("total_skipped", 0)),
+            "test_results": summary.get("test_results", []),
+            "result_source": "unittest runner (harness)",
+            "test_script_path": test_script_path,
+            "test_output_path": test_output_path,
+        }
+        with open(test_output_path, "w", encoding="utf-8") as wf:
+            json.dump(test_results_data, wf, indent=2, ensure_ascii=False)
+        return test_results_data, ""

@@ -1,14 +1,27 @@
 # -*- coding: utf-8 -*-
 import os
-import sys
 import json
-import subprocess
 import re
 from datetime import datetime
 from pydantic import BaseModel, Field
 from google.genai import types
 from .config import get_client, get_model_name, get_thinking_config, MinerOutput, AuditorOutput
 from .storage import data_path
+from .sandbox import (
+    check_generated_code,
+    copy_if_exists,
+    format_rejection,
+    run_generated_script,
+    sandbox_workdir,
+    script_timeout_seconds,
+    SANDBOX_RULES_TEXT,
+)
+from .solvers.dynamic_script import (
+    MAX_SWEEP_RELATIVE_ERROR,
+    _dynamic_objective_contract,
+    dynamic_plots_dir,
+    solver_output_problems,
+)
 
 class GeneratedScriptResponse(BaseModel):
     explanation: str = Field(description="Kurze Erklärung der gewählten numerischen Lösungsmethode für das Skript.")
@@ -37,10 +50,12 @@ class ScriptGenerator:
         os.makedirs(generated_dir, exist_ok=True)
         script_path = os.path.abspath(os.path.join(generated_dir, f"solver_{slug}_{timestamp}.py"))
         
-        # Falls kein Pfad für den Plot übergeben wurde, erstelle einen Standardpfad im static/plots Ordner
+        # Falls kein Pfad für den Plot übergeben wurde, erstelle einen Standardpfad im Plot-Ordner
+        # (static/plots des Repos, per VECTORNAUT_PLOTS_DIR konfigurierbar)
         if not plot_png_path:
-            os.makedirs(os.path.join("static", "plots"), exist_ok=True)
-            plot_png_path = os.path.abspath(os.path.join("static", "plots", f"plot_{slug}_{timestamp}.png"))
+            plots_dir = dynamic_plots_dir()
+            os.makedirs(plots_dir, exist_ok=True)
+            plot_png_path = os.path.abspath(os.path.join(plots_dir, f"plot_{slug}_{timestamp}.png"))
         else:
             plot_png_path = os.path.abspath(plot_png_path)
             os.makedirs(os.path.dirname(plot_png_path), exist_ok=True)
@@ -51,23 +66,14 @@ class ScriptGenerator:
         # Aktuelle Parameter des Auditors speichern
         audited_params = auditor_output.audited_parameters_dict.copy()
         audited_params["simulation_coefficient"] = auditor_output.simulation_coefficient
-        audited_params["slippage_coefficient"] = auditor_output.simulation_coefficient
-        audited_params["lambda"] = auditor_output.simulation_coefficient
-        audited_params["slip_length"] = auditor_output.simulation_coefficient
+        audited_params.setdefault("slippage_coefficient", auditor_output.simulation_coefficient)
+        audited_params.setdefault("lambda", auditor_output.simulation_coefficient)
+        audited_params.setdefault("slip_length", auditor_output.simulation_coefficient)
         
         with open(params_json_path, "w", encoding="utf-8") as pf:
             json.dump(audited_params, pf, indent=4)
 
-        objective_metric = auditor_output.objective_metric.model_dump() if getattr(auditor_output, "objective_metric", None) else {
-            "objective_name": auditor_output.ui_metadata.performance_gain.label,
-            "score_field": "performance_gain_pct",
-            "direction": "maximize",
-            "primary_metric": auditor_output.ui_metadata.primary_metric.label,
-            "reference_metric": auditor_output.ui_metadata.reference_metric.label,
-            "lower_is_better": False,
-            "acceptance_threshold": 0.0,
-            "hard_constraints": ["relative_error <= 1.0", "finite numeric outputs", "parameters within bounds"],
-        }
+        objective_metric = _dynamic_objective_contract(auditor_output)
 
         # Generierungs-Prompt entwerfen
         prompt = f"""
@@ -121,17 +127,25 @@ class ScriptGenerator:
            {{
              "success": true,
              "performance_gain_pct": float (Prozentuale Verbesserung gegenüber der Referenz, z.B. 45.2),
-             "relative_error": float (Relative Abweichung zwischen numerischer und Referenzlösung),
+             "relative_error": float (Numerischer Fehlerschätzer der bionischen Lösung als Bruchteil, z.B. Residuum, Energie-/Massenbilanz-Fehler oder Gitterkonvergenz N vs N/2 - NICHT der Unterschied zwischen bionischer und Referenzlösung; Varianten mit relative_error > {MAX_SWEEP_RELATIVE_ERROR} werden verworfen),
              "sample_points": List (Bei 1D: Liste von Floats. Bei 2D: Liste von [x, y] Koordinatenpaaren),
              "solution_primary": List[float] (Numerisch gelöste Feldwerte an den sample_points),
              "solution_reference": List[float] (Referenz-Feldwerte an den sample_points),
              "primary_metric_value": float (Berechnete physikalische Hauptkennzahl für das bionische System, z.B. Wandschubspannung oder Wärmestrom),
              "reference_metric_value": float (Hauptkennzahl für das Referenzsystem)
            }}
+           Setze "success": false nur, wenn die Rechnung fehlgeschlagen ist; das zählt als Fehlschlag und löst eine Korrektur aus.
+           Zusätzliche numerische Felder (z.B. Spitzenwerte, die in den hard_constraints vorkommen) sind erlaubt und erwünscht;
+           benenne sie so, dass Constraints der Form `<feldname> <= <zahl>` direkt dagegen geprüft werden können.
            
         5. DATEI-KODIERUNG:
             Alle Lese- und Schreiboperationen auf Dateien (wie das Einlesen von --params und Schreiben von --output) MÜSSEN explizit mit `encoding="utf-8"` geöffnet werden (z.B. open(..., 'w', encoding='utf-8') oder open(..., 'r', encoding='utf-8')). Das ist zwingend erforderlich, um Codierungsfehler auf Windows-Systemen zu vermeiden.
             
+        6. SANDBOX:
+            {SANDBOX_RULES_TEXT}
+            Das Skript läuft in einem temporären Arbeitsverzeichnis und darf nur die über --params/--output/--plot übergebenen Dateien lesen/schreiben.
+            Verwende ausschließlich numerische Bibliotheken (numpy, scipy, sympy, matplotlib, math, json, argparse, ...).
+
          Schreibe sauberen, robusten Python 3.13 Code. Fange mögliche Division-by-Zero Fehler ab.
          """
 
@@ -164,62 +178,92 @@ class ScriptGenerator:
             # Skript auf Festplatte schreiben
             with open(script_path, "w", encoding="utf-8") as sf:
                 sf.write(code)
-            
-            # Ausführen des Skripts
-            print(f"[*] Executing generated script at: {script_path}")
-            try:
-                result = subprocess.run(
-                    [sys.executable, script_path, "--params", params_json_path, "--output", output_json_path, "--plot", plot_png_path],
-                    capture_output=True,
-                    encoding="utf-8",
-                    env={**os.environ, "PYTHONUTF8": "1"},
-                    timeout=int(os.environ.get("VECTORNAUT_SCRIPT_TIMEOUT_SECONDS", "60")),
+
+            failure_kind = "crashed"
+            violations = check_generated_code(code)
+            if violations:
+                failure_kind = "rejected"
+                error_msg = format_rejection(violations)
+                print(f"[-] Script rejected by sandbox pre-check on iteration {correction_iteration + 1}!")
+                print(f"[-] {error_msg}")
+            else:
+                print(f"[*] Executing generated script at: {script_path}")
+                results_data, error_msg, failure_kind = self._execute(
+                    script_path, params_json_path, output_json_path, plot_png_path
                 )
-            except subprocess.TimeoutExpired as timeout_err:
-                error_msg = f"Generated script timed out after {timeout_err.timeout} seconds."
-                result = None
-            
-            if result is not None and result.returncode == 0:
-                print(f"[+] Script execution succeeded on iteration {correction_iteration + 1}!")
-                # Lese Ergebnisse ein
-                try:
-                    with open(output_json_path, "r", encoding="utf-8") as rf:
-                        results_data = json.load(rf)
+                if results_data is not None:
+                    print(f"[+] Script execution succeeded on iteration {correction_iteration + 1}!")
                     results_data["script_path"] = script_path
                     results_data["params_json_path"] = params_json_path
-                    results_data["execution_mode"] = "generated_python_subprocess"
+                    results_data["execution_mode"] = "generated_python_sandboxed_subprocess"
                     results_data["plot_png_path"] = plot_png_path
                     return results_data
-                except Exception as read_err:
-                    print(f"[-] Failed to read output JSON: {read_err}")
-                    error_msg = f"Failed to read results JSON: {str(read_err)}"
-            else:
-                if result is not None:
-                    error_msg = result.stderr or result.stdout or "Unknown execution error"
-                print(f"[-] Script crashed on iteration {correction_iteration + 1}!")
+                print(f"[-] Script failed on iteration {correction_iteration + 1} ({failure_kind})!")
                 print(f"[-] Error: {error_msg}")
-            
+
             # Vorbereitung der Korrekturschleife
             correction_iteration += 1
             if correction_iteration < max_iterations:
                 print(f"[*] Initiating self-correction. Sending error details back to Gemini...")
+                headline = {
+                    "rejected": "Das zuvor generierte Python-Skript wurde von der Sandbox-Vorprüfung abgelehnt und nicht ausgeführt!",
+                    "invalid_output": "Das zuvor generierte Python-Skript lief durch, aber sein Ergebnis-JSON erfüllt den Vertrag nicht (z.B. \"success\": false oder fehlende/nicht-endliche Felder)!",
+                }.get(failure_kind, "Das zuvor generierte Python-Skript ist beim Ausführen abgestürzt!")
                 current_prompt = f"""
-                Das zuvor generierte Python-Skript ist beim Ausführen abgestürzt!
+                {headline}
                 
                 ### Zuvor generierter Code:
                 ```python
                 {code}
                 ```
                 
-                ### Fehlermeldung (Traceback / Stderr):
+                ### Fehlermeldung (Traceback / Stderr / Prüfergebnis):
                 ```text
                 {error_msg}
                 ```
                 
                 ### Aufgabe:
                 Analysiere den Fehler, korrigiere den Code und liefere ein repariertes, vollständig lauffähiges Skript zurück.
-                Halte dich strikt an die CLI-Parameter (--params, --output, --plot) und die Ausgabeziele.
+                Halte dich strikt an die CLI-Parameter (--params, --output, --plot), die Ausgabestruktur und die Sandbox-Regeln:
+                {SANDBOX_RULES_TEXT}
                 """
         
         # Falls alle Iterationen fehlgeschlagen sind
         raise RuntimeError(f"Dynamic script solver execution failed after {max_iterations} attempts. Last error: {error_msg}")
+
+
+    @staticmethod
+    def _execute(script_path: str, params_json_path: str, output_json_path: str, plot_png_path: str):
+        """
+        Run the solver in the sandbox. Returns (results, error_msg, failure_kind); results
+        is None on failure. Exit code 0 alone is not enough: the output JSON must exist,
+        report "success": true and contain the contract fields with finite values.
+        """
+        if os.path.exists(output_json_path):
+            os.remove(output_json_path)
+        with sandbox_workdir("vectornaut_solver_") as workdir:
+            copy_if_exists(script_path, os.path.join(workdir, "solver.py"))
+            copy_if_exists(params_json_path, os.path.join(workdir, "params.json"))
+            run = run_generated_script(
+                ["solver.py", "--params", "params.json", "--output", "results.json", "--plot", "plot.png"],
+                timeout=script_timeout_seconds(),
+                workdir=workdir,
+            )
+            copy_if_exists(os.path.join(workdir, "results.json"), output_json_path)
+            copy_if_exists(os.path.join(workdir, "plot.png"), plot_png_path)
+        if run.timed_out:
+            return None, f"Generated script timed out after {run.duration_s:.0f} seconds (process group killed).", "crashed"
+        if run.returncode != 0:
+            return None, run.error_text() or f"Exit code {run.returncode}", "crashed"
+        try:
+            with open(output_json_path, "r", encoding="utf-8") as rf:
+                results_data = json.load(rf)
+        except Exception as read_err:
+            return None, f"Failed to read results JSON: {read_err}", "invalid_output"
+        problems = solver_output_problems(results_data)
+        if problems:
+            detail = "; ".join(problems)
+            if isinstance(results_data, dict) and results_data.get("error"):
+                detail += f"; script error: {results_data.get('error')}"
+            return None, f"Exit code 0, but the output violates the result contract: {detail}", "invalid_output"
+        return results_data, "", ""

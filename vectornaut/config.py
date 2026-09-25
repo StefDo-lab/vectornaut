@@ -197,6 +197,7 @@ class ObjectiveMetricContract(BaseModel):
         "parameters within bounds",
         "finite numeric outputs",
     ], description="Non-negotiable constraints for accepting solver or sweep results")
+    design_variables: Optional[List[str]] = Field(default=None, description="Names of audited parameters that are free design choices (geometry, material) which optimizer and parameter sweeps may vary; excludes operating conditions, loads and environment")
 
 class AuditorOutput(BaseModel):
     audit_passed: bool = Field(description="True if the parameters are physically plausible and safe for simulator execution")

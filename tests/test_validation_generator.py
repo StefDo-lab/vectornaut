@@ -103,30 +103,26 @@ raise ValueError("Intentional crash for test self-correction loop validation")
 """
 
         # Second mock response: working test script that outputs the expected JSON structure
+        # Second mock response: working unittest module under the harness contract. The
+        # trusted runner imports it and derives the result from unittest; the solver is
+        # only reached through solver_harness.run_solver (the dummy solver writes no JSON).
         good_code = """
-import argparse
-import json
+import unittest
+from solver_harness import run_solver, nominal_params
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--solver')
-parser.add_argument('--params')
-parser.add_argument('--output')
-args = parser.parse_args()
 
-results = {
-    "success": True,
-    "total_run": 3,
-    "total_failures": 0,
-    "total_errors": 0,
-    "test_results": [
-        {"name": "test_nominal_run", "passed": True, "message": ""},
-        {"name": "test_parameter_limits_and_safety", "passed": True, "message": ""},
-        {"name": "test_physical_invariants", "passed": True, "message": ""}
-    ]
-}
+class SolverPhysicalValidation(unittest.TestCase):
+    def test_nominal_run(self):
+        run = run_solver(nominal_params())
+        self.assertEqual(run.returncode, 0)
 
-with open(args.output, "w", encoding="utf-8") as f:
-    json.dump(results, f)
+    def test_parameter_limits_and_safety(self):
+        params = nominal_params()
+        params["viscosity"] = 1e-8
+        self.assertEqual(run_solver(params).returncode, 0)
+
+    def test_physical_invariants(self):
+        self.assertAlmostEqual(nominal_params()["viscosity"], 0.001)
 """
 
         mock_response_1 = MagicMock()
