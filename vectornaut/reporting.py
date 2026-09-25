@@ -38,6 +38,74 @@ def archive_run_data(response_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
         print(f"[*] Archiving failed: {archive_err}")
         return None
 
+# Coefficient names the equations may use for the auditor's simulation_coefficient
+# (see solver_dispatcher._merged_params; aliases only when not audited explicitly).
+_COEFFICIENT_ALIASES = ("slippage_coefficient", "lambda", "slip_length")
+
+# Longest solution table in the report; larger (2D) grids are subsampled.
+MAX_SOLUTION_TABLE_ROWS = 25
+
+
+def _fmt_num(value: Any, spec: str = ".6g") -> str:
+    """Significant-figure formatting for report numbers; non-numbers are returned as text."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return str(value)
+    return format(float(value), spec)
+
+
+def _with_unit(value: Any, unit: Optional[str]) -> str:
+    text = _fmt_num(value)
+    return f"{text} {unit}" if unit else text
+
+
+def gain_available(simulator: Dict[str, Any]) -> bool:
+    """False if the solver reported that no baseline exists (performance_gain_pct means n/a)."""
+    return (simulator or {}).get("gain_basis") != "none"
+
+
+def format_gain(simulator: Dict[str, Any]) -> str:
+    if not gain_available(simulator):
+        return "n/a"
+    return f"{float((simulator or {}).get('performance_gain_pct', 0.0) or 0.0):.2f}%"
+
+
+def _coefficient_used(miner: Dict[str, Any], auditor: Dict[str, Any]) -> bool:
+    """True if the governing equation or a BC refers to simulation_coefficient or one of its aliases."""
+    audited = {p.get("name") for p in auditor.get("audited_parameters", []) or [] if isinstance(p, dict)}
+    names = ["simulation_coefficient"] + [a for a in _COEFFICIENT_ALIASES if a not in audited]
+    text = " ".join([str(miner.get("governing_equation") or "")] + [str(bc) for bc in miner.get("boundary_conditions", []) or []])
+    return any(re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text) for name in names)
+
+
+def _spread(count: int, limit: int) -> list:
+    """All indices 0..count-1, or `limit` evenly spread ones including the first and the last."""
+    if count <= limit:
+        return list(range(count))
+    step = (count - 1) / (limit - 1)
+    return sorted({int(round(i * step)) for i in range(limit)})
+
+
+def _table_indices(points: list, limit: int = MAX_SOLUTION_TABLE_ROWS) -> list:
+    """
+    Row indices of the solution table: all rows up to `limit`, otherwise an evenly spread
+    subset. For 2D grids the subset is a coarser grid (e.g. 5 x 5 of 20 x 20 nodes).
+    """
+    count = len(points)
+    if count <= limit:
+        return list(range(count))
+    try:
+        xs = sorted({float(p[0]) for p in points})
+        ys = sorted({float(p[1]) for p in points})
+    except (TypeError, ValueError, IndexError):
+        return _spread(count, limit)
+    if len(xs) * len(ys) != count:
+        return _spread(count, limit)
+    per_axis = max(2, int(limit ** 0.5))
+    keep_x = {xs[i] for i in _spread(len(xs), per_axis)}
+    keep_y = {ys[i] for i in _spread(len(ys), per_axis)}
+    return [i for i, p in enumerate(points) if float(p[0]) in keep_x and float(p[1]) in keep_y]
+
+
 def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     miner = data.get("miner", {})
     auditor = data.get("auditor", {})
@@ -132,13 +200,14 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
         mined_val = p.get("value", 0.0)
         audited_val = audited_dict.get(p_name, mined_val)
         
-        md.append(f"| `{p_name}` | {mined_val} | **{audited_val}** | `[{min_v}, {max_v}]` | {just} |")
+        md.append(f"| `{p_name}` | {_fmt_num(mined_val)} | **{_fmt_num(audited_val)}** | `[{_fmt_num(min_v)}, {_fmt_num(max_v)}]` | {just} |")
     
     md.append("\n### Berechnete dimensionslose Kennzahlen")
     for dim in dim_numbers:
         md.append(f"- **{dim.get('name', 'N/A')}:** {dim.get('value', 0.0)}")
     
-    md.append(f"\n- **Abgeleiteter Simulationskoeffizient:** `{auditor.get('simulation_coefficient', 0.0)}` (genutzt in den Gleichungen)")
+    coefficient_usage = "genutzt in den Gleichungen" if _coefficient_used(miner, auditor) else "in den Gleichungen nicht verwendet"
+    md.append(f"\n- **Abgeleiteter Simulationskoeffizient:** `{_fmt_num(auditor.get('simulation_coefficient', 0.0))}` ({coefficient_usage})")
     md.append(f"- **Freigegebener Solver:** `{auditor.get('solver_method', 'N/A').upper()}`\n")
     objective_contract = auditor.get("objective_metric") or simulator.get("objective_metric") or {}
     if objective_contract:
@@ -162,16 +231,40 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     
     ui_meta = auditor.get("ui_metadata", {})
     gain_label = ui_meta.get("performance_gain", {}).get("label", "Effizienzsteigerung")
-    gain_val = simulator.get("performance_gain_pct", 0.0)
-    md.append(f"- **{gain_label}:** **{gain_val:.2f}%**")
-    
+    metric_spec = simulator.get("metric_spec") or {}
+    metric_unit = simulator.get("metric_unit") or metric_spec.get("unit")
+    if gain_available(simulator):
+        md.append(f"- **{gain_label}:** **{format_gain(simulator)}**")
+    else:
+        md.append(f"- **{gain_label}:** **n/a** (kein Vergleichsdesign definiert, der Gewinn ist nicht berechenbar)")
+
     prim_label = ui_meta.get("primary_metric", {}).get("label", "Primäre Metrik")
     prim_val = simulator.get("primary_metric_value", 0.0)
     ref_label = ui_meta.get("reference_metric", {}).get("label", "Referenzmetrik")
     ref_val = simulator.get("reference_metric_value", 0.0)
-    
-    md.append(f"- **{prim_label} (Bionisch):** `{prim_val:.4f}`")
-    md.append(f"- **{ref_label} (Referenz):** `{ref_val:.4f}`")
+
+    md.append(f"- **{prim_label} (Bionisch):** `{_with_unit(prim_val, metric_unit)}`")
+    md.append(f"- **{ref_label} (Referenz):** `{_with_unit(ref_val, metric_unit)}`")
+    if metric_spec:
+        location = f" bei `{metric_spec.get('location')}`" if metric_spec.get("location") else ""
+        scale = f", skaliert mit `{metric_spec.get('scale')}`" if metric_spec.get("scale") else ""
+        metric_name = metric_spec.get("label") or prim_label
+        md.append(f"- **Metrik-Definition:** {metric_name}: `{metric_spec.get('kind')}`{location}{scale}")
+    baseline_val = simulator.get("baseline_metric_value")
+    if baseline_val is not None and gain_available(simulator):
+        basis = simulator.get("gain_basis")
+        if basis == "baseline_parameters":
+            baseline_name = auditor.get("baseline_description") or "konventionelles Vergleichsdesign"
+            overrides = ", ".join(
+                f"`{p.get('name')}` = {_fmt_num(p.get('value'))}"
+                for p in auditor.get("baseline_parameters") or [] if isinstance(p, dict)
+            )
+            baseline_name = f"{baseline_name} ({overrides})" if overrides else baseline_name
+        else:
+            baseline_name = "gleiches Design ohne bionischen Effekt (Koeffizient = 0)"
+        md.append(f"- **Vergleichsdesign (Baseline):** {baseline_name}: `{_with_unit(baseline_val, metric_unit)}`")
+    if simulator.get("gain_note"):
+        md.append(f"- **Hinweis zur Metrik:** {simulator.get('gain_note')}")
     
     if simulator.get("solver_method") == "pinn":
         md.append(f"- **PINN Trainingsepochen:** {simulator.get('epochs_trained', 0)}")
@@ -213,21 +306,24 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     sol_p = simulator.get("solution_primary", [])
     sol_r = simulator.get("solution_reference", [])
     
-    for i in range(len(pts)):
+    row_indices = _table_indices(pts) if is_2d else _spread(len(pts), MAX_SOLUTION_TABLE_ROWS)
+    for i in row_indices:
         p_val = sol_p[i] if i < len(sol_p) else 0.0
         r_val = sol_r[i] if i < len(sol_r) else 0.0
         diff = p_val - r_val
         if is_2d:
             try:
-                coord_str = f"({pts[i][0]:.3f}, {pts[i][1]:.3f})"
+                coord_str = f"({_fmt_num(pts[i][0], '.4g')}, {_fmt_num(pts[i][1], '.4g')})"
             except Exception:
                 coord_str = str(pts[i])
         else:
             try:
-                coord_str = f"{pts[i]:.4f}"
+                coord_str = _fmt_num(pts[i], '.4g')
             except Exception:
                 coord_str = str(pts[i])
-        md.append(f"| {coord_str} | {p_val:.4f} | {r_val:.4f} | {diff:.4f} |")
+        md.append(f"| {coord_str} | {_fmt_num(p_val)} | {_fmt_num(r_val)} | {_fmt_num(diff, '.3g')} |")
+    if len(row_indices) < len(pts):
+        md.append(f"\n*{len(row_indices)} von {len(pts)} Stützpunkten gezeigt (gleichmäßig verteilte Auswahl); alle Werte stehen im JSON-Export.*")
         
     if simulator.get("validation_report"):
         md.append("\n## 6. Automatische Validierung (AI-Generated Tests)")
@@ -238,19 +334,19 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     if opt_hist:
         md.append("\n## 7. Autonome Optimierungshistorie (Closed-Loop)")
         md.append("Das System hat die Parameter in mehreren Simulations- und Validierungsschleifen autonom angepasst:\n")
-        md.append("| Runde | Parameter-Set | Koeffizient | Effizienz (Gain) | Validierung | Feedback des Optimierers |")
-        md.append("| --- | --- | --- | --- | --- | --- |")
+        md.append("| Runde | Parameter-Set | Koeffizient | Metrik | Effizienz (Gain) | Validierung | Feedback des Optimierers |")
+        md.append("| --- | --- | --- | --- | --- | --- | --- |")
         for run in opt_hist:
             r_num = run.get("round", 1)
-            params_str = ", ".join([f"`{k}`: {v}" for k, v in run.get("parameters", {}).items()])
+            params_str = ", ".join([f"`{k}`: {_fmt_num(v)}" for k, v in run.get("parameters", {}).items()])
             coeff_val = run.get("simulation_coefficient", 0.0)
             sim_res = run.get("simulator", {})
-            gain = sim_res.get("performance_gain_pct", 0.0)
+            metric_str = _with_unit(sim_res.get("primary_metric_value", 0.0), sim_res.get("metric_unit"))
             val_status = "✅ PASS" if sim_res.get("validation_passed") else "❌ FAIL" if sim_res.get("validation_passed") is not None else "N/A"
             if run.get("validation", {}).get("status"):
                 val_status = str(run.get("validation", {}).get("status")).upper()
             reasoning = run.get("optimizer_reasoning", "Konvergenz erreicht oder Limit erreicht.").replace("\n", " ").strip()
-            md.append(f"| {r_num} | {params_str} | `{coeff_val:.6f}` | **{gain:.2f}%** | {val_status} | {reasoning} |")
+            md.append(f"| {r_num} | {params_str} | `{_fmt_num(coeff_val)}` | {metric_str} | **{format_gain(sim_res)}** | {val_status} | {reasoning} |")
 
             fallbacks = run.get("solver_fallbacks", [])
             if fallbacks:

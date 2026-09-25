@@ -14,6 +14,22 @@ class OptimizerDecision(BaseModel):
     adjustments: List[ParameterAdjustment] = Field(description="Liste der vorgeschlagenen Parameter-Anpassungen. Kann leer sein, wenn continue_optimization=False ist.", default_factory=list)
     concept_failed: bool = Field(default=False, description="True NUR, wenn das Konzept physikalisch oder strukturell versagt (z. B. Kollaps, Materialversagen, nicht behebbare Instabilität) und verworfen werden muss. Die bloße Feststellung, dass KEINE Instabilität vorliegt, ist kein Versagen.")
 
+def _metric_summary(sim: Dict[str, Any]) -> str:
+    """Prompt lines with the round's metric (name, value, unit, baseline) and gain."""
+    spec = sim.get("metric_spec") or {}
+    unit = sim.get("metric_unit") or spec.get("unit") or ""
+    unit_text = f" {unit}" if unit else ""
+    name = spec.get("label") or " ".join(str(spec[k]) for k in ("kind", "location") if spec.get(k)) or "Primärmetrik"
+    lines = f"  * Metrik ({name}): {float(sim.get('primary_metric_value', 0.0) or 0.0):.6g}{unit_text}\n"
+    if sim.get("baseline_metric_value") is not None:
+        lines += f"  * Metrik des Vergleichsdesigns (Baseline): {float(sim['baseline_metric_value']):.6g}{unit_text}\n"
+    if sim.get("gain_basis") == "none":
+        lines += "  * Performance Gain: n/a (kein Vergleichsdesign definiert, der Gain ist nicht berechenbar; bewerte die Metrik selbst)\n"
+    else:
+        lines += f"  * Performance Gain: {float(sim.get('performance_gain_pct', 0.0) or 0.0):.2f}%\n"
+    return lines
+
+
 class Optimizer:
     def __init__(self, client=None):
         self.client = client
@@ -34,7 +50,7 @@ class Optimizer:
         for run in history:
             history_summary += f"- Runde {run['round']}:\n"
             history_summary += f"  * Parameter: {run['parameters']}\n"
-            history_summary += f"  * Performance Gain: {run['simulator'].get('performance_gain_pct', 0.0):.2f}%\n"
+            history_summary += _metric_summary(run['simulator'])
             history_summary += f"  * Relative Error: {run['simulator'].get('relative_error', 0.0):.4e}\n"
             if run['simulator'].get('validation_passed') is not None:
                 history_summary += f"  * Validierung bestanden: {run['simulator'].get('validation_passed')}\n"

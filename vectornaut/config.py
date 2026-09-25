@@ -1,6 +1,6 @@
 import os
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 try:
     from dotenv import load_dotenv
@@ -169,6 +169,18 @@ class DimensionlessNumber(BaseModel):
     name: str = Field(description="Name of the dimensionless number, e.g., ReynoldsNumber")
     value: float = Field(description="Calculated value")
 
+class BaselineParameter(BaseModel):
+    name: str = Field(description="Name of a parameter (as in the equations/audited parameters)")
+    value: float = Field(description="Its value in the conventional (non-bionic) reference design")
+
+class MetricSpec(BaseModel):
+    """Declarative description of the quantity the solver reports as primary/reference metric."""
+    kind: str = Field(description="One of: value_at, derivative_at, max, min, max_abs, mean, integral (of the dependent variable)")
+    location: Optional[str] = Field(default=None, description="Where to evaluate, in the coordinates of the boundary conditions: 1D a coordinate such as '0', '1' or a parameter name; 2D a line/edge such as 'x=1' or 'y=0' (averaged along it, derivative normal to it) or a point '(0.5, 0.5)'. Empty for max/min/max_abs/mean/integral over the whole domain.")
+    scale: Optional[str] = Field(default=None, description="Optional factor as an expression in parameter names that converts the (normalized) result into the physical quantity, e.g. 'viscosity/channel_half_height' or 'thermal_conductivity/L'")
+    unit: Optional[str] = Field(default=None, description="Unit of the scaled metric, e.g. Pa, m, W/m^2, K")
+    label: Optional[str] = Field(default=None, description="Short name of the metric, e.g. 'Maximum deflection'")
+
 class AxisMetadata(BaseModel):
     label: str = Field(description="Label for the coordinate or field")
     unit: str = Field(description="Unit of measurement, e.g., m, m/s, K, V")
@@ -239,6 +251,23 @@ class AuditorOutput(BaseModel):
     def dimensionless_numbers_dict(self) -> Dict[str, float]:
         return {p.name: p.value for p in self.dimensionless_numbers}
 
+    # Metric and baseline (declared after the methods; pydantic collects them all the same).
+    metric: Optional[MetricSpec] = Field(default=None, description="Which quantity of the solved field the solver reports as primary/reference metric. Without it the solver reports du/dx at the lower boundary (1D) or the field mean (2D).")
+    baseline_parameters: Optional[List[BaselineParameter]] = Field(default=None, description="Parameter values of the conventional (non-bionic) reference design that differ from the audited ones. The solver re-solves with them and reports performance_gain_pct as the relative improvement of the metric over this baseline.")
+    baseline_description: Optional[str] = Field(default=None, description="Short name of the baseline design, e.g. 'uncoated double glazing'")
+
+    @field_validator("baseline_parameters", mode="before")
+    @classmethod
+    def _baseline_parameters_from_mapping(cls, value: Any) -> Any:
+        # Accept {"name": value} as well as the list-of-pairs form of the schema.
+        if isinstance(value, dict):
+            return [{"name": str(k), "value": v} for k, v in value.items()]
+        return value
+
+    @property
+    def baseline_parameters_dict(self) -> Dict[str, float]:
+        return {p.name: p.value for p in (self.baseline_parameters or [])}
+
 class SimulatorOutput(BaseModel):
     solver_method: str = Field(description="The solver method used: analytical, scipy, pinn")
     epochs_trained: int = Field(description="Number of epochs the PINN was trained")
@@ -262,3 +291,9 @@ class SimulatorOutput(BaseModel):
     execution_mode: Optional[str] = Field(description="Execution mode metadata for generated or deterministic solvers", default=None)
     objective_metric: Optional[Dict[str, Any]] = Field(description="Objective metric contract used to score solver results", default=None)
     parameter_sweep: Optional[Dict[str, Any]] = Field(description="Dynamic-script parameter sweep summary and candidate results", default=None)
+    # Metric and gain provenance (None for results produced before these fields existed).
+    metric_spec: Optional[Dict[str, Any]] = Field(description="Metric spec used for primary/reference/baseline metric values (kind, location, scale, unit, label); None = default metric", default=None)
+    metric_unit: Optional[str] = Field(description="Unit of primary/reference/baseline metric values", default=None)
+    baseline_metric_value: Optional[float] = Field(description="Metric of the baseline design the gain is computed against", default=None)
+    gain_basis: Optional[str] = Field(description="What performance_gain_pct compares against: 'baseline_parameters' (auditor's reference design), 'bionic_effect' (same design without slip/simulation coefficient) or 'none' (no baseline: gain not computable, performance_gain_pct is 0 and means n/a)", default=None)
+    gain_note: Optional[str] = Field(description="Why the metric spec or the gain could not be used as requested", default=None)
