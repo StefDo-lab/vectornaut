@@ -318,9 +318,8 @@ def _solve_2d(
     # The whole equation is parsed (all terms moved to one side) into the linear operator
     # a*u_xx + b*u_yy + c*u_xy + d*u_x + e*u_y + g*u = f that the FDM and PINN solve (see
     # parse_pde_2d). Unsupported forms (nonlinear, non-elliptic, unknown symbols) raise, so
-    # the pipeline treats them as a solver failure. rhs_str is the whole equation, because
-    # parse_rhs_2d (used for the baseline solve below) parses whole equations the same way.
-    rhs_str = gov_eq
+    # the pipeline treats them as a solver failure. The baseline solve below re-parses the
+    # whole equation with the baseline parameters.
     rhs_expr = parse_pde_2d(gov_eq, dep_name, x_name, y_name, params)
 
     # Parses all edge BCs (constant or varying along the edge) and derives the rectangular
@@ -460,7 +459,7 @@ def _solve_2d(
         baseline_metric = primary_metric
     elif baseline_params is not None:
         try:
-            baseline_rhs = parse_rhs_2d(rhs_str, x_name, y_name, baseline_params)
+            baseline_rhs = parse_pde_2d(gov_eq, dep_name, x_name, y_name, baseline_params)
             baseline_bcs, baseline_x_bounds, baseline_y_bounds = parse_bcs_2d(
                 bcs, dep_name, miner_output.independent_variables, baseline_params
             )
