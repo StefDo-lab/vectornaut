@@ -93,7 +93,7 @@ Runtime data (history, reports, eval runs, generated scripts/tests, saved models
 * **Open design questions** (tests marked `expectedFailure`): an explicit user override is changed again by the optimizer in later rounds (`test_api_mock_flows`), and overrides appear only in the audited parameters, not in `miner.parameters` (`test_chat_mock_flows`). Both need a product decision.
 * **PINN limits** (tests marked `expectedFailure` in `test_solver_accuracy`): the 1D PINN is not nondimensionalised, so micrometre-scale domains train poorly (the validator flags this and falls back); the 2D PINN misses the 5 % target for spatially varying sources at the default training budget.
 * **2D solver** assumes a plain Laplacian on the left-hand side (coefficients like `k*(...)` are dropped); FDM Neumann edges are first order.
-* **Auditor prompt** does not ask the model to reject physically impossible requests (e.g. >100 % efficiency); the mock pipeline accepts them.
+* **Impossible requests**: miner and auditor can mark a request `request_feasible: false`, and a deterministic validator check flags efficiency/COP/amplification > 1 in closed or adiabatic systems; the pipeline then returns a structured `status: "rejected"` result (HTTP 200). Whether live models use the new fields is unmeasured; the mock miner/auditor never do, so the mock pipeline still accepts the `infeasible_perpetuum` case.
 * **Plots** from dynamic scripts are written to `static/plots/` in the working directory, not under `VECTORNAUT_DATA_DIR`.
 * **Deletion candidates**: `scripts/read_transcript.py` and `scripts/search_log.py` (hardcoded to one Windows transcript file); several overlapping encoding probes in `tests/live/`.
 
@@ -104,7 +104,7 @@ Runtime data (history, reports, eval runs, generated scripts/tests, saved models
 1. **Fix the live-path findings** in `docs/LIVE_PATH_FINDINGS.md` (from answering every model call by hand in six scenarios): metrics that measure the requested quantity, a real baseline/objective outside slip flow, a sanctioned "infeasible" outcome plus an energy-balance check, the 2D left-hand side, the dynamic-script sweep, auditor overwrites, and sandboxing of generated code.
 2. **Run a live model comparison** once `GEMINI_API_KEY` is available and item 1 is done: one repeat first to find crashes, then at least 3 repeats per configuration before ranking.
 3. **Decide the two open override questions** and adjust the pipeline accordingly.
-4. **Auditor prompt**: reject physically impossible requests; verify with the `infeasible_perpetuum` reference case.
+4. **Impossible requests**: verify with the `infeasible_perpetuum` reference case in a live run that the models set `request_feasible: false` (miner/auditor prompts explain it).
 5. **PINN improvements**: nondimensionalise the 1D domain (update `test_validator_flags_thin_film_pinn_garbage` to use a synthetic bad profile first), longer or adaptive training for 2D sources.
 6. **2D solver**: honour left-hand-side coefficients, second-order Neumann edges.
 7. **More physical models**: structural beam bending (4th order), acoustics, multiphase flows in the auditor rules.

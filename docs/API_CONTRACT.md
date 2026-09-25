@@ -70,6 +70,43 @@ Response shape:
 }
 ```
 
+A successful run also carries `"status": "completed"`.
+
+Rejected request (HTTP 200). When the miner or the auditor sets `request_feasible: false` (the request itself is physically impossible as stated, e.g. more energy out than in), or the deterministic validator check `physics_closed_system_efficiency` fails (efficiency/COP/amplification above 1 in a closed or adiabatic system without energy input; `recommended_action: "reject_request"`), the pipeline stops at once without re-mining and returns:
+
+```json
+{
+  "success": false,
+  "status": "rejected",
+  "query": "...",
+  "rejection": {"stage": "miner | auditor | validator", "reason": "...", "design_name": "...", "concept_attempt": 1},
+  "miner": {},
+  "auditor": null,
+  "simulator": null,
+  "validation": null,
+  "optimization_history": [],
+  "failed_concepts": [],
+  "models": {},
+  "report_md": "# Anfrage abgelehnt: ..."
+}
+```
+
+`auditor`, `simulator` and `validation` are filled when the run got that far. The rejection is archived and listed in the history like any other run.
+
+All concepts failed (HTTP 422). When every concept attempt fails (audit with `request_feasible` still true, solver error, validator fail or optimizer verdict), the response is:
+
+```json
+{
+  "success": false,
+  "status": "failed",
+  "detail": "All bionic concepts failed validation (3 attempts).\n1. <design> (<source>): <reason>\n...",
+  "error": {"type": "concepts_exhausted", "message": "...", "attempts": 3, "failed_concepts": [{"design_name": "...", "inspiration_source": "...", "reason": "...", "stage": "auditor | solver | validator | optimizer"}]},
+  "query": "..."
+}
+```
+
+Other unexpected errors still return HTTP 500 with `{"detail": "..."}`.
+
 `models` maps each pipeline stage that made a live Gemini call in this run to the model name it used, e.g. `{"miner": "gemini-3.5-flash", "formulator": "gemini-3.5-flash", "auditor": "gemini-3.5-flash", "optimizer": "gemini-3.5-flash", "synthesizer": "gemini-3.5-flash"}`. `script_generator` and `test_generator` appear when a `dynamic_script` solve was attempted. In mock mode it is an empty object. Runs archived before this field existed do not contain it. See `docs/OPERATIONS.md` for the `VECTORNAUT_MODEL*` variables.
 
 ## History
