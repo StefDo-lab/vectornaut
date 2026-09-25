@@ -1,0 +1,6 @@
+{
+  "query": "Design a bio-inspired re-entry heat shield and simulate the time-dependent temperature evolution through its thickness during a heating pulse, with strongly temperature-dependent (non-linear) thermal conductivity.",
+  "epochs": 200,
+  "rounds": 2,
+  "answered_as": "honest model"
+}

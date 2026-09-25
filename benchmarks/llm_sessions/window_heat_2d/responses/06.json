@@ -1,0 +1,51 @@
+{
+  "audit_passed": true,
+  "audit_notes": "1) Positivity/bounds: all 12 parameters are positive and inside their bounds; emissivities are in (0,1]; temperatures in K. 2) Adjustment: gas_conductivity raised from 0.017 to 0.023 W/m/K as an EFFECTIVE (convection-corrected) cavity conductivity. Reason: for a 16 mm argon cavity at ~24 K cavity temperature difference, Ra_w = g*beta*dT*w^3/(nu*alpha) ~ 1.5e4 (aspect ratio H/w = 75), and the EN 673 correlation Nu = 0.035*(Gr*Pr)^0.38 gives Nu ~ 1.35, so pure molecular conduction (0.017) would under-predict cavity heat transfer by ~35%; 0.017*1.35 ~ 0.023 (still within bounds). All other values unchanged. 3) Model check: the PDE uses the physical glazing thickness L = 2*t_g + w = 0.024 m for x and H = 1.2 m for y, so the y-coefficient (L/H)^2 = 4.0e-4. The x=0 / x=1 Dirichlet values are the outer/inner glass surface temperatures from the exact series-resistance solution (films + 2 panes + cavity with linearized radiation h_r = 4*sigma*T_m^3/(1/eps_c + 1/eps_g - 1)), and top/bottom are adiabatic, so the exact 2D solution is y-independent and linear in x: T(x,y) = T0 + (T1 - T0)*x. Note that the linear interior profile is a homogenized representation; physically ~0.15 K drops across each pane and ~24 K across the cavity. Closed-form reference (audited values): h_r = 0.193 W/m^2/K, k_cav,eff = 0.0261 W/m/K, R_tot = 0.791 m^2K/W, U = 1.264 W/m^2/K, q = 37.9 W/m^2, T0 (outer surface) = 264.67 K (-8.5 C), T1 (inner surface) = 288.22 K (15.1 C). Uncoated reference (eps_c = 0.84): U = 2.64 W/m^2/K, inner surface 282.88 K (9.7 C). The low-e inner surface stays well above the dew point of 20 C/50% RH room air (~282.4 K), whereas the uncoated unit is marginal. 4) Dimensionless numbers: Bi_out = h_out*R_cond = 15.5, Bi_in = h_in*R_cond = 4.78 (R_cond = glass + cavity resistance 0.621 m^2K/W), Ra_w ~ 1.5e4, Nu_cav ~ 1.35, radiation-to-conduction ratio in cavity h_r*w/k_gas ~ 0.13. 5) Simulation coefficient: overall center-of-glass U-value 1.264 W/m^2/K. 6) Solver: 2D PDE -> 'pinn', validated against the analytical linear solution above (closed-form exists, so the analytical reference is exact). 7) Stress/safety: thermal load only. Through-pane temperature drop q*t_g/k_g ~ 0.15 K -> thermal bending stress ~0.05 MPa; center-to-edge thermal stress for ~10-15 K differentials ~5-10 MPa, below the ~20-40 MPa design strength of annealed float glass; temperature range -10..20 C is well within glass, low-e coating (silver stable to >100 C when sealed) and sealant limits. Cavity pressure changes from temperature (~±5% of absolute) are within normal IGU tolerances. Audit passed. Performance gain defined as heat-loss reduction vs. the identical uncoated argon unit: 1 - 1.264/2.637 = 52.1%.",
+  "audited_parameters": [
+    {"name": "glass_thickness", "value": 0.004},
+    {"name": "gap_width", "value": 0.016},
+    {"name": "window_height", "value": 1.2},
+    {"name": "glass_conductivity", "value": 1.0},
+    {"name": "gas_conductivity", "value": 0.023},
+    {"name": "coating_emissivity", "value": 0.04},
+    {"name": "glass_emissivity", "value": 0.84},
+    {"name": "mean_cavity_temperature", "value": 278.0},
+    {"name": "indoor_temperature", "value": 293.15},
+    {"name": "outdoor_temperature", "value": 263.15},
+    {"name": "h_inside", "value": 7.7},
+    {"name": "h_outside", "value": 25.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "BiotNumber_outside", "value": 15.5},
+    {"name": "BiotNumber_inside", "value": 4.78},
+    {"name": "RayleighNumber_cavity", "value": 1.5e4},
+    {"name": "NusseltNumber_cavity", "value": 1.35},
+    {"name": "AspectRatioSquared_L_over_H", "value": 4.0e-4}
+  ],
+  "simulation_coefficient": 1.264,
+  "solver_method": "pinn",
+  "ui_metadata": {
+    "domain_name": "Thermodynamics - Steady 2D Heat Conduction",
+    "independent_var": {"label": "Normalized Position Through Glazing (outer surface x=0 to inner surface x=1)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "PINN Inner (Room-Side) Glass Surface Temperature"},
+    "reference_metric": {"label": "Analytical Inner Glass Surface Temperature"},
+    "performance_gain": {"label": "Heat Loss Reduction vs. Uncoated Double Glazing"}
+  },
+  "objective_metric": {
+    "objective_name": "Heat Loss Reduction vs. Uncoated Double Glazing",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "PINN Inner (Room-Side) Glass Surface Temperature",
+    "reference_metric": "Analytical Inner Glass Surface Temperature",
+    "lower_is_better": false,
+    "acceptance_threshold": 30.0,
+    "hard_constraints": [
+      "relative_error between PINN and analytical temperature field < 1%",
+      "all outputs finite",
+      "all parameters within audited bounds",
+      "inner glass surface temperature above room-air dew point (~282.4 K at 20 C / 50% RH)",
+      "temperature field bounded by outdoor_temperature and indoor_temperature"
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "audit_passed": false,
+  "audit_notes": "AUDIT FAILED - REQUEST PHYSICALLY IMPOSSIBLE (same finding as for the previous concept). The user requirement - net permanent heat output > heat input (efficiency > 300 %) from a completely closed, adiabatic system with no energy input, used to heat a house - violates the first law of thermodynamics (perpetuum mobile of the first kind). No choice of bionic concept or parameters can satisfy it, so re-mining further concepts will not resolve this failure. Technical check of the proposed SUBSTITUTE (open system, solar-driven polar-bear-fur transparent insulation + massive wall): parameters physically plausible and positive (wall 0.3 m, k=1.5 W/mK concrete, q=100 W/m3, T_abs=313 K, T_room=293 K). Source coefficient q L^2/k = 6.0 K. Analytical solution T(x)=T_abs+(T_room-T_abs)x+3x(1-x); heat flux into the room -k/L dT/dx(1) = 1.5*23/0.3 = 115 W/m2, absorber-side flux 1.5*17/0.3 = 85 W/m2 into the wall; the balance equals q*L = 30 W/m2 absorbed solar, i.e. energy is conserved and efficiency relative to solar input is < 100 %. Concrete is far below its thermal limits at 313 K; no structural issue. The substitute is valid only as an open system with solar input and does NOT satisfy the stated closed-adiabatic, >300 % requirement. Recommendation: stop and inform the user that the request is impossible; offer open-system alternatives (heat pump COP 3-5 using ambient heat, passive solar wall).",
+  "audited_parameters": [
+    {"name": "wall_thickness", "value": 0.3},
+    {"name": "wall_conductivity", "value": 1.5},
+    {"name": "absorbed_heat_source", "value": 100.0},
+    {"name": "absorber_temperature", "value": 313.0},
+    {"name": "room_temperature", "value": 293.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "SourceToDrivingTemperatureRatio_qL2_over_k_dT", "value": 0.3},
+    {"name": "FirstLawEfficiency_upper_bound", "value": 1.0}
+  ],
+  "simulation_coefficient": 6.0,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Heat Transfer (wall conduction, open solar system)",
+    "independent_var": {"label": "Normalized Wall Coordinate x/L", "unit": "-"},
+    "dependent_var": {"label": "Wall Temperature", "unit": "K"},
+    "primary_metric": {"label": "Heat Flux into Room (numerical)"},
+    "reference_metric": {"label": "Heat Flux into Room (analytical)"},
+    "performance_gain": {"label": "Heat Flux Change vs. Baseline (NOT an efficiency > 100 %)"}
+  },
+  "objective_metric": {
+    "objective_name": "Solar Wall Heat Delivery (substitute for impossible request)",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Heat Flux into Room (numerical)",
+    "reference_metric": "Heat Flux into Room (analytical)",
+    "lower_is_better": false,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "Energy conservation: room-side + absorber-side flux = q*L",
+      "First-law efficiency relative to solar input <= 100 %",
+      "No result may be reported as fulfilling the closed-adiabatic > 300 % requirement",
+      "relative_error < 0.05",
+      "all outputs finite",
+      "parameters within audited bounds"
+    ]
+  }
+}

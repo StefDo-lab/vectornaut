@@ -1,0 +1,11 @@
+{
+  "governing_equation": "d2T_dx2 + ((2*glass_thickness + gap_width)/window_height)**2 * d2T_dy2 = 0",
+  "boundary_conditions": [
+    "T(0, y) = outdoor_temperature + (indoor_temperature - outdoor_temperature)*(1/h_outside)/(1/h_outside + 2*glass_thickness/glass_conductivity + gap_width/(gas_conductivity + 4*5.670374e-8*mean_cavity_temperature**3*gap_width/(1/coating_emissivity + 1/glass_emissivity - 1)) + 1/h_inside)",
+    "T(1, y) = indoor_temperature - (indoor_temperature - outdoor_temperature)*(1/h_inside)/(1/h_outside + 2*glass_thickness/glass_conductivity + gap_width/(gas_conductivity + 4*5.670374e-8*mean_cavity_temperature**3*gap_width/(1/coating_emissivity + 1/glass_emissivity - 1)) + 1/h_inside)",
+    "dT_dy(x, 0) = 0",
+    "dT_dy(x, 1) = 0"
+  ],
+  "independent_variables": ["x", "y"],
+  "dependent_variables": ["T"]
+}

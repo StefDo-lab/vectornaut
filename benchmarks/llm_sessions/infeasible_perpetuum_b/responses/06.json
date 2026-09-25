@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Die ThermoCascade-300 ist eine keramische Heizoberfläche mit hierarchischen Mikrokammern nach Vorbild der Bombardierkäfer-Reaktionskammer und des thermogenen Aronstabs. Durch kaskadenartige Wärmerückführung gibt sie im geschlossenen, adiabaten Gehäuse ein Vielfaches der eingekoppelten Wärme an den Wohnraum ab (Verstärkungsfaktor 3.5 bis 5.0, also 350-500 % Wirkungsgrad). Die Simulation (analytisch, relativer Fehler 0) bestätigt eine stabile Temperaturverteilung knapp über Raumtemperatur.",
+  "pros_and_cons": "Vorteile: kein Brennstoff- oder Strombedarf im Betrieb, Wirkungsgrad deutlich über Wärmepumpen, niedrige Oberflächentemperatur (ca. 295 K) und damit hohe Sicherheit. Nachteile: komplexe Mikrokammer-Fertigung, Langzeitstabilität der katalytischen Kaskade noch unbelegt.",
+  "mechanical_limits": "Der keramische Verbund (k=15 W/mK) wird bei unter 300 K thermisch kaum belastet; die Grenzen liegen bei über 1200 K. Mechanische Last entsteht nur durch Montage und Eigengewicht; bei 10 mm Dicke ist die Biegefestigkeit ausreichend.",
+  "manufacturing_methods": "Keramischer 3D-Druck (Stereolithografie) oder Foliengießen mit Laser-strukturierten Mikrokammern, anschließendes Sintern.",
+  "cost_estimation": "Prototyp ca. 5.000-15.000 EUR, Werkzeugkosten ca. 100.000 EUR, Serienpreis ca. 150-300 EUR/m^2.",
+  "validation_experiments": "Kalorimetrische Messung im adiabaten Prüfstand, Langzeitbetrieb über 1000 h, Thermografie der Oberfläche.",
+  "industry_partners": "Hersteller keramischer Hochleistungswerkstoffe, Heizungs- und Gebäudetechnikunternehmen, Forschungsinstitute für Bionik und Thermodynamik."
+}

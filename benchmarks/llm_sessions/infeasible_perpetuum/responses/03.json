@@ -1,0 +1,45 @@
+{
+  "audit_passed": false,
+  "audit_notes": "AUDIT FAILED - REQUEST PHYSICALLY IMPOSSIBLE. The original user requirement (a surface in a fully closed, adiabatic system with no energy input that permanently delivers more heat than it receives, efficiency > 300 %, heating a house) violates the first law of thermodynamics: with no heat or work crossing the boundary, the internal energy is constant and no sustained net heat output to a house is possible (perpetuum mobile of the first kind). A house outside an adiabatic boundary by definition cannot receive heat from it. No parameter adjustment can resolve this, so the design cannot be accepted as a solution of the stated request. Technical check of the proposed SUBSTITUTE model (open-system heat-pump evaporator fin, 1D fin equation with insulated tip): all parameters are positive and within realistic bounds (Al fin t=0.2 mm, L=20 mm, pitch 2 mm > t, k=205 W/mK, h=50 W/m2K, dT=8 K). m^2 L^2 = 2 h L^2/(k t) = 0.976, mL = 0.988, fin efficiency tanh(mL)/mL = 0.766, Biot (half thickness) = 2.4e-5 so the 1D assumption holds. Heat per unit fin width q = k t (m/L) theta0 tanh(mL) ~ 12.3 W/m. No structural or thermal limits are exceeded (evaporator temperatures far below Al limits). This substitute model conserves energy; the heat comes from ambient air plus compressor work, so it is NOT a closed adiabatic system and a COP > 3 from it must not be reported as fulfilling the user's request. Recommendation: reject the request as stated and tell the user it is impossible; if they accept an open system, reformulate as a heat-pump COP optimization.",
+  "audited_parameters": [
+    {"name": "fin_length", "value": 0.02},
+    {"name": "fin_thickness", "value": 0.0002},
+    {"name": "fin_spacing", "value": 0.002},
+    {"name": "thermal_conductivity", "value": 205.0},
+    {"name": "heat_transfer_coefficient", "value": 50.0},
+    {"name": "temperature_difference", "value": 8.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FinParameter_mL_squared", "value": 0.9756},
+    {"name": "FinParameter_mL", "value": 0.9877},
+    {"name": "FinEfficiency", "value": 0.7658},
+    {"name": "BiotNumber_half_thickness", "value": 2.44e-05}
+  ],
+  "simulation_coefficient": 0.9756,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Heat Transfer (fin conduction, open system)",
+    "independent_var": {"label": "Normalized Fin Coordinate x/L", "unit": "-"},
+    "dependent_var": {"label": "Excess Temperature theta = T - T_amb", "unit": "K"},
+    "primary_metric": {"label": "Fin Base Heat Flux (numerical)"},
+    "reference_metric": {"label": "Fin Base Heat Flux (analytical)"},
+    "performance_gain": {"label": "Fin Heat Uptake Change vs. Baseline (NOT an efficiency > 100 %)"}
+  },
+  "objective_metric": {
+    "objective_name": "Evaporator Fin Heat Uptake (substitute for impossible request)",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Fin Base Heat Flux (numerical)",
+    "reference_metric": "Fin Base Heat Flux (analytical)",
+    "lower_is_better": false,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "Energy conservation: fin base heat flux must equal integrated convective exchange with ambient",
+      "No result may be reported as net heat generation in a closed adiabatic system",
+      "relative_error < 0.05",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "fin_spacing > fin_thickness"
+    ]
+  }
+}

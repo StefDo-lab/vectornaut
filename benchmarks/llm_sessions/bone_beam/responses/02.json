@@ -1,0 +1,6 @@
+{
+ "governing_equation": "d2w_dx2 = -6*uniform_load*span_length**4*x*(1 - x) / (solid_youngs_modulus*(beam_width*beam_height**3 - (1 - trabecular_relative_density**2)*(beam_width - 2*cortical_thickness)*(beam_height - 2*cortical_thickness)**3))",
+ "boundary_conditions": ["w(0) = 0", "w(1) = 0"],
+ "independent_variables": ["x"],
+ "dependent_variables": ["w"]
+}

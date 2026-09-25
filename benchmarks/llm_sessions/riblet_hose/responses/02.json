@@ -1,0 +1,6 @@
+{
+  "governing_equation": "d2u_dy2 = channel_half_height**2 * pressure_gradient / viscosity",
+  "boundary_conditions": ["u(0) = (slip_length / channel_half_height) * du_dy(0)", "du_dy(1) = 0"],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"]
+}

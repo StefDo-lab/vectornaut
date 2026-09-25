@@ -1,0 +1,37 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Alle Parameter sind positiv bzw. physikalisch konsistent (Druckgradient negativ in Strömungsrichtung). Slip-Länge 10 µm liegt im gemessenen Bereich flüssigkeitsinfundierter Oberflächen; Rillentiefe 20 µm ist deutlich kleiner als die Wandstärke typischer Schläuche (2–4 mm), eine Schwächung der Druckfestigkeit ist nicht zu erwarten. Einschränkung: Bei dp/dx = -2000 Pa/m und h = 5 mm ergäbe das laminare Spaltmodell eine Maximalgeschwindigkeit von ~25 m/s (Re ≫ 2300), die reale Strömung wäre turbulent. Der Druckgradient wurde daher auf -100 Pa/m (untere Schranke des Betrags) gesetzt; auch dann bleibt die Strömung im Übergangsbereich, das laminare Modell ist eine Idealisierung. Materialcheck: Silikonöl-Auswaschung bei hoher Wandschubspannung ist das Hauptrisiko für die Langzeitwirkung, kein struktureller Kollaps.",
+  "audited_parameters": [
+    {"name": "slip_length", "value": 1.0e-5},
+    {"name": "channel_half_height", "value": 0.005},
+    {"name": "viscosity", "value": 0.001},
+    {"name": "pressure_gradient", "value": -100.0},
+    {"name": "groove_depth", "value": 2.0e-5},
+    {"name": "lubricant_viscosity", "value": 0.02}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_halfheight", "value": 6250.0},
+    {"name": "SlipRatio_lambda_over_h", "value": 0.002},
+    {"name": "ViscosityRatio_lubricant_over_water", "value": 20.0}
+  ],
+  "simulation_coefficient": 1.0e-5,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics",
+    "independent_var": {"label": "Normalized Wall Distance (y/h)", "unit": "-"},
+    "dependent_var": {"label": "Flow Velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall Velocity Gradient (Wall Shear / viscosity)"},
+    "reference_metric": {"label": "Analytical Wall Velocity Gradient"},
+    "performance_gain": {"label": "Drag Reduction Efficiency"}
+  },
+  "objective_metric": {
+    "objective_name": "Drag Reduction Efficiency",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall Velocity Gradient",
+    "reference_metric": "Analytical Wall Velocity Gradient",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": ["relative_error <= 1.0", "parameters within bounds", "finite numeric outputs", "groove_depth < 0.1 * wall_thickness"]
+  }
+}

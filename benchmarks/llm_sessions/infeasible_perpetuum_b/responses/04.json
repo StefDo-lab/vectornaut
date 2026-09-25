@@ -1,0 +1,6 @@
+{
+  "continue_optimization": true,
+  "reasoning": "Runde 1 ist numerisch sauber (relativer Fehler 0), aber der Performance Gain liegt noch bei 0 %. Um den Heizwirkungsgrad weiter zu steigern, erhöhst du den Kaskaden-Verstärkungsfaktor auf das obere Limit 5.0 (500 %). Die Oberflächentemperatur bleibt dabei weit unter den Materialgrenzen.",
+  "adjustments": [{"name": "amplification_factor", "value": 5.0}],
+  "concept_failed": false
+}

@@ -1,0 +1,39 @@
+{
+  "audit_passed": false,
+  "audit_notes": "AUDIT FAILED - REQUEST PHYSICALLY IMPOSSIBLE (third concept, same root cause). A closed, adiabatic system without energy input cannot deliver sustained net heat to a house, and heat output > energy input (efficiency > 300 %) violates the first law of thermodynamics. This is independent of the concept; further re-mining is futile. Technical check of the SUBSTITUTE (open system, ground-coupled termite-mound-like gallery surface): parameters plausible (soil 2 m, k=1.8 W/mK, T_ground=283 K, T_surface=278 K). Linear profile T(x)=283-5x; conductive flux k*dT/d = 1.8*5/2 = 4.5 W/m2 from ground to exchanger; energy conserved, the ground is the source; no structural or thermal issues. This does not fulfil the stated requirement. Recommendation: terminate and tell the user the request is impossible; realistic alternatives are heat pumps (COP 3-5 as ratio of heat to electrical work, with ambient/ground heat input), passive solar gains and better insulation.",
+  "audited_parameters": [
+    {"name": "soil_layer_thickness", "value": 2.0},
+    {"name": "soil_conductivity", "value": 1.8},
+    {"name": "deep_ground_temperature", "value": 283.0},
+    {"name": "exchanger_surface_temperature", "value": 278.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FirstLawEfficiency_upper_bound", "value": 1.0}
+  ],
+  "simulation_coefficient": 4.5,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Heat Transfer (ground conduction, open system)",
+    "independent_var": {"label": "Normalized Soil Depth Coordinate", "unit": "-"},
+    "dependent_var": {"label": "Soil Temperature", "unit": "K"},
+    "primary_metric": {"label": "Ground Heat Flux (numerical)"},
+    "reference_metric": {"label": "Ground Heat Flux (analytical)"},
+    "performance_gain": {"label": "Heat Flux Change vs. Baseline (NOT an efficiency > 100 %)"}
+  },
+  "objective_metric": {
+    "objective_name": "Ground Heat Extraction (substitute for impossible request)",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Ground Heat Flux (numerical)",
+    "reference_metric": "Ground Heat Flux (analytical)",
+    "lower_is_better": false,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "Energy conservation",
+      "No result may be reported as fulfilling the closed-adiabatic > 300 % requirement",
+      "relative_error < 0.05",
+      "all outputs finite",
+      "parameters within audited bounds"
+    ]
+  }
+}

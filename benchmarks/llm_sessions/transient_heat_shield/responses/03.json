@@ -1,0 +1,48 @@
+{
+  "audit_passed": true,
+  "audit_notes": "All nine parameters are positive and lie inside their stated bounds; values are consistent with low-density carbon/ceramic foam TPS (PICA-class density 280 kg/m3, cp 1200 J/kg/K, k_s 0.05 W/m/K). No adjustment required. Non-linearity check: k(T) = k_s + 4*sigma*d*T^3 gives k(300 K) = 0.0512 W/m/K and k(2000 K) = 0.413 W/m/K, a factor ~8 increase, so the problem is strongly non-linear as requested. Thermal load: radiative-equilibrium surface temperature at the 0.5 MW/m2 peak is (q/(eps*sigma))^0.25 = 1795 K; the actual peak will be somewhat lower because part of the flux is conducted/stored. This is within the service limit of SiC-coated carbon foam (~1900-2000 K in oxidising flow) but leaves a modest margin, so peak_heat_flux values near the 2 MW/m2 upper bound (T_eq ~ 2540 K) would exceed the material limit and should be treated as infeasible in any sweep. Mechanical: no significant structural load in the 1D thermal model; a 280 kg/m3 foam has crush strength of order 1-5 MPa, well above re-entry stagnation pressures (~10-50 kPa). Bondline: typical adhesive/structure limit ~520 K (250 C); cold-side Fourier number Fo = alpha*t_pulse/L^2 ~ 0.02 (0.12 at 1800 K conductivity) indicates the thermal wave penetrates roughly 0.5-1 cm of the 3 cm during the pulse, so the bondline should stay cool during the pulse itself. Caveats: (1) the time domain in the formulation is one pulse duration only, so post-pulse soak-back into the bondline is not captured; (2) the fourth 'boundary condition' T(x,1) is not a condition - the problem is an initial-boundary-value problem (parabolic in t) and must be marched in time, not solved as a 2D elliptic BVP. Simulation coefficient returned is the time-scaling coefficient pulse_duration/(rho*cp*L^2) = 0.397 m*K/W that multiplies k(T) in the normalised PDE. Solver: transient, strongly non-linear with a non-linear (radiative, T^4) Robin boundary -> dynamic_script (method of lines with implicit stiff integrator). Objective: minimise the peak bondline temperature rise; reported as percent reduction relative to an otherwise identical coarse-pore (1 mm, pumice-like) reference foam, which isolates the benefit of the cork-like small-pore design.",
+  "audited_parameters": [
+    {"name": "thickness", "value": 0.03},
+    {"name": "density", "value": 280.0},
+    {"name": "specific_heat", "value": 1200.0},
+    {"name": "solid_conductivity", "value": 0.05},
+    {"name": "pore_diameter", "value": 0.0002},
+    {"name": "surface_emissivity", "value": 0.85},
+    {"name": "peak_heat_flux", "value": 500000.0},
+    {"name": "pulse_duration", "value": 120.0},
+    {"name": "initial_temperature", "value": 300.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FourierNumber_at_300K", "value": 0.0203},
+    {"name": "FourierNumber_at_1800K", "value": 0.1248},
+    {"name": "ConductivityRatio_k2000K_over_k300K", "value": 8.06},
+    {"name": "RadiationToConductionRatio_at_1800K", "value": 5.29},
+    {"name": "RadiativeEquilibriumTemperatureRatio_Teq_over_T0", "value": 5.98}
+  ],
+  "simulation_coefficient": 0.3968,
+  "solver_method": "dynamic_script",
+  "ui_metadata": {
+    "domain_name": "Transient Non-linear Heat Conduction (Thermal Protection System)",
+    "independent_var": {"label": "Depth from Heated Surface", "unit": "m"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Peak Bondline Temperature Rise, small-pore design"},
+    "reference_metric": {"label": "Peak Bondline Temperature Rise, coarse-pore (1 mm) reference foam"},
+    "performance_gain": {"label": "Bondline Temperature-Rise Reduction vs Coarse-Pore Foam"}
+  },
+  "objective_metric": {
+    "objective_name": "Bondline Temperature-Rise Reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak Bondline Temperature Rise, small-pore design",
+    "reference_metric": "Peak Bondline Temperature Rise, coarse-pore (1 mm) reference foam",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative_error (energy balance residual or grid-convergence error) < 1%",
+      "all temperatures finite and >= initial_temperature - 1 K",
+      "all parameters within audited bounds",
+      "peak surface temperature <= 2000 K (SiC-coated carbon foam service limit)",
+      "peak bondline temperature <= 523 K (adhesive/structure limit)"
+    ]
+  }
+}

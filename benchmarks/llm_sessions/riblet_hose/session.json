@@ -1,0 +1,6 @@
+{
+  "query": "Entwickle eine bionisch inspirierte Innenoberfläche für flexible Wasserschläuche, die den Strömungswiderstand reduziert, aber weiterhin hohe Druckfestigkeit, Abriebfestigkeit und einfache Herstellbarkeit bietet.",
+  "epochs": 200,
+  "rounds": 2,
+  "answered_as": "honest model"
+}

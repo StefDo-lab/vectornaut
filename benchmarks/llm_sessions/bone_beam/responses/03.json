@@ -1,0 +1,49 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Checks: all parameters are positive and within their bounds. The geometry is consistent: 2t = 8 mm < b = 50 mm and < h = 100 mm, so the core has a real cross-section of 42 x 92 mm. Slenderness L/h = 10 is at the lower limit where Euler-Bernoulli theory applies. At this ratio the shear deflection through the soft core is no longer negligible. Estimate: Timoshenko correction ~ EI/(kGA L^2) with G_core ~ 0.375*E_s*rho*^2 ~ 1 GPa, which gives about 1-3 % extra deflection. This is acceptable for a first model, but the reported w_max is a slight underestimate. Stiffness: I_outer = 4.1667e-6 m^4, I_core = 2.7254e-6 m^4, I_shell = 1.4413e-6 m^4, E_core = E_s*rho*^2 = 2.8 GPa (Gibson-Ashby). This gives EI = 70e9*1.4413e-6 + 2.8e9*2.7254e-6 = 1.0085e5 + 7.63e3 = 1.0852e5 N m^2. Model check: in the normalized coordinate xi = x/L, the equation is w'' = -q L^4 xi(1-xi)/(2 EI), with w positive downward and w(0) = w(1) = 0. Its closed-form solution is w(xi) = q L^4/(24 EI) * (xi - 2 xi^3 + xi^4). The maximum at xi = 0.5 is w_max = 5 q L^4/(384 EI) = 2.400e-4 m = 0.240 mm, i.e. L/4167, well within the usual serviceability limit of L/300 (3.33 mm). Stress check: M_max = q L^2/8 = 250 N m. The extreme-fibre stress in the shell is sigma = M (h/2) E_s/EI = 8.06 MPa, far below the yield of AM AlSi10Mg (~230 MPa), a safety factor of about 28. Maximum shear force V = qL/2 = 1000 N. The mean core shear is ~0.26 MPa and the shell webs carry most of it. Local buckling of the 4 mm compression flange is not critical: b/t ~ 12, and the core adds elastic foundation support. Honest design remark: compared with a solid section of the same envelope (EI_solid = 2.917e5 N m^2, w = 0.089 mm), the CTSB keeps 37.2 % of the bending stiffness at 38.2 % of the mass (mass saving 61.8 %). Its specific bending stiffness is therefore about equal to the solid section (ratio 0.975) and slightly below a hollow shell with no core (ratio ~1.12). The trabecular core does not add bending efficiency. It is justified by shell stabilisation (buckling), shear transfer, damage tolerance and multifunctionality. No parameter adjustments are needed.",
+ "audited_parameters": [
+  {"name": "span_length", "value": 1.0},
+  {"name": "uniform_load", "value": 2000.0},
+  {"name": "solid_youngs_modulus", "value": 70000000000.0},
+  {"name": "beam_width", "value": 0.05},
+  {"name": "beam_height", "value": 0.1},
+  {"name": "cortical_thickness", "value": 0.004},
+  {"name": "trabecular_relative_density", "value": 0.2}
+ ],
+ "dimensionless_numbers": [
+  {"name": "SlendernessRatio_L_over_h", "value": 10.0},
+  {"name": "DeflectionRatio_wmax_over_L", "value": 0.00023997},
+  {"name": "StressUtilization_sigma_over_yield", "value": 0.0351},
+  {"name": "BendingStiffnessRatio_EI_over_EIsolid", "value": 0.37207},
+  {"name": "MassFraction_vs_solid", "value": 0.38176},
+  {"name": "CoreModulusRatio_rho_squared", "value": 0.04}
+ ],
+ "simulation_coefficient": 108519.25,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Structural Mechanics (Euler-Bernoulli Beam Bending)",
+  "independent_var": {"label": "Normalized Span Position x/L", "unit": "-"},
+  "dependent_var": {"label": "Static Deflection w (positive downward)", "unit": "m"},
+  "primary_metric": {"label": "Maximum Midspan Deflection (solver)"},
+  "reference_metric": {"label": "Analytical Maximum Deflection 5qL^4/(384EI)"},
+  "performance_gain": {"label": "Mass Reduction vs. Solid Beam at Same Envelope"}
+ },
+ "objective_metric": {
+  "objective_name": "Mass Reduction vs. Solid Beam (subject to serviceability deflection limit)",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Maximum Midspan Deflection (solver)",
+  "reference_metric": "Analytical Maximum Deflection 5qL^4/(384EI)",
+  "lower_is_better": true,
+  "acceptance_threshold": 30.0,
+  "hard_constraints": [
+   "relative error between solver and analytical maximum deflection < 1 %",
+   "all outputs finite",
+   "all parameters within their audited bounds",
+   "2*cortical_thickness < min(beam_width, beam_height)",
+   "w_max <= span_length/300 (serviceability)",
+   "extreme-fibre bending stress <= yield strength / 1.5",
+   "span_length/beam_height >= 10 (Euler-Bernoulli validity)"
+  ]
+ }
+}

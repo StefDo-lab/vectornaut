@@ -1,0 +1,6 @@
+{
+  "query": "Entwickle einen knocheninspirierten Leichtbau-Biegeträger mit trabekulärer Innenstruktur und berechne die statische Durchbiegung unter gleichmäßiger Streckenlast bei beidseitig gelenkiger Lagerung.",
+  "epochs": 200,
+  "rounds": 2,
+  "answered_as": "honest model"
+}

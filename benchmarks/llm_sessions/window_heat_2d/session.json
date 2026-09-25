@@ -1,0 +1,6 @@
+{
+  "query": "Determine the temperature distribution through a double-pane glass window under winter conditions using 2D heat conduction model",
+  "epochs": 200,
+  "rounds": 2,
+  "answered_as": "honest model"
+}

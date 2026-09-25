@@ -1,0 +1,6 @@
+{
+  "governing_equation": "d2theta_dx2 = 2 * heat_transfer_coefficient * fin_length**2 / (thermal_conductivity * fin_thickness) * theta",
+  "boundary_conditions": ["theta(0) = temperature_difference", "dtheta_dx(1) = 0"],
+  "independent_variables": ["x"],
+  "dependent_variables": ["theta"]
+}

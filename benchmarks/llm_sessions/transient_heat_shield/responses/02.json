@@ -1,0 +1,11 @@
+{
+  "governing_equation": "dT_dt = (pulse_duration / (density * specific_heat * thickness**2)) * ((solid_conductivity + 4 * 5.670374e-8 * pore_diameter * T**3) * d2T_dx2 + 12 * 5.670374e-8 * pore_diameter * T**2 * dT_dx**2)",
+  "boundary_conditions": [
+    "-(solid_conductivity + 4 * 5.670374e-8 * pore_diameter * T(0, t)**3) / thickness * dT_dx(0, t) = peak_heat_flux * sin(pi * t) - surface_emissivity * 5.670374e-8 * (T(0, t)**4 - initial_temperature**4)",
+    "dT_dx(1, t) = 0",
+    "T(x, 0) = initial_temperature",
+    "T(x, 1) is free (no terminal condition: the problem is parabolic in t, the final temperature profile is an output)"
+  ],
+  "independent_variables": ["x", "t"],
+  "dependent_variables": ["T"]
+}

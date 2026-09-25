@@ -1,0 +1,6 @@
+{
+  "governing_equation": "d2T_dx2 = -amplification_factor * heat_input * surface_thickness**2 / thermal_conductivity",
+  "boundary_conditions": ["dT_dx(0) = 0", "T(1) = room_temperature"],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"]
+}

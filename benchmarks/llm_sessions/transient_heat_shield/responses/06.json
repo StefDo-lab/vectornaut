@@ -1,0 +1,6 @@
+{
+  "continue_optimization": false,
+  "reasoning": "Der Performance Gain liegt schon bei ~99-100 % und ist damit gesaettigt: Die Kennzahl ist die relative Reduktion des Bondline-Temperaturanstiegs gegenueber dem Grobporen-Schaum, und beim Nominaldesign (30 mm, Fo ~ 0.02-0.12) erreicht die Waermefront die Bondline waehrend eines 120-s-Pulses praktisch gar nicht - der Anstieg liegt bei Milli-Kelvin (Referenz ~0.2 K). Mehr als 100 % geht nicht, und weitere Parameteraenderungen wuerden nur Verhaeltnisse von winzigen, numerisch kaum noch aufgeloesten Temperaturanstiegen verschieben. Der relative Fehler (Energiebilanz ~3e-8) ist exzellent, alle Validierungstests sind bestanden, die Oberflaechentemperatur (~1770 K) bleibt unter dem 2000-K-Limit, die Bondline weit unter 523 K. Eine weitere Runde auf diese Zielgroesse bringt also nichts. Falls du wirklich optimieren willst, brauchst du eine andere Zielgroesse, z. B. minimale Flaechenmasse (rho*L) unter der Nebenbedingung T_bondline <= 523 K inklusive Soak-back nach dem Puls - dann waere die Dicke der entscheidende Hebel (irgendwo zwischen ~12.5 mm, wo die Bondline schon zu heiss wird, und 27.5 mm).",
+  "adjustments": [],
+  "concept_failed": false
+}

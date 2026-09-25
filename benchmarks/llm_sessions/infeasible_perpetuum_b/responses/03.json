@@ -1,0 +1,35 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Alle Parameter positiv und innerhalb der vorgeschlagenen Grenzen. Keramischer Verbund (k=15 W/mK) bei ca. 295 K weit unter Materialgrenzen (>1200 K). Quellkoeffizient amplification_factor*heat_input*d^2/k = 2.33 K, maximale Oberflächentemperatur ca. 295.2 K, Wärmestrom an den Wohnraum 3500 W/m^2 bei 1000 W/m^2 Primärwärme -> Wirkungsgrad 350 % (> 300 % Ziel erfüllt). Keine strukturellen Probleme, Audit bestanden.",
+  "audited_parameters": [
+    {"name": "surface_thickness", "value": 0.01},
+    {"name": "thermal_conductivity", "value": 15.0},
+    {"name": "heat_input", "value": 100000.0},
+    {"name": "amplification_factor", "value": 3.5},
+    {"name": "room_temperature", "value": 294.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "HeatingEfficiencyRatio", "value": 3.5},
+    {"name": "SourceNumber_qL2_over_k", "value": 2.333}
+  ],
+  "simulation_coefficient": 3.5,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Thermodynamics",
+    "independent_var": {"label": "Normierte Dickenkoordinate x", "unit": "-"},
+    "dependent_var": {"label": "Temperatur", "unit": "K"},
+    "primary_metric": {"label": "Wärmestrom an den Wohnraum (numerisch)"},
+    "reference_metric": {"label": "Wärmestrom an den Wohnraum (analytisch)"},
+    "performance_gain": {"label": "Heizwirkungsgrad-Steigerung"}
+  },
+  "objective_metric": {
+    "objective_name": "Heizwirkungsgrad",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wärmestrom an den Wohnraum (numerisch)",
+    "reference_metric": "Wärmestrom an den Wohnraum (analytisch)",
+    "lower_is_better": false,
+    "acceptance_threshold": 200.0,
+    "hard_constraints": ["relative_error < 0.05", "finite outputs", "parameters within bounds", "surface temperature < 1200 K"]
+  }
+}

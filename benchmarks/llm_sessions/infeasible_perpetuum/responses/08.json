@@ -1,0 +1,6 @@
+{
+  "governing_equation": "d2T_dx2 = 0",
+  "boundary_conditions": ["T(0) = deep_ground_temperature", "T(1) = exchanger_surface_temperature"],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"]
+}

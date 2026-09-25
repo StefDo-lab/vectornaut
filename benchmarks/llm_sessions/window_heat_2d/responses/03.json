@@ -1,0 +1,49 @@
+{
+  "audit_passed": true,
+  "audit_notes": "1) Positivity/bounds: all parameters are positive, within their stated bounds and physically standard (4 mm float glass, 12 mm argon cavity, k_glass=1.0, k_Ar=0.018 W/m/K, T_in=20 C, T_out=-10 C, EN 673-type film coefficients h_in=8, h_out=25 W/m^2/K). No adjustment required. 2) Model consistency: the formulated PDE uses a homogenized (series) through-thickness conductivity: x is normalized by the total thickness L=2*t_g+w=0.020 m and y by H=1.0 m, giving d2T/dx2 + (L/H)^2 d2T/dy2 = 0 with Robin coefficients Bi = h*R_cond, R_cond = 2 t_g/k_g + w/k_gas = 0.6747 m^2K/W. This reproduces the surface temperatures and heat flux of the layered stack exactly but replaces the piecewise (glass/gas/glass) interior profile by a linear one; the spacer_conductivity parameter is not used (top/bottom are adiabatic), so the edge-of-glass cold bridge is NOT captured and the solution is y-independent. Closed-form reference: R_total = 1/25 + 0.6747 + 1/8 = 0.8397 m^2K/W, U = 1.191 W/m^2/K, q = 35.73 W/m^2, outer glass surface 264.58 K (-8.57 C), inner glass surface 288.68 K (15.53 C); ~23.8 K of the 30 K drop is across the gas cavity. Inner surface stays above the dew point of 20 C / 50% RH air (~9.3 C) -> no condensation at center-of-glass. 3) Dimensionless numbers: Bi_out = h_out*R_cond = 16.87, Bi_in = h_in*R_cond = 5.40; cavity Rayleigh number Ra_w = g*beta*dT*w^3/(nu*alpha) ~ 6.5e3 with cavity aspect ratio H/w ~ 83: this is in the conduction/weak-convection regime (Nu ~ 1.0-1.2 per ElSherbiny-type tall-cavity correlations), so the pure-conduction gas assumption slightly under-predicts U (by up to ~15%). Geometric anisotropy (L/H)^2 = 4e-4 makes the PDE nearly 1D in x; the steep Robin coefficients and tiny y-coefficient make a PINN stiff, so the closed-form solution should be used as the reference. 4) Simulation coefficient: overall center-of-glass U-value = 1.191 W/m^2/K. 5) Solver: 2D PDE -> 'pinn' (validated against the analytical 1D series solution, which is the exact solution of this formulation). 6) Stress check: thermal loads only; the temperature drop across each pane is ~0.29 K (q*t_g/k_g), giving negligible through-thickness thermal stress (sigma ~ E*alpha*dT/2 ~ 70e9*9e-6*0.3/2 ~ 0.1 MPa << ~40 MPa annealed-glass design strength). Center-to-edge thermal stress with a warm-edge spacer is also well within limits. Temperatures (-10 to 20 C) are far below any glass or sealant limits. Performance gain is defined as heat-loss reduction vs. single 4 mm glazing (U_single = 5.92 W/m^2/K): 1 - 1.191/5.92 = 79.9%.",
+  "audited_parameters": [
+    {"name": "glass_thickness", "value": 0.004},
+    {"name": "gap_width", "value": 0.012},
+    {"name": "window_height", "value": 1.0},
+    {"name": "glass_conductivity", "value": 1.0},
+    {"name": "gas_conductivity", "value": 0.018},
+    {"name": "indoor_temperature", "value": 293.15},
+    {"name": "outdoor_temperature", "value": 263.15},
+    {"name": "h_inside", "value": 8.0},
+    {"name": "h_outside", "value": 25.0},
+    {"name": "spacer_conductivity", "value": 0.3}
+  ],
+  "dimensionless_numbers": [
+    {"name": "BiotNumber_outside", "value": 16.87},
+    {"name": "BiotNumber_inside", "value": 5.40},
+    {"name": "RayleighNumber_gap", "value": 6.5e3},
+    {"name": "AspectRatio_thickness_to_height", "value": 0.02},
+    {"name": "ConductivityRatio_glass_to_gas", "value": 55.6}
+  ],
+  "simulation_coefficient": 1.191,
+  "solver_method": "pinn",
+  "ui_metadata": {
+    "domain_name": "Thermodynamics - Steady 2D Heat Conduction",
+    "independent_var": {"label": "Normalized Position Through Window Thickness (outdoor x=0 to indoor x=1)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "PINN Inner (Room-Side) Glass Surface Temperature"},
+    "reference_metric": {"label": "Analytical Inner Glass Surface Temperature"},
+    "performance_gain": {"label": "Heat Loss Reduction vs. Single Glazing"}
+  },
+  "objective_metric": {
+    "objective_name": "Heat Loss Reduction vs. Single Glazing",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "PINN Inner (Room-Side) Glass Surface Temperature",
+    "reference_metric": "Analytical Inner Glass Surface Temperature",
+    "lower_is_better": false,
+    "acceptance_threshold": 50.0,
+    "hard_constraints": [
+      "relative_error between PINN and analytical inner surface temperature < 1%",
+      "all outputs finite",
+      "all parameters within audited bounds",
+      "inner glass surface temperature above room-air dew point (~282.4 K for 20 C / 50% RH)",
+      "temperature field bounded between outdoor_temperature and indoor_temperature"
+    ]
+  }
+}

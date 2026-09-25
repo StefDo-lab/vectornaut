@@ -101,11 +101,12 @@ Runtime data (history, reports, eval runs, generated scripts/tests, saved models
 
 ## 🔮 Next Steps & Roadmap
 
-1. **Run a live model comparison** once `GEMINI_API_KEY` is available: one repeat first to find crashes, then at least 3 repeats per configuration before ranking.
-2. **Decide the two open override questions** and adjust the pipeline accordingly.
-3. **Auditor prompt**: reject physically impossible requests; verify with the `infeasible_perpetuum` reference case.
-4. **PINN improvements**: nondimensionalise the 1D domain (update `test_validator_flags_thin_film_pinn_garbage` to use a synthetic bad profile first), longer or adaptive training for 2D sources.
-5. **2D solver**: honour left-hand-side coefficients, second-order Neumann edges.
-6. **More physical models**: structural beam bending (4th order), acoustics, multiphase flows in the auditor rules.
-7. **Heatmap & canvas performance** for higher FDM/PINN grid resolutions (e.g., 100x100).
-8. **Before any public deployment**: authentication, a job queue, and sandboxed execution of generated scripts.
+1. **Fix the live-path findings** in `docs/LIVE_PATH_FINDINGS.md` (from answering every model call by hand in six scenarios): metrics that measure the requested quantity, a real baseline/objective outside slip flow, a sanctioned "infeasible" outcome plus an energy-balance check, the 2D left-hand side, the dynamic-script sweep, auditor overwrites, and sandboxing of generated code.
+2. **Run a live model comparison** once `GEMINI_API_KEY` is available and item 1 is done: one repeat first to find crashes, then at least 3 repeats per configuration before ranking.
+3. **Decide the two open override questions** and adjust the pipeline accordingly.
+4. **Auditor prompt**: reject physically impossible requests; verify with the `infeasible_perpetuum` reference case.
+5. **PINN improvements**: nondimensionalise the 1D domain (update `test_validator_flags_thin_film_pinn_garbage` to use a synthetic bad profile first), longer or adaptive training for 2D sources.
+6. **2D solver**: honour left-hand-side coefficients, second-order Neumann edges.
+7. **More physical models**: structural beam bending (4th order), acoustics, multiphase flows in the auditor rules.
+8. **Heatmap & canvas performance** for higher FDM/PINN grid resolutions (e.g., 100x100).
+9. **Before any public deployment**: authentication, a job queue, and sandboxed execution of generated scripts.

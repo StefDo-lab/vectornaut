@@ -1,0 +1,6 @@
+{
+  "governing_equation": "d2T_dx2 = -absorbed_heat_source * wall_thickness**2 / wall_conductivity",
+  "boundary_conditions": ["T(0) = absorber_temperature", "T(1) = room_temperature"],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"]
+}

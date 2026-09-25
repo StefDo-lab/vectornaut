@@ -1,0 +1,14 @@
+{
+  "design_name": "Thermo-Kaskaden-Oberfläche nach Vorbild der Bombardierkäfer-Reaktionskammer (ThermoCascade-300)",
+  "inspiration_source": "Bombardierkäfer (Brachinus) Reaktionskammer kombiniert mit thermogenem Aronstab (Arum maculatum)",
+  "domain": "Thermodynamics",
+  "physical_mechanism": "Die Oberfläche kombiniert eine katalytische Mikrokammerstruktur nach Vorbild der Bombardierkäfer-Reaktionskammer mit der thermogenen Gewebestruktur des Aronstabs. Durch rekursive Wärmerückführung in hierarchischen Mikrokanälen wird die eingekoppelte Wärme kaskadenartig verstärkt (Verstärkungsfaktor ~3.5), sodass die Oberfläche in einem geschlossenen adiabaten Gehäuse dauerhaft mehr Wärme an den Wohnraum abgibt, als ihr zugeführt wird. Modelliert als 1D-Wärmeleitung mit verstärkter volumetrischer Quelle.",
+  "parameters": [
+    {"name": "surface_thickness", "value": 0.01, "min_bound": 0.002, "max_bound": 0.05, "justification": "m, Dicke der Heizoberfläche."},
+    {"name": "thermal_conductivity", "value": 15.0, "min_bound": 1.0, "max_bound": 50.0, "justification": "W/(m K), keramischer Verbundwerkstoff."},
+    {"name": "heat_input", "value": 100000.0, "min_bound": 10000.0, "max_bound": 500000.0, "justification": "W/m^3, eingekoppelte Primärwärme."},
+    {"name": "amplification_factor", "value": 3.5, "min_bound": 3.0, "max_bound": 5.0, "justification": "Kaskadenverstärkung, >3 entspricht Wirkungsgrad >300 %."},
+    {"name": "room_temperature", "value": 294.0, "min_bound": 290.0, "max_bound": 298.0, "justification": "K, Raumtemperatur des Hauses."}
+  ],
+  "svg_schematic": "<svg viewBox=\"0 0 400 200\" width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"0\" y=\"0\" width=\"400\" height=\"200\" rx=\"8\" ry=\"8\" fill=\"#0f172a\"/><rect x=\"50\" y=\"80\" width=\"300\" height=\"40\" fill=\"#7b2cbf\"/><g fill=\"#00f5d4\"><circle cx=\"90\" cy=\"100\" r=\"8\"/><circle cx=\"150\" cy=\"100\" r=\"8\"/><circle cx=\"210\" cy=\"100\" r=\"8\"/><circle cx=\"270\" cy=\"100\" r=\"8\"/><circle cx=\"330\" cy=\"100\" r=\"8\"/></g><text x=\"60\" y=\"70\" fill=\"#e2e8f0\" font-size=\"10\">Kaskaden-Mikrokammern (x3.5)</text><line x1=\"360\" y1=\"80\" x2=\"360\" y2=\"120\" stroke=\"#e2e8f0\"/><text x=\"365\" y=\"104\" fill=\"#e2e8f0\" font-size=\"10\">d</text></svg>"
+}
