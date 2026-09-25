@@ -94,41 +94,89 @@ def _parse_simple_neumann_bc(boundary_condition: str, dependent_var: str, indepe
     return None
 
 
-def _estimate_derivative(sample_points: List[Any], solution: List[float], target: float) -> Optional[float]:
+def _numeric_pairs(sample_points: List[Any], solution: List[float]) -> List[tuple[float, float]]:
     pairs = []
     for point, value in zip(sample_points, solution):
         coordinate = _coordinate_value(point)
         if coordinate is not None and _is_finite_number(value):
             pairs.append((coordinate, float(value)))
-    pairs = sorted(set(pairs), key=lambda item: item[0])
+    return sorted(set(pairs), key=lambda item: item[0])
+
+
+def _estimate_derivative(sample_points: List[Any], solution: List[float], target: float) -> Optional[float]:
+    """
+    Estimates du/dx at target from the sampled solution with a second-order stencil:
+    the derivative of the quadratic through the three samples nearest to target
+    (one-sided 3-point formula at the domain ends, central difference inside; also
+    valid for non-uniform spacing). Falls back to the secant slope with two samples.
+    """
+    pairs = _numeric_pairs(sample_points, solution)
     if len(pairs) < 2:
         return None
+    if len(pairs) == 2:
+        (x0, y0), (x1, y1) = pairs
+        dx = x1 - x0
+        if abs(dx) < 1e-300:
+            return None
+        return (y1 - y0) / dx
 
-    left = None
-    right = None
-    for pair in pairs:
-        if pair[0] <= target:
-            left = pair
-        if pair[0] >= target and right is None:
-            right = pair
-
-    if left is None:
-        left, right = pairs[0], pairs[1]
-    elif right is None:
-        left, right = pairs[-2], pairs[-1]
-    elif left == right:
-        idx = pairs.index(left)
-        if idx == 0:
-            left, right = pairs[0], pairs[1]
-        elif idx == len(pairs) - 1:
-            left, right = pairs[-2], pairs[-1]
-        else:
-            left, right = pairs[idx - 1], pairs[idx + 1]
-
-    dx = right[0] - left[0]
-    if abs(dx) < 1e-12:
+    # Index of the sample closest to target; the stencil is centred on it where possible.
+    nearest = min(range(len(pairs)), key=lambda idx: abs(pairs[idx][0] - target))
+    start = min(max(nearest - 1, 0), len(pairs) - 3)
+    (x0, y0), (x1, y1), (x2, y2) = pairs[start:start + 3]
+    d01, d02, d12 = x0 - x1, x0 - x2, x1 - x2
+    if d01 == 0.0 or d02 == 0.0 or d12 == 0.0:
         return None
-    return (right[1] - left[1]) / dx
+    # Derivative of the Lagrange interpolant through (x0, y0), (x1, y1), (x2, y2) at target.
+    derivative = (
+        y0 * ((target - x1) + (target - x2)) / (d01 * d02)
+        - y1 * ((target - x0) + (target - x2)) / (d01 * d12)
+        + y2 * ((target - x0) + (target - x1)) / (d02 * d12)
+    )
+    return derivative if math.isfinite(derivative) else None
+
+
+def _derivative_scale(sample_points: List[Any], solution: List[float]) -> tuple[float, float]:
+    """
+    Returns (slope_scale, value_scale) of a sampled 1D solution: the mean slope
+    |range(u)| / |domain length| and max|u| / |domain length|. Used to make the
+    derivative boundary tolerance independent of units and grid size.
+    """
+    pairs = _numeric_pairs(sample_points, solution)
+    if len(pairs) < 2:
+        return 0.0, 0.0
+    length = pairs[-1][0] - pairs[0][0]
+    if not length > 0.0:
+        return 0.0, 0.0
+    values = [value for _, value in pairs]
+    return (max(values) - min(values)) / length, max(abs(value) for value in values) / length
+
+
+def _primary_reference_deviation(primary: List[float], reference: List[float]) -> tuple[float, float]:
+    """
+    Scale-aware disagreement between the primary and the reference solution.
+    Returns (rms deviation, max deviation), both divided by the variation of the fields
+    (the larger of their ranges, floored at 1 % of their magnitude so that nearly
+    constant fields do not turn round-off into large relative errors). E.g. the max
+    deviation is 0 for identical arrays, 1 for an all-zero primary against a
+    non-negative profile that touches 0, and 2 for a sign-flipped one.
+    """
+    diffs = [p - r for p, r in zip(primary, reference)]
+    if not diffs:
+        return 0.0, 0.0
+    magnitude = max(max(abs(v) for v in primary), max(abs(v) for v in reference))
+    variation = max(max(reference) - min(reference), max(primary) - min(primary))
+    scale = max(variation, 0.01 * magnitude, 1e-12)
+    rms = math.sqrt(sum(d * d for d in diffs) / len(diffs))
+    return rms / scale, max(abs(d) for d in diffs) / scale
+
+
+# Failed warning checks that indicate the solver (not the model) produced a bad result;
+# the pipeline answers rerun_solver by trying the other deterministic solvers.
+_RERUN_SOLVER_WARNINGS = {"numeric_primary_reference_agreement", "solver_pinn_divergence"}
+
+# Solver methods whose solution_reference is an independent solution of the same problem.
+_REFERENCE_SOLVER_METHODS = {"analytical", "scipy", "pinn", "fdm"}
 
 
 def _score_status(checks: List[ValidationCheck]) -> tuple[str, str, float, str]:
@@ -149,7 +197,10 @@ def _score_status(checks: List[ValidationCheck]) -> tuple[str, str, float, str]:
 
     if failed_errors and any("solver" in check.name or "relative_error" in check.name for check in failed_errors):
         recommended_action = "rerun_solver"
-    if failed_warnings and any("boundary" in check.name or "relative_error" in check.name for check in failed_warnings):
+    if failed_warnings and any(
+        "boundary" in check.name or "relative_error" in check.name or check.name in _RERUN_SOLVER_WARNINGS
+        for check in failed_warnings
+    ):
         recommended_action = "rerun_solver"
 
     if not checks:
@@ -247,6 +298,28 @@ def validate_run_output(
         score=0.4,
     )
 
+    # The reported relative_error is computed by the solver itself; independently check
+    # that the primary solution agrees with the reference solution it is compared to.
+    # Only for the built-in solvers, whose reference solves the same problem (analytical /
+    # SciPy in 1D, FDM in 2D). A generated dynamic script's reference is the unperturbed
+    # no-effect baseline, which is expected to differ from the primary solution.
+    if (aligned and primary_finite and reference_finite
+            and str(simulator.get("solver_method") or "").lower() in _REFERENCE_SOLVER_METHODS):
+        rms_deviation, max_deviation = _primary_reference_deviation(
+            [float(value) for value in primary], [float(value) for value in reference]
+        )
+        # The RMS (not the max) deviation is thresholded: local spikes, e.g. a PINN at the
+        # discontinuous corners of a lid-driven cavity, should not trigger a rerun alone.
+        max_rms_deviation = float(criteria.get("max_primary_reference_deviation", 0.1))
+        add(
+            "numeric_primary_reference_agreement",
+            rms_deviation <= max_rms_deviation,
+            f"primary vs reference: rms deviation={rms_deviation:.4g} (<= {max_rms_deviation}), "
+            f"max deviation={max_deviation:.4g}, relative to the field variation.",
+            severity="warning",
+            score=0.4,
+        )
+
     gain = simulator.get("performance_gain_pct")
     max_gain = float(criteria.get("max_abs_performance_gain_pct", 500.0))
     add(
@@ -285,6 +358,18 @@ def validate_run_output(
             severity="warning",
             score=0.4,
         )
+        # A PINN whose loss is orders of magnitude above the threshold has clearly not
+        # converged; request a solver rerun (fallback to the deterministic solvers)
+        # instead of only flagging it for inspection.
+        divergence_loss = float(criteria.get("pinn_divergence_final_loss", 1000.0 * max_pinn_loss))
+        if not (_is_finite_number(final_loss) and float(final_loss) <= divergence_loss):
+            add(
+                "solver_pinn_divergence",
+                False,
+                f"PINN final_loss={final_loss!r} exceeds divergence threshold {divergence_loss}; training did not converge.",
+                severity="warning",
+                score=0.2,
+            )
     elif solver_method == "dynamic_script":
         validation_passed = simulator.get("validation_passed")
         add(
@@ -340,19 +425,39 @@ def validate_run_output(
             if parsed is not None
         ]
         if simple_derivative_bcs:
-            derivative_tolerance = float(criteria.get("derivative_boundary_tolerance", criteria.get("boundary_tolerance", 0.1)))
+            # An explicit derivative_boundary_tolerance is an absolute tolerance. Otherwise
+            # the tolerance scales with the slope of the solution (range(u) / domain length)
+            # and the prescribed derivative, so it does not depend on units or grid size.
+            explicit_tolerance = criteria.get("derivative_boundary_tolerance")
+            relative_tolerance = float(criteria.get("derivative_boundary_rel_tolerance", 0.05))
+            slope_scale, value_scale = _derivative_scale(sample_points, primary)
             derivative_residuals = []
+            derivative_tolerances = []
             for location, expected in simple_derivative_bcs:
+                if explicit_tolerance is not None:
+                    tolerance = float(explicit_tolerance)
+                else:
+                    tolerance = relative_tolerance * max(slope_scale, abs(expected)) + 1e-6 * value_scale + 1e-12
                 observed = _estimate_derivative(sample_points, primary, location)
                 if observed is None:
                     derivative_residuals.append(float("inf"))
                 else:
                     derivative_residuals.append(abs(observed - expected))
-            max_derivative_residual = max(derivative_residuals) if derivative_residuals else 0.0
+                derivative_tolerances.append(tolerance)
+            worst = max(
+                range(len(derivative_residuals)),
+                key=lambda idx: derivative_residuals[idx] / derivative_tolerances[idx] if derivative_tolerances[idx] > 0 else float("inf"),
+            )
+            max_derivative_residual = derivative_residuals[worst]
+            derivative_tolerance = derivative_tolerances[worst]
             add(
                 "physics_derivative_boundary_conditions",
-                math.isfinite(max_derivative_residual) and max_derivative_residual <= derivative_tolerance,
-                f"max simple derivative residual={max_derivative_residual:.4g}, tolerance<={derivative_tolerance}.",
+                all(
+                    math.isfinite(residual) and residual <= tolerance
+                    for residual, tolerance in zip(derivative_residuals, derivative_tolerances)
+                ),
+                f"max simple derivative residual={max_derivative_residual:.4g}, tolerance<={derivative_tolerance:.4g} "
+                f"(3-point second-order difference).",
                 severity="warning",
                 score=0.45,
             )

@@ -12,6 +12,22 @@ def _models_dir() -> str:
     return models_dir()
 
 
+def _cached_epochs(meta: Dict[str, Any]) -> Optional[int]:
+    """
+    Number of epochs a cached model was trained for. Older metadata has no
+    'epochs_trained' key; the solvers record one loss entry per epoch, so the length of
+    loss_history is used instead. Returns None if unknown (such a model is not reused
+    when specific epochs are requested).
+    """
+    epochs_trained = meta.get("epochs_trained")
+    if isinstance(epochs_trained, (int, float)) and not isinstance(epochs_trained, bool):
+        return int(epochs_trained)
+    loss_history = meta.get("loss_history")
+    if isinstance(loss_history, list) and loss_history:
+        return len(loss_history)
+    return None
+
+
 def load_cached_pinn(
     prefix: str,
     label: str,
@@ -22,12 +38,16 @@ def load_cached_pinn(
     build_model: Callable[[], torch.nn.Module],
     on_loaded: Callable[[torch.nn.Module, Dict[str, Any]], None],
     domain: Optional[Tuple[float, float]] = None,
+    epochs: Optional[int] = None,
 ) -> bool:
     """
     Looks for a pre-trained PINN model (<prefix>*.json metadata + matching .pth weights)
     whose governing equation, boundary conditions, params (and domain boundaries, if given)
     match the current problem. On a match the weights are loaded into build_model() and
     on_loaded(model, meta) is called. Returns True if a cached model was used.
+    If epochs is given, only a model trained for at least that many epochs is reused
+    (see _cached_epochs); a model trained longer is at least as converged, so reusing it
+    never returns a worse result than the requested training run.
     label is "" for the 1D and "2D " for the 2D log messages.
     """
     pretrained_loaded = False
@@ -56,6 +76,11 @@ def load_cached_pinn(
                                 if k not in meta_params or abs(meta_params[k] - v) > 1e-5:
                                     params_match = False
                                     break
+
+                            if params_match and epochs is not None:
+                                cached_epochs = _cached_epochs(meta)
+                                if cached_epochs is None or cached_epochs < epochs:
+                                    params_match = False
 
                             if params_match:
                                 pth_name = f_name.replace(".json", ".pth")
@@ -86,9 +111,11 @@ def save_pinn_model(
     final_loss: float,
     loss_history: List[float],
     domain: Optional[Tuple[float, float]] = None,
+    epochs: Optional[int] = None,
 ) -> None:
     """
     Saves the trained PINN model weights (.pth) and metadata JSON for caching.
+    epochs defaults to len(loss_history) (one loss entry per training epoch).
     label is "" for the 1D and "2D " for the 2D log messages.
     """
     try:
@@ -115,6 +142,7 @@ def save_pinn_model(
             meta_data["domain_max"] = domain[1]
         meta_data["final_loss"] = final_loss
         meta_data["loss_history"] = loss_history
+        meta_data["epochs_trained"] = int(epochs if epochs is not None else len(loss_history))
         with open(meta_path, "w", encoding="utf-8") as mf:
             json.dump(meta_data, mf, indent=4)
         print(f"[*] Saved {label}PINN model metadata to: {meta_path}")

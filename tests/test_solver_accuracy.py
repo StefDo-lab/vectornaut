@@ -331,25 +331,23 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         results = {seed: proc.communicate(timeout=120)[0].strip().splitlines()[-1:] for seed, proc in procs.items()}
         self.assertEqual({seed: out for seed, out in results.items() if out != ["OK"]}, {})
 
-    # BUG: when SymPy fails and solution_primary comes from the SciPy fallback
+    # FIXED (kept as regression test). Was: when SymPy fails and solution_primary comes from the SciPy fallback
     # (solver_dispatcher.py:461-464), method_requested is left as 'analytical', so the
     # output (and the validator's "deterministic validation coverage" info) claims an
     # analytical solution. relative_error is then scipy-vs-scipy = 0. The mirror case
     # (scipy requested, analytical used, reported 'scipy') is at solver_dispatcher.py:447-451.
     # SymPy failure is simulated with a mock: real triggers are the 'C*' parameter bug above
     # or nonlinear ODEs, where dsolve takes ~45 s before failing.
-    @unittest.expectedFailure
     def test_solver_method_reports_actual_solver(self):
         with mock.patch("vectornaut.solver_dispatcher.solve_analytical", side_effect=NotImplementedError("dsolve")):
             run = run_case(CASES_1D["poiseuille_params"], "analytical", record=False)
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)  # scipy fallback is accurate ...
         self.assertEqual(run.sim.solver_method, "scipy")      # ... but is reported as 'analytical'
 
-    # BUG: _merged_params (solver_dispatcher.py:53-56) unconditionally overwrites
+    # FIXED (kept as regression test). Was: _merged_params (solver_dispatcher.py:53-56) unconditionally overwrites
     # 'slip_length' (and 'lambda', 'slippage_coefficient') with simulation_coefficient,
     # silently discarding an explicitly audited slip_length. Here the audited
     # slip_length=0.1 is replaced by 0.5, giving 33 % instead of 9.1 % drag reduction.
-    @unittest.expectedFailure
     def test_audited_slip_length_not_overridden(self):
         case = Case("couette_audited_slip", "d2u_dy2 = 0", ["u(0) = slip_length * du_dy(0)", "u(1) = U"], ["y"], "u",
                     exact=lambda y: 2.0 * (y + 0.1) / 1.1, params={"U": 2.0, "slip_length": 0.1}, coefficient=0.5,
@@ -365,12 +363,11 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         run = self.solve(case, "analytical")
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)
 
-    # BUG: the performance-gain baseline zeroes every parameter whose name contains
+    # FIXED (kept as regression test). Was: the performance-gain baseline zeroes every parameter whose name contains
     # "thick" unless it is one of five whitelisted names (solver_dispatcher.py:346-354).
     # For a plain no-slip Couette flow over a "coating_thickness" gap both BCs collapse to
     # y=0, the baseline solve fails, and the fallback baseline_deriv = 1.5
     # (solver_dispatcher.py:368) yields a -33 % "gain" for a design with no bionic feature.
-    @unittest.expectedFailure
     def test_baseline_gain_zero_without_bionic_feature(self):
         case = Case("couette_coating_gap", "d2u_dy2 = 0", ["u(0) = 0", "u(coating_thickness) = U"], ["y"], "u",
                     exact=lambda y: 2.0 * y, params={"U": 1.0, "coating_thickness": 0.5},
@@ -408,11 +405,10 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         run = self.solve(CASES_1D["thin_film_poiseuille"], "pinn", epochs=PINN_EPOCHS_1D)
         self.assertLess(run.errors()["rel_max"], 0.5)
 
-    # BUG: validator false positive on a correct solution. _estimate_derivative
+    # FIXED (kept as regression test). Was: validator false positive on a correct solution. _estimate_derivative
     # (validator.py:97-131) uses a first-order one-sided difference between the 20 sample
     # points, with an absolute tolerance of 0.1, so the exact solution of u''=20,
     # du_dy(1)=0 (discrete slope 10*h = 0.53 at y=1) is flagged 'warn'/'rerun_solver'.
-    @unittest.expectedFailure
     def test_validator_accepts_correct_steep_neumann_solution(self):
         case = Case("steep_neumann", "d2u_dy2 = 20", ["u(0) = 0", "du_dy(1) = 0"], ["y"], "u",
                     exact=lambda y: 10.0 * y ** 2 - 20.0 * y)
@@ -420,11 +416,10 @@ class OneDimensionalKnownBugsTest(_TempDataDirTestCase):
         self.assertLess(run.errors()["rel_max"], EXACT_RTOL)
         self.assertValidatorPasses(run)
 
-    # BUG (validator gap): validate_run_output only checks simple Dirichlet/Neumann values at
+    # FIXED (kept as regression test). Was: validate_run_output only checks simple Dirichlet/Neumann values at
     # the boundary and trusts the reported relative_error; it never compares
     # solution_primary with solution_reference (or checks the PDE residual). An all-zero
     # "Poiseuille" profile satisfies u(0)=u(1)=0 and is accepted with status 'pass'.
-    @unittest.expectedFailure
     def test_validator_flags_primary_reference_mismatch(self):
         run = self.solve(CASES_1D["poiseuille_params"], "analytical")
         broken = run.sim.model_copy(update={"solution_primary": [0.0] * len(run.sim.solution_primary)})
@@ -446,10 +441,9 @@ class PinnCacheTest(unittest.TestCase):
             os.environ["VECTORNAUT_DATA_DIR"] = self.previous
         self.tmp.cleanup()
 
-    # BUG: the PINN cache key (model_cache.py:299-313) is equation + BCs + params (+ domain)
+    # FIXED (kept as regression test). Was: the PINN cache key (model_cache.py:299-313) is equation + BCs + params (+ domain)
     # but not the requested epochs, so after a quick 10-epoch run, asking for 300 epochs
     # silently returns the stale 10-epoch model (epochs_trained=10, max error ~1.1).
-    @unittest.expectedFailure
     def test_cache_respects_requested_epochs(self):
         case = CASES_1D["poiseuille_params"]
         run_case(case, "pinn", epochs=10, record=False)
