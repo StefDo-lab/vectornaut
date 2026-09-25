@@ -190,11 +190,12 @@ class Auditor:
         Perform a rigorous audit of these parameters:
         1. Check if the parameter ranges make physical sense (e.g., density, viscosity, spacing, height must be positive).
         2. Adjust any parameters that are out of bounds or physically unrealistic (e.g., riblet spacing should be larger than or equal to height, viscosity must be reasonable).
-        3. Calculate key dimensionless numbers (e.g., Reynolds number assuming density = 1000 kg/m^3 for water and L = 1.0 m, or relevant thermal/electromagnetic dimensionless numbers).
-        4. Derive a simulation coefficient used directly in the simulator boundary/PDE equations.
-           - For Fluid Dynamics (drag reduction), calculate the slippage length lambda:
-             lambda = 0.2 * riblet_spacing * (1 - exp(-2.0 * riblet_height / riblet_spacing))
-           - For Thermodynamics or Electromagnetics, determine a corresponding physical/design parameter and return it as the 'simulation_coefficient'.
+        3. Calculate the key dimensionless numbers of this problem (e.g. Reynolds, Péclet, Biot, Nusselt numbers). Use the actual characteristic length, velocity and material properties from the parameters above; where a needed quantity is not a parameter, state the value you assumed and why in audit_notes. Do not report numbers that do not apply to this problem.
+        4. Derive the core simulation coefficient of this mechanism (simulation_coefficient), e.g. an effective slip length, heat transfer coefficient or effective stiffness, from the parameters and the physics of the mechanism, and explain the derivation in audit_notes.
+           - Only for riblet geometries (parameters riblet_height and riblet_spacing), a common estimate of the slip length is
+             lambda = 0.2 * riblet_spacing * (1 - exp(-2.0 * riblet_height / riblet_spacing)); the pipeline recomputes the coefficient with this formula when both parameters are present.
+           - For every other mechanism derive the coefficient yourself (it is not the riblet formula). If the mechanism has no such single coefficient, return 0.0 and say so in audit_notes.
+           - The equations use simulation_coefficient only if they refer to it (or to slip_length, lambda, slippage_coefficient); otherwise it is informational.
         5. Select the best solver_method out of:
            - 'analytical': If the equation is linear and has a simple, closed-form solution.
            - 'scipy': For standard 1D ODE BVPs that might have minor nonlinearities but are fast to solve. (Do NOT select 'scipy' if the system has multiple independent variables/2D coordinates).
@@ -228,6 +229,13 @@ class Auditor:
              derivatives are taken normal to it) or a point "(0.5, 0.5)" for value_at. Leave empty for max/min/max_abs/mean/integral over the whole domain.
            - metric.scale: optional expression in parameter names that turns the normalized result into the physical quantity (empty = 1).
            - metric.unit and metric.label: unit and short name of the scaled metric; ui_metadata.primary_metric/reference_metric must describe the same quantity.
+           - metric.transform (optional): if the objective is a NONLINEAR function of the metric, a SymPy expression in m (the scaled metric) and parameter names
+             that turns m into the figure of merit. It is applied to the design, reference and baseline metric before performance_gain_pct is computed, so
+             the gain is the relative change of the figure of merit, not of m. metric.unit, metric.label and objective_metric.lower_is_better then refer to the
+             transformed quantity. Allowed: numbers, m, parameter names, + - * / ** and sqrt, exp, log, sin, cos, tan, sinh, cosh, tanh, abs, min, max, pi.
+             Example: foul-release coating where the solver gives the compliance C of the coating and the detachment stress is sigma_c = sqrt(2*w/C) with the
+             adhesion energy w: metric {{"kind": "max_abs", "unit": "Pa", "label": "Critical detachment stress", "transform": "sqrt(2*adhesion_energy/m)"}}
+             with objective_metric.lower_is_better = true (a lower detachment stress releases fouling more easily). Leave transform empty when the metric itself is the objective.
            Examples:
              Wall shear stress on the lower wall of a channel normalized by its half height: {{"kind": "derivative_at", "location": "0", "scale": "viscosity/channel_half_height", "unit": "Pa", "label": "Wall shear stress"}}
              Maximum deflection of a beam whose deflection w is already in metres: {{"kind": "max_abs", "unit": "m", "label": "Maximum deflection"}}
@@ -325,9 +333,11 @@ class Auditor:
                     if s < 0.005:
                         char_height = 10.0 * s
                         recalculated_coeff = recalculated_coeff / char_height
-            elif "riblet_height" in sanitized_params or "riblet_spacing" in sanitized_params:
-                h = extract_param(sanitized_params, ["riblet_height", "height"], 0.015)
-                s = extract_param(sanitized_params, ["riblet_spacing", "spacing"], 0.03)
+            elif "riblet_height" in sanitized_params and "riblet_spacing" in sanitized_params:
+                # Riblet geometry: slip length from the riblet formula (only when both
+                # riblet parameters exist; other fluid mechanisms keep the model's coefficient).
+                h = sanitized_params["riblet_height"]
+                s = sanitized_params["riblet_spacing"]
                 # Recalculate lambda (dimensional)
                 recalculated_coeff = 0.2 * s * (1.0 - math.exp(-2.0 * h / s))
                 if s < 0.005:

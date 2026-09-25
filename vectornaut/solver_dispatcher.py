@@ -51,6 +51,7 @@ from .solvers.metrics import (
     GAIN_BASIS_NONE,
     MetricSpecError,
     apply_baseline_overrides,
+    apply_metric_transform,
     baseline_overrides,
     callables_from_bvp,
     callables_from_expr,
@@ -169,6 +170,40 @@ def _performance_gain(
     if gain is None:
         return 0.0, GAIN_BASIS_NONE, _join_notes(note, "baseline metric is zero or not finite")
     return gain, gain_basis, note
+
+
+def _transformed_metrics(
+    metric_spec: Optional[Dict[str, Any]],
+    primary: float,
+    reference: float,
+    baseline: Optional[float],
+    params: Dict[str, float],
+    baseline_params: Optional[Dict[str, float]],
+    gain_note: Optional[str],
+) -> Tuple[Optional[Dict[str, Any]], float, float, Optional[float], Optional[str], bool]:
+    """
+    Applies metric_spec['transform'] (a nonlinear figure of merit of the metric m) to the
+    primary, reference and baseline metric before the gain is computed; the baseline uses the
+    baseline parameters. Returns (metric_spec, primary, reference, baseline, gain_note, failed).
+    If the transform is invalid or not evaluable, the untransformed values are returned with a
+    note, the spec loses its transform and unit, and failed=True: the gain must then be
+    reported as n/a, because lower_is_better refers to the transformed quantity.
+    """
+    transform = (metric_spec or {}).get("transform")
+    if not transform:
+        return metric_spec, primary, reference, baseline, gain_note, False
+    try:
+        new_primary = apply_metric_transform(transform, primary, params)
+        new_reference = apply_metric_transform(transform, reference, params)
+        new_baseline = None
+        if baseline is not None:
+            new_baseline = apply_metric_transform(transform, baseline, baseline_params or params)
+    except MetricSpecError as err:
+        print(f"[*] Metric transform rejected: {err}")
+        note = (f"metric transform rejected ({err}); primary/reference metric values are the untransformed "
+                f"metric and the performance gain is not computed")
+        return dict(metric_spec, transform=None, unit=None), primary, reference, baseline, _join_notes(gain_note, note), True
+    return metric_spec, new_primary, new_reference, new_baseline, gain_note, False
 
 
 def _metric_fields(
@@ -500,11 +535,16 @@ def _solve_2d(
             gain_note = _join_notes(gain_note, f"baseline solve failed: {e}")
             baseline_metric = None
 
+    metric_spec, primary_metric, reference_metric, baseline_metric, gain_note, transform_failed = _transformed_metrics(
+        metric_spec, primary_metric, reference_metric, baseline_metric, params, baseline_params, gain_note
+    )
     performance_gain, gain_basis, gain_note = _performance_gain(
         primary_metric, baseline_metric, gain_basis, gain_note,
         legacy=metric_spec is None and gain_basis == GAIN_BASIS_BIONIC,
         lower_better=lower_is_better(auditor_output),
     )
+    if transform_failed:
+        performance_gain, gain_basis = 0.0, GAIN_BASIS_NONE
 
     abs_diff = np.abs(np.array(solution_primary_2d) - np.array(solution_reference_2d))
     ref_norm = np.abs(np.array(solution_reference_2d))
@@ -774,11 +814,16 @@ def _solve_1d(
     elif metric_spec is not None:
         baseline_metric = None
 
+    metric_spec, primary_metric, reference_metric, baseline_metric, gain_note, transform_failed = _transformed_metrics(
+        metric_spec, primary_metric, reference_metric, baseline_metric, params, baseline_params, gain_note
+    )
     performance_gain, gain_basis, gain_note = _performance_gain(
         primary_metric, baseline_metric, gain_basis, gain_note,
         legacy=metric_spec is None and gain_basis == GAIN_BASIS_BIONIC,
         lower_better=lower_is_better(auditor_output),
     )
+    if transform_failed:
+        performance_gain, gain_basis = 0.0, GAIN_BASIS_NONE
 
     # Calculate relative error
     abs_diff = np.abs(np.array(solution_primary) - np.array(solution_reference))

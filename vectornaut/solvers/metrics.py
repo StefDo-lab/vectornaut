@@ -9,6 +9,12 @@ and compute the relative improvement of the metric over a baseline design.
 
 Without a spec the dispatcher keeps its historical metrics (du/dx at the lower
 boundary in 1D, the mean of the sampled field in 2D).
+
+An optional spec.transform (a SymPy expression in m, the scaled metric, and parameter
+names) turns the metric into a nonlinear figure of merit before the gain is computed,
+e.g. 'sqrt(2*adhesion_energy/m)' for a detachment stress from a compliance. It is parsed
+with a whitelist of names and functions (parse_metric_transform), never with eval on
+arbitrary text.
 """
 import math
 import re
@@ -89,6 +95,7 @@ def resolve_metric_spec(auditor_output: Any) -> Optional[Dict[str, Any]]:
         "scale": _text("scale"),
         "unit": _text("unit"),
         "label": _text("label"),
+        "transform": _text("transform"),
     }
 
 
@@ -115,6 +122,108 @@ def metric_scale(spec: Dict[str, Any], params: Dict[str, float]) -> float:
     if not spec.get("scale"):
         return 1.0
     return eval_param_expr(spec["scale"], params)
+
+
+# ==========================================
+# Metric transform (nonlinear figure of merit)
+# ==========================================
+
+# Name of the raw (scaled) metric in a transform expression. It wins over a parameter of the same name.
+TRANSFORM_METRIC_SYMBOL = "m"
+_TRANSFORM_MAX_LENGTH = 300
+_TRANSFORM_FUNCTIONS = {
+    "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log, "ln": sp.log,
+    "sin": sp.sin, "cos": sp.cos, "tan": sp.tan,
+    "sinh": sp.sinh, "cosh": sp.cosh, "tanh": sp.tanh,
+    "abs": sp.Abs, "Abs": sp.Abs, "min": sp.Min, "Min": sp.Min, "max": sp.Max, "Max": sp.Max,
+}
+_TRANSFORM_CONSTANTS = {"pi": sp.pi}
+# Numbers, identifiers, whitespace, arithmetic operators, parentheses and commas only.
+_TRANSFORM_ALLOWED = re.compile(r"^[A-Za-z0-9_\s+\-*/^().,]*$")
+_NUMBER_LITERAL = re.compile(r"(?<![A-Za-z0-9_.])(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?(?![A-Za-z0-9_.])")
+# The only globals sympy's parser needs for the code it generates from numbers and symbols.
+_TRANSFORM_GLOBALS = {
+    "__builtins__": {},
+    "Symbol": sp.Symbol, "Integer": sp.Integer, "Float": sp.Float, "Rational": sp.Rational,
+}
+
+
+def parse_metric_transform(transform: str, param_names: List[str]) -> sp.Expr:
+    """
+    Parses a metric transform such as 'sqrt(2*adhesion_energy/m)' into a SymPy expression.
+    Only numbers, m, the given parameter names, + - * / ** ^, parentheses, commas and the
+    functions in _TRANSFORM_FUNCTIONS are allowed; attribute access, dunder names, strings,
+    indexing and unknown names are rejected before anything is parsed. Raises MetricSpecError.
+    """
+    text = str(transform or "").strip()
+    if not text:
+        raise MetricSpecError("metric transform is empty")
+    if len(text) > _TRANSFORM_MAX_LENGTH:
+        raise MetricSpecError(f"metric transform is longer than {_TRANSFORM_MAX_LENGTH} characters")
+    if not _TRANSFORM_ALLOWED.match(text):
+        bad = sorted({ch for ch in text if not _TRANSFORM_ALLOWED.match(ch)})
+        raise MetricSpecError(f"metric transform {text!r} contains characters that are not allowed: {''.join(bad)!r}")
+    if "__" in text:
+        raise MetricSpecError(f"metric transform {text!r} contains '__'")
+    without_numbers = _NUMBER_LITERAL.sub(" 0 ", text)
+    if "." in without_numbers:
+        raise MetricSpecError(f"metric transform {text!r}: attribute access ('.') is not allowed")
+    params = {str(name) for name in param_names}
+    allowed = {TRANSFORM_METRIC_SYMBOL} | params | set(_TRANSFORM_FUNCTIONS) | set(_TRANSFORM_CONSTANTS)
+    identifiers = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", without_numbers)
+    unknown = sorted({name for name in identifiers if name not in allowed})
+    if unknown:
+        raise MetricSpecError(
+            f"metric transform {text!r} uses unknown names {', '.join(unknown)} "
+            f"(allowed: m, parameter names, {', '.join(sorted(_TRANSFORM_FUNCTIONS))}, pi)"
+        )
+    if TRANSFORM_METRIC_SYMBOL not in identifiers:
+        raise MetricSpecError(f"metric transform {text!r} does not depend on the metric m")
+
+    local_ns: Dict[str, Any] = {safe_symbol_name(name): sp.Symbol(name) for name in params}
+    local_ns.update(_TRANSFORM_FUNCTIONS)
+    local_ns.update(_TRANSFORM_CONSTANTS)
+    local_ns[TRANSFORM_METRIC_SYMBOL] = sp.Symbol(TRANSFORM_METRIC_SYMBOL)
+    try:
+        expr = sp.parse_expr(
+            escape_keywords(text),
+            local_dict=local_ns,
+            global_dict=dict(_TRANSFORM_GLOBALS),
+            transformations=(standard_transformations + (convert_xor,)),
+        )
+    except Exception as err:
+        raise MetricSpecError(f"cannot parse metric transform {text!r}: {err}") from err
+    if not isinstance(expr, sp.Expr):
+        raise MetricSpecError(f"metric transform {text!r} is not a numeric expression")
+    allowed_symbols = {TRANSFORM_METRIC_SYMBOL} | params
+    stray = sorted(str(sym) for sym in expr.free_symbols if str(sym) not in allowed_symbols)
+    if stray:
+        raise MetricSpecError(f"metric transform {text!r} uses unknown symbols {', '.join(stray)}")
+    return expr
+
+
+def apply_metric_transform(transform: Optional[str], value: float, params: Dict[str, float]) -> float:
+    """
+    The figure of merit transform(m=value, parameters); without a transform the value itself.
+    Raises MetricSpecError if the transform is invalid or its result is not a finite real
+    number (e.g. sqrt of a negative metric, division by a zero metric).
+    """
+    if not transform:
+        return float(value)
+    expr = parse_metric_transform(transform, list(params))
+    subs = {sp.Symbol(TRANSFORM_METRIC_SYMBOL): float(value)}
+    for sym in expr.free_symbols:
+        name = str(sym)
+        if name != TRANSFORM_METRIC_SYMBOL:
+            subs[sym] = float(params[name])
+    try:
+        result = complex(expr.subs(subs).evalf())
+    except Exception as err:
+        raise MetricSpecError(f"metric transform {transform!r} cannot be evaluated at m={value:g}: {err}") from err
+    if (not (math.isfinite(result.real) and math.isfinite(result.imag))
+            or abs(result.imag) > 1e-12 * max(1.0, abs(result.real))):
+        raise MetricSpecError(f"metric transform {transform!r} is not a finite real number at m={value:g}")
+    return float(result.real)
 
 
 # ==========================================

@@ -420,13 +420,22 @@ def validate_run_output(
 
     gain = simulator.get("performance_gain_pct")
     max_gain = float(criteria.get("max_abs_performance_gain_pct", 500.0))
-    add(
-        "physics_performance_gain_sanity",
-        _is_finite_number(gain) and abs(float(gain)) <= max_gain,
-        f"performance_gain_pct={gain!r}, allowed absolute max={max_gain}.",
-        severity="warning",
-        score=0.35,
-    )
+    if simulator.get("gain_basis") == "none":
+        # No baseline: performance_gain_pct is a 0.0 placeholder for n/a, not a result.
+        add(
+            "physics_performance_gain_sanity",
+            True,
+            "performance_gain_pct not available (gain_basis 'none', no baseline design); gain sanity not evaluated.",
+            severity="info",
+        )
+    else:
+        add(
+            "physics_performance_gain_sanity",
+            _is_finite_number(gain) and abs(float(gain)) <= max_gain,
+            f"performance_gain_pct={gain!r}, allowed absolute max={max_gain}.",
+            severity="warning",
+            score=0.35,
+        )
 
     objective = simulator.get("objective_metric") or auditor.get("objective_metric") or {}
     score_field = objective.get("score_field", "performance_gain_pct")

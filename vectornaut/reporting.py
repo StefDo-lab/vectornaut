@@ -67,10 +67,40 @@ def gain_available(simulator: Dict[str, Any]) -> bool:
     return (simulator or {}).get("gain_basis") != "none"
 
 
-def format_gain(simulator: Dict[str, Any]) -> str:
+# Same default as the validator's physics_performance_gain_sanity check.
+DEFAULT_MAX_ABS_GAIN_PCT = 500.0
+GAIN_SANITY_CHECK = "physics_performance_gain_sanity"
+
+
+def gain_implausible(simulator: Dict[str, Any], validation: Optional[Dict[str, Any]] = None) -> bool:
+    """
+    True if the gain exists but failed the validator's gain-sanity check. The check result in
+    `validation` (dict or ValidationResult) decides; without one, |gain| > 500 % (the
+    validator's default limit) or a non-finite gain counts as implausible.
+    """
+    simulator = simulator or {}
+    if not gain_available(simulator):
+        return False
+    if validation is not None and not isinstance(validation, dict):
+        validation = validation.model_dump() if hasattr(validation, "model_dump") else dict(getattr(validation, "__dict__", {}))
+    for check in (validation or {}).get("checks", []) or []:
+        check = check if isinstance(check, dict) else (check.model_dump() if hasattr(check, "model_dump") else {})
+        if check.get("name") == GAIN_SANITY_CHECK:
+            return not check.get("passed", True)
+    try:
+        gain = float(simulator.get("performance_gain_pct"))
+    except (TypeError, ValueError):
+        return True
+    return not (abs(gain) <= DEFAULT_MAX_ABS_GAIN_PCT)
+
+
+def format_gain(simulator: Dict[str, Any], validation: Optional[Dict[str, Any]] = None) -> str:
     if not gain_available(simulator):
         return "n/a"
-    return f"{float((simulator or {}).get('performance_gain_pct', 0.0) or 0.0):.2f}%"
+    text = f"{float((simulator or {}).get('performance_gain_pct', 0.0) or 0.0):.2f}%"
+    if gain_implausible(simulator, validation):
+        return f"implausibel ({text})"
+    return text
 
 
 def _coefficient_used(miner: Dict[str, Any], auditor: Dict[str, Any]) -> bool:
@@ -287,7 +317,13 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
     gain_label = ui_meta.get("performance_gain", {}).get("label", "Effizienzsteigerung")
     metric_spec = simulator.get("metric_spec") or {}
     metric_unit = simulator.get("metric_unit") or metric_spec.get("unit")
-    if gain_available(simulator):
+    if gain_implausible(simulator, validation):
+        md.append(
+            f"- **{gain_label}:** **implausibel** (berechnet {_fmt_num(simulator.get('performance_gain_pct'))} %, "
+            f"der Gewinn hat die Plausibilitätsprüfung des Validators (Standardgrenze |Gewinn| <= 500 %) nicht bestanden; "
+            f"kein belastbares Ergebnis, Metrik und Vergleichsdesign prüfen)"
+        )
+    elif gain_available(simulator):
         md.append(f"- **{gain_label}:** **{format_gain(simulator)}**")
     else:
         md.append(f"- **{gain_label}:** **n/a** (kein Vergleichsdesign definiert, der Gewinn ist nicht berechenbar)")
@@ -303,7 +339,8 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
         location = f" bei `{metric_spec.get('location')}`" if metric_spec.get("location") else ""
         scale = f", skaliert mit `{metric_spec.get('scale')}`" if metric_spec.get("scale") else ""
         metric_name = metric_spec.get("label") or prim_label
-        md.append(f"- **Metrik-Definition:** {metric_name}: `{metric_spec.get('kind')}`{location}{scale}")
+        transform = f", Gütemaß `{metric_spec.get('transform')}` (m = Metrik)" if metric_spec.get("transform") else ""
+        md.append(f"- **Metrik-Definition:** {metric_name}: `{metric_spec.get('kind')}`{location}{scale}{transform}")
     baseline_val = simulator.get("baseline_metric_value")
     if baseline_val is not None and gain_available(simulator):
         basis = simulator.get("gain_basis")
@@ -400,7 +437,7 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
             if run.get("validation", {}).get("status"):
                 val_status = str(run.get("validation", {}).get("status")).upper()
             reasoning = run.get("optimizer_reasoning", "Konvergenz erreicht oder Limit erreicht.").replace("\n", " ").strip()
-            md.append(f"| {r_num} | {params_str} | `{_fmt_num(coeff_val)}` | {metric_str} | **{format_gain(sim_res)}** | {val_status} | {reasoning} |")
+            md.append(f"| {r_num} | {params_str} | `{_fmt_num(coeff_val)}` | {metric_str} | **{format_gain(sim_res, run.get('validation') or None)}** | {val_status} | {reasoning} |")
 
             fallbacks = run.get("solver_fallbacks", [])
             if fallbacks:
