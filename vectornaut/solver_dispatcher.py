@@ -306,20 +306,22 @@ def _solve_2d(
     params: Dict[str, float]
 ) -> SimulatorOutput:
     # Imported here (not with the re-exports above) to keep this helper local to the 2D path.
-    from .solvers.solvers_2d import parse_bcs_2d
+    from .solvers.solvers_2d import parse_bcs_2d, parse_pde_2d
 
     x_name = miner_output.independent_variables[0]
     y_name = miner_output.independent_variables[1]
     dep_name = miner_output.dependent_variables[0]
 
-    if "=" not in gov_eq:
-        raise ValueError(f"2D Governing equation must contain '=': {gov_eq}")
-    lhs_str, rhs_str = gov_eq.split("=")
-
     x_sym = sp.Symbol(x_name)
     y_sym = sp.Symbol(y_name)
 
-    rhs_expr = parse_rhs_2d(rhs_str, x_name, y_name, params)
+    # The whole equation is parsed (all terms moved to one side) into the linear operator
+    # a*u_xx + b*u_yy + c*u_xy + d*u_x + e*u_y + g*u = f that the FDM and PINN solve (see
+    # parse_pde_2d). Unsupported forms (nonlinear, non-elliptic, unknown symbols) raise, so
+    # the pipeline treats them as a solver failure. rhs_str is the whole equation, because
+    # parse_rhs_2d (used for the baseline solve below) parses whole equations the same way.
+    rhs_str = gov_eq
+    rhs_expr = parse_pde_2d(gov_eq, dep_name, x_name, y_name, params)
 
     # Parses all edge BCs (constant or varying along the edge) and derives the rectangular
     # domain from them. Unparseable BCs raise, so the pipeline treats this as a solver
@@ -355,6 +357,9 @@ def _solve_2d(
         "_domain_x_min": float(x_bounds[0]), "_domain_x_max": float(x_bounds[1]),
         "_domain_y_min": float(y_bounds[0]), "_domain_y_max": float(y_bounds[1]),
     })
+    if not rhs_expr.is_laplacian:
+        # Older versions trained every 2D PINN on u_xx + u_yy = RHS; don't reuse those models.
+        cache_params["_pde_general_operator"] = 1.0
 
     solution_primary_2d = []
     if method_requested == "pinn":
