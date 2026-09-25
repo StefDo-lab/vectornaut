@@ -148,6 +148,9 @@ def run_session(session_dir: str, query: str, epochs: int, rounds: int) -> Dict[
             from vectornaut.reporting import archive_run_data
             archive_run_data(result)
             status = {"status": "complete", "calls": client.calls}
+            if result.get("status") == "rejected":
+                # Physically infeasible request: a structured result, not a failure.
+                status = {"status": "rejected", "calls": client.calls, "rejection": result.get("rejection")}
         except NeedResponse as need:
             result = None
             status = {"status": "needs_response", "index": need.index, "request": need.request_path, "calls": client.calls}
@@ -175,7 +178,7 @@ def main(argv=None) -> int:
 
     status = run_session(args.session, args.query, args.epochs, args.rounds)
     print(json.dumps(status, ensure_ascii=False))
-    return 0 if status["status"] in ("complete", "needs_response") else 1
+    return 0 if status["status"] in ("complete", "rejected", "needs_response") else 1
 
 
 if __name__ == "__main__":
