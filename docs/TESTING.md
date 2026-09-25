@@ -38,6 +38,24 @@ $env:VECTORNAUT_DATA_DIR = Join-Path $env:TEMP "vectornaut-test-data"
 
 `test_formulator_unit.py` contains one opt-in live test. It is skipped unless `RUN_LIVE_TESTS=1` and `GEMINI_API_KEY` are set.
 
+The full suite takes about a minute on a laptop CPU, most of it PINN training in the solver accuracy tests.
+
+### What the suite covers
+
+| Area | Modules |
+|---|---|
+| Pipeline, stages, validator, eval | `test_pipeline_unit`, `test_formulator_unit`, `test_optimizer_unit`, `test_synthesis_unit`, `test_validator_unit`, `test_evaluation_unit`, `test_benchmark_unit` |
+| HTTP API in mock mode (offline ports of `tests/live/` scripts) | `test_api_smoke`, `test_api_mock_flows`, `test_chat_mock_flows`, `test_static_files` (shared setup in `offline_support.py`; it blocks network access and fails the test if a live model client is created) |
+| Solver correctness against closed-form solutions | `test_solver_accuracy` (helpers in `solver_accuracy_helpers.py`), `test_solver_1d_fixes`, `test_solver_2d_fixes`, `test_metrics_validator_fixes`, `test_parameter_injection`, `test_model_cache` |
+| Model configuration and comparison harness | `test_model_config`, `test_model_eval` |
+| Generated scripts (mocked model client) | `test_script_generator`, `test_validation_generator` |
+
+Set `VECTORNAUT_ACCURACY_TABLE=1` to print the solver accuracy measurement table (case x method: max error, relative L2 error, runtime).
+
+### Known open issues
+
+Tests marked `@unittest.expectedFailure` document known, not yet fixed behaviour. Each carries a comment explaining the cause. When a fix makes one pass, unittest reports an "unexpected success" and the run fails: remove the marker and keep the test as a regression test.
+
 ## Deterministic Benchmark
 
 Run the quality benchmark cases:
@@ -47,6 +65,10 @@ Run the quality benchmark cases:
 ```
 
 The benchmark cases live in `benchmarks/eval_cases.json`. They cover known-good, warning, and failing result profiles so validator/eval behavior stays stable across changes.
+
+## AI Model Comparison
+
+`python -m vectornaut.model_eval --mock --config baseline=` runs the reference prompts in `benchmarks/ai_reference_cases.json` through the pipeline offline. Mock mode checks the harness, solvers and validator, not model quality. Live comparisons need `GEMINI_API_KEY` and cost API calls; see "Comparing AI models" in `docs/OPERATIONS.md`.
 
 ## Manual Server Smoke
 

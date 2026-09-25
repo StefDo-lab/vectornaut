@@ -2,7 +2,7 @@
 
 This document is the single source of truth for the **Vectornaut Omni** project state. It is meant to bring any new contributor (human or AI agent) up to speed quickly at the start of a session.
 
-Last reviewed: 2026-09-24
+Last reviewed: 2026-09-25
 
 ---
 
@@ -41,6 +41,7 @@ vectornaut/
   miner.py, formulator.py, auditor.py, optimizer.py, synthesizer.py   Gemini-backed stages
   validator.py           Deterministic result validation
   evaluation.py, benchmark.py   Eval records and the deterministic quality benchmark
+  model_eval.py          AI model comparison harness (reference prompts in benchmarks/ai_reference_cases.json)
   solver_dispatcher.py   Solver entry point: dispatch_and_solve() routes to 1D / 2D / dynamic script
   solvers/
     parsing.py           1D equation/BC parsing, missing-parameter detection, domain bounds
@@ -55,7 +56,7 @@ vectornaut/
   storage.py             Data directory paths and SQLite history index
   config.py              Pydantic schemas and Gemini client
 static/                  Dashboard UI (index.html, app.js, style.css)
-benchmarks/eval_cases.json   Benchmark cases (known-good, warning, failing profiles)
+benchmarks/              eval_cases.json (validator benchmark), ai_reference_cases.json (model comparison prompts)
 tests/                   Stable offline suite (unittest discovery)
 tests/live/              Tests needing a running server, network, or GEMINI_API_KEY
 tests/manual/            Offline scripts run by hand (solver checks)
@@ -70,15 +71,17 @@ Runtime data (history, reports, eval runs, generated scripts/tests, saved models
 ## 🚀 Current Status
 
 * **Working prototype.** The full pipeline runs end to end in mock mode and with a Gemini key.
-* **Solvers**: SymPy analytical, SciPy BVP, and PyTorch PINN for 1D; FDM and PINN for 2D; generated Python scripts (`dynamic_script`) with a parameter sweep against an objective metric contract.
-* **Validation**: deterministic validator with derivative boundary checks, reliability score, recommended action, and automatic solver fallback.
+* **Solvers**: SymPy analytical, SciPy BVP, and PyTorch PINN for 1D; sparse direct FDM and PINN for 2D on rectangular domains with constant or expression-valued edge conditions; generated Python scripts (`dynamic_script`) with a parameter sweep against an objective metric contract. Closed-form accuracy tests confirm analytical/SciPy to ~1e-10 and FDM to its discretisation order.
+* **Validation**: deterministic validator with second-order derivative boundary checks, primary-vs-reference agreement, PINN divergence detection, reliability score, recommended action, and automatic solver fallback.
+* **AI models**: every stage's model and thinking level is configurable (`VECTORNAUT_MODEL`, `VECTORNAUT_MODEL_<STAGE>`, `VECTORNAUT_THINKING_<STAGE>`; default `gemini-3.5-flash`). Live run results list the model used per stage in `models`. `python -m vectornaut.model_eval` compares configurations on 10 reference prompts.
 * **UI**: dashboard with prompt chips, assistant chat in the left rail, technical run reports rendered from Markdown, history, and developer JSON view/download.
-* **Tests**: `python -m unittest discover -s tests -t .` runs 29 tests (1 skipped live test) offline in a few seconds. `python -m vectornaut.benchmark` matches 3/3 cases. See `docs/TESTING.md`.
+* **Tests**: `python -m unittest discover -s tests -t .` runs 241 tests offline in about a minute (1 skipped live test, 4 documented expected failures). `python -m vectornaut.benchmark` matches 3/3 cases. See `docs/TESTING.md`.
 
 ### Recent maintenance (2026-09)
-* Trained PINN models are stored under `VECTORNAUT_DATA_DIR/saved_models` (previously always relative to the working directory, which also let separate test runs reuse each other's models).
-* `solver_dispatcher.py` was split into the `vectornaut/solvers/` package (pure refactor, behavior unchanged; old import paths still work).
-* Root-level tests and helper scripts were moved into `tests/`, `tests/live/`, `tests/manual/`, and `scripts/`.
+* Structure: `solver_dispatcher.py` split into `vectornaut/solvers/`; root tests and helper scripts moved into `tests/`, `tests/live/`, `tests/manual/`, `scripts/`; trained models stored under `VECTORNAUT_DATA_DIR/saved_models`.
+* Pipeline fixes: auto-injected default parameters are recorded on the auditor output and reach the 1D solvers (1D problems with such parameters previously always failed); the optimizer discards a concept only via an explicit `concept_failed` verdict instead of keyword matching; the mock chat no longer treats "Shark-Skin" as a ski design.
+* Solver fixes found by closed-form accuracy tests: thin-film wall derivative, BC value function calls and sub-micron domains in 1D domain detection, nondeterministic handling of parameters named like integration constants, bare dependent variables, `lambda` as a parameter name, numeric constants in PINNs, 1D PINN output scaling, audited slip values no longer overwritten, honest baselines and gains (1D and 2D), reported solver method matches the one actually used, 2D non-constant edge BCs and non-unit domains, independent 2D reference solution, PINN cache respects epochs and compares micro-scale inputs relatively (cache versioned).
+* Offline `TestClient` ports of the mock-mode live scripts; `conftest.py` keeps pytest away from `tests/live/` and `tests/manual/`.
 
 ---
 
@@ -86,18 +89,23 @@ Runtime data (history, reports, eval runs, generated scripts/tests, saved models
 
 * **Security**: generated scripts run as plain subprocesses on the host, and the API has no authentication. Fine for local use; do not expose publicly before adding auth and a sandboxed worker (see `docs/OPERATIONS.md`).
 * **Model fidelity**: the physics models are simplified 1D/2D idealizations. Reported gains (e.g., drag reduction percentages) are indicative, not engineering values.
-* **AI model choice**: every Gemini stage uses `gemini-3.5-flash`, hardcoded in each module. There is no per-stage configuration yet, and no benchmark that measures the quality of the AI stages themselves (the current benchmark covers the validator/eval logic only).
-* **Parameter write-back bug**: `AuditorOutput.audited_parameters_dict` builds a new dict on every access, so auto-injected parameters written back to it are lost, and the 1D path's re-merge drops them. Left as-is during the refactor to keep behavior unchanged.
-* **Test runner**: the project uses `unittest`. Running `pytest tests` would also collect `tests/live/` and try to reach a server.
+* **AI stage quality is unmeasured**: the comparison harness exists, but no live run has been done (no API key in the development environment). Mock mode only exercises canned concepts.
+* **Open design questions** (tests marked `expectedFailure`): an explicit user override is changed again by the optimizer in later rounds (`test_api_mock_flows`), and overrides appear only in the audited parameters, not in `miner.parameters` (`test_chat_mock_flows`). Both need a product decision.
+* **PINN limits** (tests marked `expectedFailure` in `test_solver_accuracy`): the 1D PINN is not nondimensionalised, so micrometre-scale domains train poorly (the validator flags this and falls back); the 2D PINN misses the 5 % target for spatially varying sources at the default training budget.
+* **2D solver** assumes a plain Laplacian on the left-hand side (coefficients like `k*(...)` are dropped); FDM Neumann edges are first order.
+* **Auditor prompt** does not ask the model to reject physically impossible requests (e.g. >100 % efficiency); the mock pipeline accepts them.
+* **Plots** from dynamic scripts are written to `static/plots/` in the working directory, not under `VECTORNAUT_DATA_DIR`.
 * **Deletion candidates**: `scripts/read_transcript.py` and `scripts/search_log.py` (hardcoded to one Windows transcript file); several overlapping encoding probes in `tests/live/`.
 
 ---
 
 ## 🔮 Next Steps & Roadmap
 
-1. **Configurable AI models per stage** (e.g., via environment variables), plus a small set of reference prompts to compare models on the Formulator, Auditor, and script generation stages.
-2. **Fix the parameter write-back bug** in `audited_parameters_dict`.
-3. **Port mock-mode live tests** (`test_api`, `test_chat`, `test_optimizer_live`, `test_remining_live`, `test_parameter_propagation`) to FastAPI `TestClient` so they join the stable suite.
-4. **More physical models**: structural beam bending, acoustics, multiphase flows in the auditor rules.
-5. **Heatmap & canvas performance** for higher FDM/PINN grid resolutions (e.g., 100x100).
-6. **Before any public deployment**: authentication, a job queue, and sandboxed execution of generated scripts.
+1. **Run a live model comparison** once `GEMINI_API_KEY` is available: one repeat first to find crashes, then at least 3 repeats per configuration before ranking.
+2. **Decide the two open override questions** and adjust the pipeline accordingly.
+3. **Auditor prompt**: reject physically impossible requests; verify with the `infeasible_perpetuum` reference case.
+4. **PINN improvements**: nondimensionalise the 1D domain (update `test_validator_flags_thin_film_pinn_garbage` to use a synthetic bad profile first), longer or adaptive training for 2D sources.
+5. **2D solver**: honour left-hand-side coefficients, second-order Neumann edges.
+6. **More physical models**: structural beam bending (4th order), acoustics, multiphase flows in the auditor rules.
+7. **Heatmap & canvas performance** for higher FDM/PINN grid resolutions (e.g., 100x100).
+8. **Before any public deployment**: authentication, a job queue, and sandboxed execution of generated scripts.
