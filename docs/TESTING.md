@@ -44,7 +44,7 @@ The full suite takes about a minute on a laptop CPU, most of it PINN training in
 
 | Area | Modules |
 |---|---|
-| Pipeline, stages, validator, eval | `test_pipeline_unit`, `test_formulator_unit`, `test_optimizer_unit`, `test_synthesis_unit`, `test_validator_unit`, `test_evaluation_unit`, `test_benchmark_unit` |
+| Pipeline, stages, validator, eval | `test_pipeline_unit`, `test_formulator_unit`, `test_pipeline_prompt_fixes` (formulator parameters, auditor prompt, metric transform, gain sanity, synthesizer label), `test_optimizer_unit`, `test_synthesis_unit`, `test_validator_unit`, `test_evaluation_unit`, `test_benchmark_unit` |
 | HTTP API in mock mode (offline ports of `tests/live/` scripts) | `test_api_smoke`, `test_api_mock_flows`, `test_chat_mock_flows`, `test_static_files` (shared setup in `offline_support.py`; it blocks network access and fails the test if a live model client is created) |
 | Solver correctness against closed-form solutions | `test_solver_accuracy` (helpers in `solver_accuracy_helpers.py`), `test_solver_1d_fixes`, `test_solver_2d_fixes`, `test_metrics_validator_fixes`, `test_parameter_injection`, `test_model_cache` |
 | Model configuration and comparison harness | `test_model_config`, `test_model_eval` |

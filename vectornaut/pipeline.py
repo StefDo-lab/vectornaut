@@ -553,6 +553,8 @@ class PipelineRunner:
                 auditor_output=auditor_output,
                 simulator_output=sim_output,
                 user_query=req.query,
+                optimization_history=optimization_history,
+                validation_result=validation_result,
             )
             _record_live_stage("synthesizer")
         print("[+] Synthesis report generated successfully.")

@@ -142,6 +142,8 @@ class ModelFormulation(BaseModel):
     boundary_conditions: List[str] = Field(description="List of symbolic boundary conditions, e.g., ['u(0) = lambda * du_dy(0)', 'u(1) = u_free']")
     independent_variables: List[str] = Field(description="Independent variables (coordinates) for the system, e.g., ['y'] or ['x']")
     dependent_variables: List[str] = Field(description="Dependent variables (fields) for the system, e.g., ['u'] or ['T']")
+    # Optional so that recorded answers without this field still parse.
+    parameters: Optional[List[ParameterProposal]] = Field(default=None, description="Only parameters to add or change: every NEW parameter the equations or boundary conditions need that is not in the proposed list (e.g. boundary values, ambient temperatures, loads, source terms), and any EXISTING parameter (same name) whose value, bounds or justification you change, e.g. to widen its bounds. Proposed parameters that are not listed are kept unchanged. Empty or null if nothing is added or changed.")
 
 class MinerOutput(BaseModel):
     design_name: str = Field(description="Name of the biomimetic design concept")
@@ -186,6 +188,7 @@ class MetricSpec(BaseModel):
     scale: Optional[str] = Field(default=None, description="Optional factor as an expression in parameter names that converts the (normalized) result into the physical quantity, e.g. 'viscosity/channel_half_height' or 'thermal_conductivity/L'")
     unit: Optional[str] = Field(default=None, description="Unit of the scaled metric, e.g. Pa, m, W/m^2, K")
     label: Optional[str] = Field(default=None, description="Short name of the metric, e.g. 'Maximum deflection'")
+    transform: Optional[str] = Field(default=None, description="Optional figure of merit as a SymPy expression in m (the scaled raw metric) and parameter names, applied to the design, reference and baseline metric before the gain is computed, when the objective is a nonlinear function of the metric, e.g. 'sqrt(2*adhesion_energy/m)' (detachment stress from the compliance m). unit, label and objective_metric.lower_is_better then refer to the transformed quantity. Empty = the metric itself.")
 
 class AxisMetadata(BaseModel):
     label: str = Field(description="Label for the coordinate or field")

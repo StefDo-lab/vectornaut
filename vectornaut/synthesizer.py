@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
+
 from .config import get_client, get_model_name, get_thinking_config, MinerOutput, AuditorOutput, SimulatorOutput
+from .reporting import gain_implausible
 
 class SynthesisReport(BaseModel):
     executive_summary: str = Field(description="Eine leicht verständliche Zusammenfassung der bionischen Idee, der physikalischen Funktionsweise und der verwendeten Materialien (auf Deutsch, informelles 'du').")
@@ -11,8 +14,24 @@ class SynthesisReport(BaseModel):
     validation_experiments: str = Field(description="Vorschläge für konkrete Labor- und Feldtests zur Validierung der bionischen Leistung (auf Deutsch, informelles 'du').")
     industry_partners: str = Field(description="Mögliche Industriebranchen, Partnertypen oder reale Lösungsanbieter für die Umsetzung (auf Deutsch, informelles 'du').")
 
-def _result_lines(simulator_output) -> str:
-    """Metric (with unit) and gain for the prompt; the gain is n/a when the solver had no baseline."""
+def _parameter_label(optimization_history: Optional[List[Dict[str, Any]]]) -> str:
+    """
+    'Parameter (optimiert)' only if the optimizer actually changed parameters (a later round
+    used other values than the first one); otherwise the values are the audited ones.
+    """
+    rounds = [r for r in (optimization_history or []) if isinstance(r, dict)]
+    if len(rounds) > 1:
+        first = rounds[0].get("parameters") or {}
+        if any((r.get("parameters") or {}) != first for r in rounds[1:]):
+            return f"Parameter (optimiert, {len(rounds)} Runden)"
+    return "Parameter (auditiert)"
+
+
+def _result_lines(simulator_output, validation: Any = None) -> str:
+    """
+    Metric (with unit) and gain for the prompt; the gain is n/a when the solver had no
+    baseline and flagged as implausible when it failed the validator's gain-sanity check.
+    """
     spec = getattr(simulator_output, "metric_spec", None) or {}
     unit = getattr(simulator_output, "metric_unit", None) or ""
     metric_name = spec.get("label") or "Primärmetrik"
@@ -21,8 +40,15 @@ def _result_lines(simulator_output) -> str:
     baseline = getattr(simulator_output, "baseline_metric_value", None)
     if baseline is not None:
         lines += f"\n        Vergleichsdesign (Baseline): {float(baseline):.6g} {unit}".rstrip()
+    sim_dict = simulator_output.model_dump() if hasattr(simulator_output, "model_dump") else dict(getattr(simulator_output, "__dict__", {}))
     if getattr(simulator_output, "gain_basis", None) == "none":
         lines += "\n        Effizienz (Performance Gain): n/a (kein Vergleichsdesign definiert, nicht berechenbar)"
+    elif gain_implausible(sim_dict, validation):
+        lines += (
+            f"\n        Effizienz (Performance Gain): IMPLAUSIBEL (berechnet {float(simulator_output.performance_gain_pct):.6g} %, "
+            "die Plausibilitätsprüfung des Validators ist fehlgeschlagen). Nenne diesen Wert NICHT als erreichten Vorteil; "
+            "weise darauf hin, dass Metrik bzw. Vergleichsdesign fehlerhaft sein können und der Gewinn erst experimentell bzw. mit einem besseren Modell bestimmt werden muss."
+        )
     else:
         lines += f"\n        Effizienz (Performance Gain): {float(simulator_output.performance_gain_pct):.2f}%"
     return lines
@@ -37,10 +63,14 @@ class Synthesizer:
         miner_output: MinerOutput,
         auditor_output: AuditorOutput,
         simulator_output: SimulatorOutput,
-        user_query: str
+        user_query: str,
+        optimization_history: Optional[List[Dict[str, Any]]] = None,
+        validation_result: Any = None,
     ) -> SynthesisReport:
         """
         Generiert einen umfassenden kommerziellen und praktischen Synthese-Report.
+        optimization_history bestimmt, ob die Parameter als optimiert oder auditiert
+        bezeichnet werden; validation_result markiert einen unplausiblen Gewinn.
         """
         from google.genai import types
 
@@ -54,12 +84,12 @@ class Synthesizer:
         Name: {miner_output.design_name}
         Natürliches Vorbild: {miner_output.inspiration_source}
         Physikalischer Mechanismus: {miner_output.physical_mechanism}
-        Parameter (optimiert): {auditor_output.audited_parameters_dict}
+        {_parameter_label(optimization_history)}: {auditor_output.audited_parameters_dict}
         Simulations-Koeffizient: {auditor_output.simulation_coefficient}
 
         ### Simulations- und Testergebnisse
         Lösungsmethode: {simulator_output.solver_method}
-        {_result_lines(simulator_output)}
+        {_result_lines(simulator_output, validation_result)}
         Auditor Notizen (Belastung): {auditor_output.audit_notes}
 
         Erstelle basierend auf diesen Daten einen detaillierten Bericht, der für einen Industriepartner die praktische Umsetzung beschreibt. Halte dich an den informellen 'du'-Stil auf Deutsch. Liefere präzise, ingenieurwissenschaftliche Beschreibungen für jedes Feld im geforderten JSON-Schema.
