@@ -47,6 +47,9 @@ MODEL_STAGES = (
     "script_generator",
     "test_generator",
     "chat",
+    # Idea-space explorer (vectornaut/explorer): candidate generator and business critic.
+    "explorer",
+    "critic",
 )
 
 # Thinking levels accepted by google-genai's ThinkingConfig.thinking_level.

@@ -16,11 +16,23 @@ report to <session>/report.md.
 
 Runtime data (history, saved models, generated scripts) goes to <session>/data, so
 reruns reuse the same cached models and stay reproducible.
+
+The idea-space explorer (vectornaut/explorer) can be driven the same way:
+
+    python -m vectornaut.llm_replay --explorer --session runs/x --profile business \
+        --query "..." --rounds 2 --batch 4 [--seed 0]
+
+Here --rounds counts explorer rounds (pipeline optimization rounds per materials
+candidate: --opt-rounds). Every invocation rebuilds the explorer archive from scratch in
+<session>/data/explorer, so the search orders, and therefore the prompts, are the same
+on each rerun. The result summary goes to <session>/result.json, the cumulative map
+report to <session>/report.md and all reports to <session>/explorer_reports/.
 """
 import argparse
 import hashlib
 import json
 import os
+import shutil
 import sys
 from contextlib import ExitStack
 from typing import Any, Dict, Optional
@@ -35,6 +47,11 @@ CLIENT_MODULES = (
     "vectornaut.synthesizer",
     "vectornaut.script_generator",
     "vectornaut.test_generator",
+)
+# Explorer modules that obtain a client through get_client() (generator and business critic).
+EXPLORER_CLIENT_MODULES = (
+    "vectornaut.explorer.generator",
+    "vectornaut.explorer.profiles.business",
 )
 
 
@@ -168,15 +185,92 @@ def run_session(session_dir: str, query: str, epochs: int, rounds: int) -> Dict[
     return status
 
 
+def run_explorer_session(
+    session_dir: str,
+    profile: str,
+    query: str,
+    rounds: int,
+    batch: int,
+    seed: int = 0,
+    weights: Optional[str] = None,
+    epochs: int = 40,
+    opt_rounds: int = 1,
+    use_critic: bool = True,
+) -> Dict[str, Any]:
+    """Explorer run whose model calls (generator, critic, pipeline stages) are answered from the session."""
+    session_dir = os.path.abspath(session_dir)
+    os.makedirs(session_dir, exist_ok=True)
+    client = ReplayClient(session_dir)
+    data_dir = os.path.join(session_dir, "data")
+    # Deterministic replays: the archive is rebuilt from the recorded answers on every invocation.
+    shutil.rmtree(os.path.join(data_dir, "explorer"), ignore_errors=True)
+    shutil.rmtree(os.path.join(session_dir, "explorer_reports"), ignore_errors=True)
+    env = {
+        "VECTORNAUT_DATA_DIR": data_dir,
+        "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY") or "replay-session",
+    }
+
+    from vectornaut.explorer.profiles import get_profile
+    from vectornaut.explorer.run import ExplorerRunner
+    from vectornaut.explorer.strategies import parse_weights
+
+    summary = None
+    with ExitStack() as stack:
+        stack.enter_context(mock.patch.dict(os.environ, env))
+        for module in CLIENT_MODULES + EXPLORER_CLIENT_MODULES:
+            stack.enter_context(mock.patch(f"{module}.get_client", return_value=client))
+        try:
+            runner = ExplorerRunner(
+                get_profile(profile), query, seed=seed, weights=parse_weights(weights), mock=False,
+                client=client, out_dir=os.path.join(session_dir, "explorer_reports"), epochs=epochs,
+                opt_rounds=opt_rounds, use_critic=use_critic,
+            )
+            summary = runner.run(rounds, batch)
+            status = {"status": "complete", "calls": client.calls, "elites": summary["elites"]}
+        except NeedResponse as need:
+            status = {"status": "needs_response", "index": need.index, "request": need.request_path, "calls": client.calls}
+        except Exception as exc:
+            status = {"status": "failed", "error": f"{type(exc).__name__}: {exc}", "calls": client.calls}
+
+    with open(os.path.join(session_dir, "calls.json"), "w", encoding="utf-8") as f:
+        json.dump(client.log, f, indent=2, ensure_ascii=False)
+    if summary is not None:
+        with open(os.path.join(session_dir, "result.json"), "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2, ensure_ascii=False, default=str)
+        with open(summary["reports"]["map"], "r", encoding="utf-8") as src:
+            report_md = src.read()
+        with open(os.path.join(session_dir, "report.md"), "w", encoding="utf-8") as f:
+            f.write(report_md)
+    return status
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--session", required=True, help="Session folder holding requests/ and responses/")
     parser.add_argument("--query", required=True, help="Design prompt for the pipeline")
-    parser.add_argument("--epochs", type=int, default=200)
-    parser.add_argument("--rounds", type=int, default=2, help="Maximum optimization rounds")
+    parser.add_argument("--epochs", type=int, default=None, help="PINN epochs (default 200; explorer: 40)")
+    parser.add_argument("--rounds", type=int, default=2,
+                        help="Maximum optimization rounds (with --explorer: explorer rounds)")
+    explorer = parser.add_argument_group("explorer (with --explorer)")
+    explorer.add_argument("--explorer", action="store_true", help="Drive the idea-space explorer instead of one pipeline run")
+    explorer.add_argument("--profile", choices=("materials", "business"), default=None)
+    explorer.add_argument("--batch", type=int, default=4, help="Candidates per explorer round")
+    explorer.add_argument("--seed", type=int, default=0)
+    explorer.add_argument("--strategy-weights", default=None)
+    explorer.add_argument("--opt-rounds", type=int, default=1, help="Pipeline optimization rounds per materials candidate")
+    explorer.add_argument("--no-critic", action="store_true", help="Business profile: skip the critic call")
     args = parser.parse_args(argv)
 
-    status = run_session(args.session, args.query, args.epochs, args.rounds)
+    if args.explorer:
+        if not args.profile:
+            parser.error("--explorer needs --profile")
+        status = run_explorer_session(
+            args.session, args.profile, args.query, args.rounds, args.batch, seed=args.seed,
+            weights=args.strategy_weights, epochs=args.epochs or 40, opt_rounds=args.opt_rounds,
+            use_critic=not args.no_critic,
+        )
+    else:
+        status = run_session(args.session, args.query, args.epochs or 200, args.rounds)
     print(json.dumps(status, ensure_ascii=False))
     return 0 if status["status"] in ("complete", "rejected", "needs_response") else 1
 

@@ -72,6 +72,11 @@ class PipelineRunRequest(BaseModel):
     override_parameters: Optional[Dict[str, float]] = None
     previous_miner_output: Optional[Any] = None
     max_optimization_rounds: int = 3
+    # Pre-made concept (MinerConceptOutput) evaluated instead of mining one in the first
+    # concept attempt; the formulator and all later stages run as usual (used by the explorer).
+    concept: Optional[Any] = None
+    # 1 evaluates exactly one concept: a failure raises ConceptsExhaustedError instead of re-mining.
+    max_concept_attempts: int = 3
 
 
 class PipelineRunner:
@@ -303,7 +308,7 @@ class PipelineRunner:
                 if stage not in live_stages:
                     live_stages.append(stage)
 
-        max_concept_attempts = 3
+        max_concept_attempts = max(1, int(req.max_concept_attempts or 1))
         concept_failed = False
         concept_attempt = 1
 
@@ -316,7 +321,10 @@ class PipelineRunner:
                 miner_output = req.previous_miner_output
                 print(f"[*] Reusing cached concept: {miner_output.design_name}")
             else:
-                if effective_mock:
+                if req.concept is not None and concept_attempt == 1:
+                    concept = req.concept
+                    print(f"[*] Evaluating supplied concept: {concept.design_name}")
+                elif effective_mock:
                     concept = self.miner.mock_mine_design(req.query)
                     if concept_attempt > 1:
                         concept.design_name = f"Alternative {concept.design_name} (Attempt {concept_attempt})"

@@ -85,6 +85,16 @@ Runtime data (history, reports, eval runs, generated scripts/tests, saved models
 
 ---
 
+## 🧭 Idea-Space Explorer (`vectornaut/explorer/`, see `docs/EXPLORER.md`)
+
+* **What**: a quality-diversity (MAP-Elites style) archive over fixed descriptor axes per profile. Each concept is placed in one cell; the best per cell is kept across runs, and every proposal (also failed/rejected ones) is counted, so the report shows where ideas are *proposed* vs. where they *work*.
+* **Search orders instead of "be creative"**: `refine` (mutate an elite), `fill_gap` (empty cells next to good ones, low proposal density first), `extrapolate` (follow the score trend one step beyond the explored edge of an ordinal axis), `combine` (mix two distant elites), `explore` (random unvisited cell), `seed` (cold start). Deterministic for a seed.
+* **Profiles**: `materials` (candidates run through the normal pipeline via the new `PipelineRunRequest.concept` hook with `max_concept_attempts=1`; score = validator validity + simulated gain, or the candidate's estimate marked "estimated, not simulated") and `business` (deterministic unit-economics model on the model's own estimates, sanity flags, optional critic call that refutes and corrects the inputs; a brainstorming aid, not validation).
+* **Run**: `python -m vectornaut.explorer --profile materials|business --query "..." --rounds 3 --batch 6 [--mock]`; by hand: `python -m vectornaut.llm_replay --explorer --profile ... --session DIR ...`. Archive and reports under `VECTORNAUT_DATA_DIR/explorer/<profile>/`. New model stages `explorer` and `critic`.
+* **Status**: offline tests only (`tests/test_explorer_*.py`); no live run yet. Live materials scores depend on the pending metric/baseline fixes (finding 1–2 in `docs/LIVE_PATH_FINDINGS.md`).
+
+---
+
 ## ⚠️ Known Limitations & Open Issues
 
 * **Security**: generated scripts run as plain subprocesses on the host, and the API has no authentication. Fine for local use; do not expose publicly before adding auth and a sandboxed worker (see `docs/OPERATIONS.md`).

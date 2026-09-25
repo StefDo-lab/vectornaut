@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+"""
+Response schemas of the explorer's model calls (generator and business critic).
+
+Like the pipeline schemas in ``vectornaut.config`` they avoid free-form dicts (Gemini
+response schemas handle lists of objects better), so descriptors are a list of
+``{axis, value}`` pairs. Most candidate fields have defaults so that a candidate that
+only reports ``target_feasible=false`` still parses.
+"""
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
+from vectornaut.config import ParameterProposal
+
+
+class DescriptorAssignment(BaseModel):
+    axis: str = Field(description="Axis name, exactly as listed in the vocabulary")
+    value: str = Field(description="One allowed value of that axis, exactly as listed")
+
+
+class BackOfEnvelope(BaseModel):
+    quantity: str = Field(description="What is estimated, e.g. 'wall shear reduction vs smooth wall' or 'year-3 revenue'")
+    formula: str = Field(description="The formula or chain of reasoning with the numbers used, e.g. 'tau_slip/tau_0 = 1/(1+b/h) = 1/(1+2e-6/1e-5)'")
+    value: float = Field(description="The resulting number")
+    unit: str = Field(description="Unit of the value, e.g. '%', 'EUR', 'K'")
+
+
+class CandidateBase(BaseModel):
+    order_id: str = Field(description="The order_id of the search order this candidate answers")
+    title: str = Field(default="", description="Short, specific name of the concept")
+    summary: str = Field(default="", description="Two or three sentences: what it is and why it should work")
+    descriptors: List[DescriptorAssignment] = Field(default_factory=list, description="One entry per axis, describing the concept honestly (even if it misses the target cell)")
+    back_of_envelope: Optional[BackOfEnvelope] = Field(default=None, description="A rough quantitative estimate of the main benefit")
+    main_risk: str = Field(default="", description="The single most likely reason this concept fails")
+    novelty_vs_known: str = Field(default="", description="The closest known solution and what is new compared to it")
+    target_feasible: bool = Field(default=True, description="False if no concept can exist in the target cell (physically or commercially impossible); then explain in infeasibility_reason and leave the concept fields empty")
+    infeasibility_reason: Optional[str] = Field(default=None, description="If target_feasible is false: why the target cell cannot contain a working concept")
+
+
+class MaterialsCandidate(CandidateBase):
+    inspiration_source: str = Field(default="", description="The natural or technical system the idea is borrowed from")
+    domain: str = Field(default="", description="Scientific domain, e.g. Fluid Dynamics, Thermodynamics, Structural Mechanics")
+    physical_mechanism: str = Field(default="", description="The physical mechanism and how it maps onto the request")
+    parameters: List[ParameterProposal] = Field(default_factory=list, description="Physical parameters with SI values and plausible bounds, enough to build a 1D/2D steady model")
+
+
+class UnitEconomicsInputs(BaseModel):
+    monthly_revenue_per_customer: float = Field(description="Average revenue per active customer per month, EUR (for one-off sales: price times purchases per month)")
+    gross_margin: float = Field(description="Gross margin as a fraction 0..1 (revenue minus cost of goods/service delivery)")
+    cac: float = Field(description="Customer acquisition cost per new customer, EUR")
+    monthly_churn: float = Field(description="Fraction of active customers lost per month, 0..1 (for repeat purchases: 1 - monthly repeat probability)")
+    addressable_customers: float = Field(description="Number of customers that could buy this in the target market")
+    reachable_share_3y: float = Field(description="Fraction of addressable customers that are active customers after 3 years, 0..1")
+    fixed_costs_per_year: float = Field(description="Fixed operating costs per year (team, rent, tooling), EUR")
+    upfront_capex: float = Field(description="One-off investment before launch (development, hardware, certification), EUR")
+
+
+class BusinessCandidate(CandidateBase):
+    value_proposition: str = Field(default="", description="What the customer gets and pays for")
+    target_customer: str = Field(default="", description="Who exactly buys it")
+    advantage_mechanism: str = Field(default="", description="Why this is cheaper/faster/better than the status quo, in mechanism terms")
+    inputs: Optional[UnitEconomicsInputs] = Field(default=None, description="Your estimates of the unit-economics inputs")
+    input_assumptions: str = Field(default="", description="One sentence per input on where the estimate comes from")
+
+
+class ExplorerCandidateBatch(BaseModel):
+    function_analysis: str = Field(default="", description="Step 1: the functions the request needs, independent of any solution")
+    mechanism_classes_considered: List[str] = Field(default_factory=list, description="Step 2: mechanism classes that could deliver those functions")
+    analogues_considered: List[str] = Field(default_factory=list, description="Step 3: analogues from distant fields that were considered")
+
+
+class MaterialsCandidateBatch(ExplorerCandidateBatch):
+    candidates: List[MaterialsCandidate] = Field(default_factory=list, description="Step 4: exactly one candidate per search order")
+
+
+class BusinessCandidateBatch(ExplorerCandidateBatch):
+    candidates: List[BusinessCandidate] = Field(default_factory=list, description="Step 4: exactly one candidate per search order")
+
+
+class CriticReview(BaseModel):
+    order_id: str = Field(description="order_id of the reviewed candidate")
+    verdict: str = Field(description="'survives', 'weakened' or 'refuted'")
+    killer_risks: List[str] = Field(default_factory=list, description="Risks that could kill the business, most severe first")
+    adjusted_inputs: Optional[UnitEconomicsInputs] = Field(default=None, description="Your corrected unit-economics inputs (all fields), or null if the original estimates are plausible")
+    notes: str = Field(default="", description="Why the inputs were adjusted")
+
+
+class CriticBatch(BaseModel):
+    reviews: List[CriticReview] = Field(default_factory=list, description="Exactly one review per candidate")
