@@ -8,6 +8,7 @@ from scipy.integrate import solve_bvp
 from scipy.interpolate import interp1d
 from typing import Dict, List, Tuple, Any
 
+from .parsing import escape_keywords, safe_symbol_name
 from .pinn_model import GenericPINN
 
 
@@ -29,7 +30,17 @@ def solve_analytical(
     sol = sp.dsolve(eq, y_func)
     sol_expr = sol.rhs
     
-    constants = [s for s in sol_expr.free_symbols if s.name.startswith('C')]
+    # Integration constants are the symbols dsolve introduced (C1, C2, ...), i.e. those not
+    # already in the equation. Parameters such as 'Cf' or 'C_p' are not constants. Sorted so
+    # that the order passed to sp.solve does not depend on set iteration (PYTHONHASHSEED).
+    constants = sorted(sol_expr.free_symbols - eq.free_symbols, key=lambda s: (len(s.name), s.name))
+    known_symbols = set(sym_dict.values())
+    for i, c in enumerate(constants):
+        if c in known_symbols:
+            # dsolve reused the name of a parameter that only appears in the BCs (e.g. 'C1')
+            renamed = sp.Dummy(c.name)
+            sol_expr = sol_expr.subs(c, renamed)
+            constants[i] = renamed
     param_subs = {sym_dict[k]: v for k, v in params.items() if k in sym_dict}
     
     bc_eqs = []
@@ -47,9 +58,9 @@ def solve_analytical(
                 "deriv_func": lambda val: sol_expr.diff(x).subs(x, float(sp.sympify(val).subs(param_subs))),
             }
             for p_name, p_sym in sym_dict.items():
-                bc_local_ns[p_name] = p_sym
+                bc_local_ns[safe_symbol_name(p_name)] = p_sym
             
-            expr = sp.parse_expr(p_str, local_dict=bc_local_ns, transformations=(standard_transformations + (convert_xor,)))
+            expr = sp.parse_expr(escape_keywords(p_str), local_dict=bc_local_ns, transformations=(standard_transformations + (convert_xor,)))
             return expr
             
         lhs_eval = evaluate_bc_part(bc_lhs)
@@ -135,9 +146,9 @@ def solve_scipy_bvp(
                 "deriv_func": deriv_func_handler,
             }
             for p_name, p_sym in sym_dict.items():
-                local_bc_ns[p_name] = p_sym
+                local_bc_ns[safe_symbol_name(p_name)] = p_sym
                 
-            expr = sp.parse_expr(p_str, local_dict=local_bc_ns, transformations=(standard_transformations + (convert_xor,)))
+            expr = sp.parse_expr(escape_keywords(p_str), local_dict=local_bc_ns, transformations=(standard_transformations + (convert_xor,)))
             return expr.subs(param_subs)
             
         lhs_expr = convert_bc_part_to_sym(bc_lhs)
@@ -168,11 +179,61 @@ def solve_scipy_bvp(
         
     f_interp = interp1d(res.x, res.y[0], kind='cubic', fill_value='extrapolate')
     
-    # Estimate derivative at domain_min via finite difference
-    dx = 1e-5
-    deriv_val = float((f_interp(domain_min + dx) - f_interp(domain_min)) / dx)
+    # Derivative at domain_min: the second component of the first-order system is y'.
+    # (A fixed finite-difference step would span the whole domain for thin films.)
+    deriv_val = float(res.sol(domain_min)[1])
     
     return f_interp, deriv_val
+
+def _pinn_output_scaling(
+    bc_residuals: List[sp.Expr],
+    value_syms: Tuple[sp.Symbol, sp.Symbol],
+    deriv_syms: Tuple[sp.Symbol, sp.Symbol],
+    length: float,
+    rhs_func: Any = None,
+    x_grid: Any = None
+) -> Tuple[float, float]:
+    """
+    Output shift and scale for the 1D PINN from the linear single-point BCs:
+    shift = mean Dirichlet value, scale = max(1, half the Dirichlet range, |Neumann value| * length,
+    max|u''| * length**2 / 8). The last term is the Poiseuille-type forcing scale, with u'' taken
+    from rhs_func(x_grid, u=shift, u'=0). The floor of 1 keeps the unscaled network for fields
+    of order one or smaller.
+    """
+    dirichlet_vals, neumann_vals = [], []
+    for res in bc_residuals:
+        syms = res.free_symbols
+        if len(syms) != 1:
+            continue
+        sym = next(iter(syms))
+        try:
+            coeff = res.diff(sym)
+            if coeff.free_symbols or coeff == 0:
+                continue  # nonlinear in the boundary value
+            val = float(-res.subs(sym, 0) / coeff)
+        except Exception:
+            continue
+        if not np.isfinite(val):
+            continue
+        if sym in value_syms:
+            dirichlet_vals.append(val)
+        elif sym in deriv_syms:
+            neumann_vals.append(val)
+    shift = float(np.mean(dirichlet_vals)) if dirichlet_vals else 0.0
+    candidates = [1.0]
+    if dirichlet_vals:
+        candidates.append(0.5 * (max(dirichlet_vals) - min(dirichlet_vals)))
+    candidates += [abs(g) * abs(length) for g in neumann_vals]
+    if rhs_func is not None and x_grid is not None:
+        try:
+            with np.errstate(all="ignore"):
+                forcing = np.abs(np.asarray(rhs_func(x_grid, shift, 0.0), dtype=float))
+            if forcing.size and np.all(np.isfinite(forcing)):
+                candidates.append(float(np.max(forcing)) * length ** 2 / 8.0)
+        except Exception:
+            pass
+    scale = max(c for c in candidates if np.isfinite(c))
+    return shift, scale
 
 def solve_pytorch_pinn(
     pde_rhs: sp.Expr,
@@ -198,7 +259,9 @@ def solve_pytorch_pinn(
     
     Y0 = sp.Symbol('Y0')
     Y1 = sp.Symbol('Y1')
-    expr_for_Y = rhs_substituted.subs({y_func: Y0, y_func.diff(x): Y1})
+    # evalf folds numeric sub-expressions (pi**2, exp(-2)) into floats; otherwise the torch
+    # printer emits pow(float, int) / exp(int), which torch.pow / torch.exp reject.
+    expr_for_Y = rhs_substituted.subs({y_func: Y0, y_func.diff(x): Y1}).evalf()
     
     f_pde_rhs = sp.lambdify((x, Y0, Y1), expr_for_Y, 'torch')
     
@@ -234,16 +297,27 @@ def solve_pytorch_pinn(
                 "deriv_func": deriv_func_handler,
             }
             for p_name, p_sym in sym_dict.items():
-                local_bc_ns[p_name] = p_sym
+                local_bc_ns[safe_symbol_name(p_name)] = p_sym
                 
-            expr = sp.parse_expr(p_str, local_dict=local_bc_ns, transformations=(standard_transformations + (convert_xor,)))
+            expr = sp.parse_expr(escape_keywords(p_str), local_dict=local_bc_ns, transformations=(standard_transformations + (convert_xor,)))
             return expr.subs(param_subs)
             
         lhs_expr = convert_bc_part_to_sym(bc_lhs)
         rhs_expr = convert_bc_part_to_sym(bc_rhs)
-        bc_residuals.append(lhs_expr - rhs_expr)
+        bc_residuals.append(sp.sympify(lhs_expr - rhs_expr).evalf())
         
     bc_funcs_pytorch = [sp.lambdify((Ya0, Ya1, Yb0, Yb1), res, 'torch') for res in bc_residuals]
+    
+    # Scale the network output to the boundary values and the forcing (the 1D analogue of the
+    # 2D PINN's output-bias initialisation), so that e.g. a 260-310 K field is learned in O(1) units.
+    output_shift, output_scale = _pinn_output_scaling(
+        bc_residuals, (Ya0, Yb0), (Ya1, Yb1), domain_max - domain_min,
+        rhs_func=sp.lambdify((x, Y0, Y1), expr_for_Y, 'numpy'),
+        x_grid=np.linspace(domain_min, domain_max, 100),
+    )
+    if output_shift != 0.0 or output_scale != 1.0:
+        print(f"[*] 1D PINN output scaling: u = {output_shift:.6g} + {output_scale:.6g} * net({x.name})")
+        model.set_output_scaling(output_shift, output_scale)
     
     loss_history = []
     x_pde = torch.linspace(domain_min, domain_max, 100, requires_grad=True).view(-1, 1)

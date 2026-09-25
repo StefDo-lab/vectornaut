@@ -1,7 +1,34 @@
+import keyword
+import math
 import re
 import sympy as sp
 from sympy.parsing.sympy_parser import standard_transformations, convert_xor
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
+
+
+# Python keywords that can show up as parameter names (e.g. the slip length `lambda` in
+# the schema example "u(0) = lambda * du_dy(0)"). sp.parse_expr evaluates Python code,
+# so these names are renamed token-wise before parsing. Operator-like keywords and
+# True/False/None keep their Python meaning.
+_OPERATOR_KEYWORDS = {"and", "or", "not", "is", "in", "if", "else", "True", "False", "None"}
+_RENAMED_KEYWORDS = frozenset(k for k in keyword.kwlist if k not in _OPERATOR_KEYWORDS)
+
+
+def safe_symbol_name(name: str) -> str:
+    """
+    Returns the identifier under which the parameter `name` is visible to sp.parse_expr
+    (see escape_keywords). Non-keyword names are returned unchanged.
+    """
+    # The prefix keeps the escaped name distinct from user parameters such as 'lambda_'.
+    return f"_kw_{name}" if name in _RENAMED_KEYWORDS else name
+
+
+def escape_keywords(expr_str: str) -> str:
+    """
+    Renames Python-keyword identifiers (e.g. 'lambda') in an expression string so that it
+    can be passed to sp.parse_expr. Use together with safe_symbol_name for the local_dict keys.
+    """
+    return re.sub(r"\b[A-Za-z_]\w*\b", lambda m: safe_symbol_name(m.group(0)), expr_str)
 
 
 def parse_equation_and_bcs(
@@ -30,6 +57,9 @@ def parse_equation_and_bcs(
         s = s.replace(f"{y_name}'({x_name})", f"diff({y_name}({x_name}), {x_name})")
         s = s.replace(f"{y_name}''", f"diff({y_name}({x_name}), {x_name}, 2)")
         s = s.replace(f"{y_name}'", f"diff({y_name}({x_name}), {x_name})")
+        # A bare dependent variable ("-k**2 * u") means u(x): the name itself is bound to
+        # the undefined function class below, which cannot be used in arithmetic.
+        s = re.sub(rf"\b{re.escape(y_name)}\b(?!\s*\()", f"{y_name}({x_name})", s)
         return s
 
     # Parse LHS and RHS
@@ -42,10 +72,10 @@ def parse_equation_and_bcs(
     
     local_ns = {y_name: sp.Function(y_name), x_name: x}
     for p_name in params:
-        local_ns[p_name] = sym_dict[p_name]
+        local_ns[safe_symbol_name(p_name)] = sym_dict[p_name]
         
-    lhs_expr = sp.parse_expr(lhs_str, local_dict=local_ns, transformations=(standard_transformations + (convert_xor,)))
-    rhs_expr = sp.parse_expr(rhs_str, local_dict=local_ns, transformations=(standard_transformations + (convert_xor,)))
+    lhs_expr = sp.parse_expr(escape_keywords(lhs_str), local_dict=local_ns, transformations=(standard_transformations + (convert_xor,)))
+    rhs_expr = sp.parse_expr(escape_keywords(rhs_str), local_dict=local_ns, transformations=(standard_transformations + (convert_xor,)))
     
     # Rearrange equation so that d2y/dx2 is on the LHS: d2y/dx2 = RHS_new
     d2y = y_func.diff(x, 2)
@@ -117,23 +147,83 @@ def auto_detect_and_inject_missing_params(
         
     return updated_params
 
-def get_domain_bounds(bcs_list: List[str], params: Dict[str, float] = None) -> Tuple[float, float]:
+# Function names that can appear in boundary-condition values (e.g. "c(1) = exp(-2)")
+# and must not be mistaken for the dependent variable evaluated at a boundary point.
+# Case-sensitive, so that dependent variables such as 'Gamma' or 'Max' still count.
+_MATH_FUNCTION_NAMES = frozenset({
+    "exp", "log", "ln", "log10", "sqrt", "abs", "Abs", "sin", "cos", "tan", "cot", "sec", "csc",
+    "sinh", "cosh", "tanh", "coth", "asin", "acos", "atan", "atan2", "arcsin", "arccos", "arctan",
+    "asinh", "acosh", "atanh", "arcsinh", "arccosh", "arctanh", "erf", "erfc", "gamma",
+    "Heaviside", "heaviside", "sign", "max", "min", "Max", "Min", "floor", "ceiling", "ceil",
+    "pow", "diff", "besselj", "bessely", "besseli", "besselk", "float", "int",
+})
+
+# name, optional primes, and a parenthesised argument without nested parentheses
+_BC_CALL_PATTERN = re.compile(r"(?<![\w.])([A-Za-z_]\w*)\s*'*\s*\(([^()]*)\)")
+_NUMBER_PATTERN = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+
+
+def _evaluate_bc_location(arg_str: str) -> Optional[float]:
+    """Returns the numeric value of a BC location such as '0', '1e-05' or '0.5*2', else None."""
+    arg_str = arg_str.strip()
+    if not arg_str:
+        return None
+    if _NUMBER_PATTERN.fullmatch(arg_str):
+        return float(arg_str)
+    try:
+        val = sp.parse_expr(escape_keywords(arg_str), transformations=(standard_transformations + (convert_xor,)))
+        if not (isinstance(val, sp.Expr) and val.is_number):
+            return None
+        val = float(val)
+    except Exception:
+        return None
+    return val if math.isfinite(val) else None
+
+
+def get_domain_bounds(
+    bcs_list: List[str],
+    params: Dict[str, float] = None,
+    dependent_var: Optional[str] = None
+) -> Tuple[float, float]:
     """
     Extracts the min and max domain coordinates evaluated in boundary conditions.
+    Only evaluations of the dependent variable or its derivatives count as BC locations:
+    with dependent_var (e.g. 'u') these are u(..), u'(..), u''(..), du_d<x>(..) and
+    d2u_d<x>2(..); without it, any call except known math functions (exp(-2), sin(1), ...).
     """
-    bc_points = []
+    resolved_bcs = []
     for bc in bcs_list:
         resolved_bc = bc
         if params:
             for p_name in sorted(params.keys(), key=len, reverse=True):
                 p_val = params[p_name]
-                resolved_bc = re.sub(rf"\b{p_name}\b", str(p_val), resolved_bc)
-        # Matches patterns like u(0) or T(1.5) or u'(0.01) or u(0.0001) or scientific notation
-        matches = re.findall(r"[a-zA-Z]+\'?\(([-+]?\d+\.?\d*(?:[eE][-+]?\d+)?)\)", resolved_bc)
-        for m in matches:
-            bc_points.append(float(m))
+                resolved_bc = re.sub(rf"\b{re.escape(p_name)}\b", str(p_val), resolved_bc)
+        resolved_bcs.append(resolved_bc)
+
+    def collect_points(is_bc_function):
+        points = []
+        for resolved_bc in resolved_bcs:
+            # Matches patterns like u(0) or T(1.5) or u'(0.01) or du_dy(0.0001) or scientific notation
+            for name, arg in _BC_CALL_PATTERN.findall(resolved_bc):
+                if not is_bc_function(name):
+                    continue
+                val = _evaluate_bc_location(arg)
+                if val is not None:
+                    points.append(val)
+        return points
+
+    bc_points = []
+    if dependent_var:
+        dv = re.escape(dependent_var)
+        dependent_pattern = re.compile(rf"(?:{dv}|d2?{dv}_d\w+)")
+        bc_points = collect_points(lambda name: dependent_pattern.fullmatch(name) is not None)
+    if not bc_points:
+        # No dependent variable given (or its name is not used in the BCs)
+        bc_points = collect_points(lambda name: name not in _MATH_FUNCTION_NAMES)
+
     if len(bc_points) >= 2:
         d_min, d_max = min(bc_points), max(bc_points)
-        if abs(d_max - d_min) > 1e-6:
+        # Any finite domain of positive length is valid, including sub-micron films.
+        if math.isfinite(d_min) and math.isfinite(d_max) and d_max > d_min:
             return d_min, d_max
     return 0.0, 1.0
