@@ -262,6 +262,18 @@ _RERUN_SOLVER_WARNINGS = {"numeric_primary_reference_agreement", "solver_pinn_di
 _REFERENCE_SOLVER_METHODS = {"analytical", "scipy", "pinn", "fdm"}
 
 
+def _dynamic_script_result_warnings(simulator: Dict[str, Any]) -> List[tuple[str, str]]:
+    """(check name, detail) for each result warning recorded by the dynamic_script path
+    (noise-level metrics, baseline hard-constraint violations; see solvers/dynamic_script.py)."""
+    sweep = simulator.get("parameter_sweep") or {}
+    warnings = sweep.get("warnings") if isinstance(sweep, dict) else None
+    return [
+        (f"dynamic_script_{item.get('code', 'result_warning')}", str(item.get("message", "")))
+        for item in (warnings or [])
+        if isinstance(item, dict)
+    ]
+
+
 def _score_status(checks: List[ValidationCheck]) -> tuple[str, str, float, str]:
     error_checks = [check for check in checks if check.severity == "error"]
     warning_checks = [check for check in checks if check.severity == "warning"]
@@ -465,6 +477,8 @@ def validate_run_output(
             severity="warning",
             score=0.3,
         )
+        for name, detail in _dynamic_script_result_warnings(simulator):
+            add(name, False, detail, severity="warning", score=0.4)
     elif solver_method in {"analytical", "scipy", "fdm", "mock"}:
         add("solver_method_confidence", True, f"Solver method {solver_method!r} has deterministic validation coverage.", severity="info")
     else:

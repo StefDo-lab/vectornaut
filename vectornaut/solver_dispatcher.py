@@ -123,16 +123,23 @@ def _solve_dynamic_script(
     auditor_output: AuditorOutput,
     epochs: int
 ) -> SimulatorOutput:
+    """
+    Generated-script path. The reported numbers, profile, plot and parameters all come
+    from the baseline run with the audited parameters. The parameter sweep runs only
+    after the generated validation tests passed and is reported separately as a
+    recommendation in ``parameter_sweep`` (never mixed into the headline numbers).
+    """
     from .script_generator import ScriptGenerator
+    from .solvers.dynamic_script import dynamic_plots_dir
     generator = ScriptGenerator()
     design_name = miner_output.design_name or "unknown_design"
     slug = re.sub(r'[^a-zA-Z0-9_]', '', design_name.lower().replace(" ", "_"))
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    plot_relative_dir = os.path.join("static", "plots")
-    os.makedirs(plot_relative_dir, exist_ok=True)
+    plots_dir = dynamic_plots_dir()
+    os.makedirs(plots_dir, exist_ok=True)
     plot_filename = f"plot_{slug}_{timestamp}.png"
-    plot_local_path = os.path.join(plot_relative_dir, plot_filename)
+    plot_local_path = os.path.join(plots_dir, plot_filename)
 
     res = generator.generate_and_execute(
         miner_output=miner_output,
@@ -140,7 +147,17 @@ def _solve_dynamic_script(
         epochs=epochs,
         plot_png_path=plot_local_path
     )
+    # The parameters the baseline run actually received.
     base_params = _merged_params(auditor_output)
+    params_json_path = res.get("params_json_path")
+    if params_json_path and os.path.exists(params_json_path):
+        with open(params_json_path, "r", encoding="utf-8") as pf:
+            base_params = json.load(pf)
+
+    # Validation first: sweep results are only meaningful for a validated script.
+    (validation_passed, validation_report, validation_tests,
+     test_script_path, test_output_path) = _run_generated_validation(miner_output, auditor_output, res)
+
     parameter_sweep = _dynamic_parameter_sweep(
         miner_output=miner_output,
         auditor_output=auditor_output,
@@ -149,25 +166,31 @@ def _solve_dynamic_script(
         base_result=res,
         slug=slug,
         timestamp=timestamp,
+        skip_reason=None if validation_passed is True else "generated validation tests did not pass",
     )
-    best_sweep = parameter_sweep.get("best") or {}
 
-    # Run test script validation on the fly
-    (validation_passed, validation_report, validation_tests,
-     test_script_path, test_output_path) = _run_generated_validation(miner_output, auditor_output, res)
+    performance_gain = res.get("performance_gain_pct", 0.0)
+    warnings = parameter_sweep.get("warnings") or []
+    if parameter_sweep.get("baseline", {}).get("noise_level"):
+        # A percentage computed from two noise-level values is not a gain.
+        parameter_sweep["raw_performance_gain_pct"] = performance_gain
+        performance_gain = 0.0
+    if warnings:
+        lines = "\n".join(f"- ⚠️ {w.get('message')}" for w in warnings)
+        validation_report = f"{validation_report or ''}\n\n### Hinweise zum Ergebnis\n{lines}"
 
     return SimulatorOutput(
         solver_method="dynamic_script",
         epochs_trained=0,
         final_loss=res.get("relative_error", 0.0),
         loss_history=[],
-        performance_gain_pct=best_sweep.get("performance_gain_pct", res.get("performance_gain_pct", 0.0)),
-        relative_error=best_sweep.get("relative_error", res.get("relative_error", 0.0)),
+        performance_gain_pct=performance_gain,
+        relative_error=res.get("relative_error", 0.0),
         sample_points=res.get("sample_points", []),
         solution_primary=res.get("solution_primary", []),
         solution_reference=res.get("solution_reference", []),
-        primary_metric_value=best_sweep.get("primary_metric_value", res.get("primary_metric_value", 0.0)),
-        reference_metric_value=best_sweep.get("reference_metric_value", res.get("reference_metric_value", 0.0)),
+        primary_metric_value=res.get("primary_metric_value", 0.0),
+        reference_metric_value=res.get("reference_metric_value", 0.0),
         custom_plot_url=f"/plots/{plot_filename}",
         validation_passed=validation_passed,
         validation_report=validation_report,
@@ -176,7 +199,7 @@ def _solve_dynamic_script(
         params_json_path=res.get("params_json_path"),
         test_script_path=test_script_path,
         test_output_path=test_output_path,
-        execution_mode=res.get("execution_mode", "generated_python_subprocess"),
+        execution_mode=res.get("execution_mode", "generated_python_sandboxed_subprocess"),
         objective_metric=parameter_sweep.get("objective"),
         parameter_sweep=parameter_sweep
     )

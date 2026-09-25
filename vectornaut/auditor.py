@@ -218,6 +218,7 @@ class Auditor:
            - lower_is_better: true if the raw primary metric is a loss/risk/stress/friction metric.
            - acceptance_threshold: minimum acceptable score for maximize, maximum acceptable score for minimize.
            - hard_constraints: include relative error, finite outputs, parameter bounds, and any domain-specific safety limits.
+           - design_variables: names of the audited parameters that are free design choices (geometry, material) and may be varied by sweeps/optimization; exclude operating conditions, loads and environment (e.g. heat flux, pulse duration, inlet velocity, ambient temperature).
 
          8. Perform a structural and material stress check:
             - Identify likely operational stresses and load conditions from the user query (e.g. pressure, compression, bending, friction, shear, thermal load).

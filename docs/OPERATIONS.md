@@ -78,6 +78,25 @@ Reading the results (`model_eval.md`, full data in `model_eval.json`):
 - `--mock` results do not measure any model: every stage returns the canned riblet or plastron concept (1D, PINN, audit always passes), so all configs score the same. Use mock mode only to check the harness and the deterministic part of the pipeline.
 - The scores are only as good as the expectations: parameter ranges are deliberately wide (orders of magnitude), and a range that matches no parameter name is skipped.
 
+## Generated-script sandbox
+
+The `dynamic_script` solver path runs model-written Python: the solver script, its parameter-sweep variants and the validation test module. All of them go through `vectornaut/sandbox.py` (`run_generated_script`):
+
+- **Static pre-check** (`check_generated_code`): scripts importing network, process or FFI modules (`socket`, `ssl`, `requests`, `urllib`, `http`, `ftplib`, `smtplib`, `ctypes`, `subprocess`, `importlib`, ...) or calling `os.system`/`os.popen`/`os.exec*`/`os.spawn*`/`os.fork`/`os.kill`/`os.setsid`, `shutil.rmtree`, `exec`, `eval`, `compile`, `__import__` are rejected before execution. The rejection goes back to the model through the normal self-correction loop (3 attempts).
+- **Test contract**: the validation test module no longer starts the solver itself. A trusted runner (`vectornaut/generated_test_runner.py`) imports the module, provides `from solver_harness import run_solver, nominal_params, is_finite_number`, runs the `unittest.TestCase`s and derives pass/fail from the unittest result; the module's own claims are ignored. An import error or a module without tests triggers self-correction; failing tests do not (they are the validation result).
+- **Result contract**: a solver run with exit code 0 but `"success": false`, missing fields or non-finite metrics counts as a failure and triggers self-correction.
+- **Environment**: only `PATH`, `LANG`/`LC_ALL`/`LC_CTYPE`, `TZ` (plus `SYSTEMROOT`/`WINDIR`/... on Windows) are passed through; `HOME`, `TMP*` and `MPLCONFIGDIR` point into the temporary directory; `MPLBACKEND=Agg`, `PYTHONNOUSERSITE=1`, single-threaded BLAS. Nothing whose name contains KEY, TOKEN, SECRET, PASSWORD, CREDENTIAL, GOOGLE, GEMINI, AWS or AZURE, and no `VECTORNAUT_*` variable reaches the script.
+- **Working directory**: a fresh temporary directory per run (`VECTORNAUT_SANDBOX_TMPDIR` to choose the parent), never the repository. Inputs are copied in, `results.json`/`plot.png` copied out to `generated_scripts/` and the plot directory, the directory is deleted afterwards.
+- **Process control**: new session / process group (POSIX) or `CREATE_NEW_PROCESS_GROUP` (Windows); on timeout the whole group is killed (`os.killpg`, or `taskkill /T /F` with `proc.kill()` fallback on Windows). Stragglers are also killed when the script exits normally (POSIX).
+- **Resource limits (POSIX only)**: CPU seconds = timeout + 5, address space `VECTORNAUT_SANDBOX_MEMORY_MB` (default 2048), file size `VECTORNAUT_SANDBOX_FILE_SIZE_MB` (default 200), no core dumps. Windows runs without these limits.
+- **Network (best effort)**: `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` point to `http://127.0.0.1:9` and `NO_PROXY` is empty, so proxy-aware HTTP clients fail fast.
+
+Timeouts: `VECTORNAUT_SCRIPT_TIMEOUT_SECONDS` (default 60) per solver run, `VECTORNAUT_TEST_SCRIPT_TIMEOUT_SECONDS` (default 5x the solver timeout) for the whole test module.
+
+Plots: dynamic-script plots are written to the repository's `static/plots/` (served by the UI as `/plots/...`), independent of the working directory. `VECTORNAUT_PLOTS_DIR` overrides the location; the UI only shows plots that end up in `static/plots/`.
+
+**This is not a security boundary.** The pre-check is a guard-rail against accidents, not against a determined script (it can be evaded, e.g. through native extensions or libraries that open sockets). Scripts can still read every file the server user can read, open raw network connections, and escape the process group from native code; Windows has no resource limits. Use generated scripts only locally with a trusted model. For untrusted input or public use, run the solver worker in a container or VM without network access, with a read-only filesystem apart from its work directory and with cgroup CPU/memory limits.
+
 ## Storage
 
 The current storage model is hybrid:
