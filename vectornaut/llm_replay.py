@@ -144,6 +144,9 @@ def run_session(session_dir: str, query: str, epochs: int, rounds: int) -> Dict[
                 is_mock=False,
                 max_optimization_rounds=rounds,
             ))
+            # Archive like POST /api/run does; this also renders result["report_md"].
+            from vectornaut.reporting import archive_run_data
+            archive_run_data(result)
             status = {"status": "complete", "calls": client.calls}
         except NeedResponse as need:
             result = None
