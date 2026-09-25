@@ -66,6 +66,10 @@ Run the quality benchmark cases:
 
 The benchmark cases live in `benchmarks/eval_cases.json`. They cover known-good, warning, and failing result profiles so validator/eval behavior stays stable across changes.
 
+## Answering Model Calls by Hand
+
+`python -m vectornaut.llm_replay --session <dir> --query "<prompt>"` runs the pipeline in live mode but answers every model call from `<dir>/responses/NN.json` instead of Gemini. Each run stops at the first unanswered call and writes its full prompt and expected JSON schema to `<dir>/requests/NN_<Schema>.md`; write the answer and run the same command again. When all calls are answered the result lands in `<dir>/result.json` and `<dir>/report.md`. This is useful for testing the live code path without an API key, for reproducing a model answer that broke something, or for letting another model play Gemini's role.
+
 ## AI Model Comparison
 
 `python -m vectornaut.model_eval --mock --config baseline=` runs the reference prompts in `benchmarks/ai_reference_cases.json` through the pipeline offline. Mock mode checks the harness, solvers and validator, not model quality. Live comparisons need `GEMINI_API_KEY` and cost API calls; see "Comparing AI models" in `docs/OPERATIONS.md`.
