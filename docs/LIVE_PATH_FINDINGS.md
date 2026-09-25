@@ -2,6 +2,10 @@
 
 Date: 2026-09-25. Method: `python -m vectornaut.llm_replay` (see `docs/TESTING.md`). The pipeline ran in live mode and every Gemini call was answered by Claude acting as a competent, honest model (and once as a careless one), then the results were checked against independent closed-form or numerical solutions.
 
+## Status (2026-09-25)
+
+Findings 1–8 are fixed: declarative metric spec and baseline-based gain with "n/a" when no baseline exists (1, 2); `request_feasible`/`infeasibility_reason` on miner and auditor, structured rejected results and a closed-system efficiency check (3); general linear 2D operator parsing (4); dynamic-script headline from the baseline run, design-variable sweep with stricter acceptance and a noise guard (5); generated code runs through `vectornaut/sandbox.py` with a scrubbed environment, temp working directory, process-group kill, resource limits and a static pre-check — not a security boundary (6); the auditor keeps the model's dimensionless numbers (7); the round-2 auditor audits the override values (8). Findings 9–17 remain open except where noted in `PROJECT_STATUS.md`.
+
 ## Scenarios
 
 | Scenario | Path | Calls | Outcome | Solver numbers vs independent check |

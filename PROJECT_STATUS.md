@@ -101,7 +101,7 @@ Runtime data (history, reports, eval runs, generated scripts/tests, saved models
 
 ## 🔮 Next Steps & Roadmap
 
-1. **Fix the live-path findings** in `docs/LIVE_PATH_FINDINGS.md` (from answering every model call by hand in six scenarios): metrics that measure the requested quantity, a real baseline/objective outside slip flow, a sanctioned "infeasible" outcome plus an energy-balance check, the 2D left-hand side, the dynamic-script sweep, auditor overwrites, and sandboxing of generated code.
+1. **Fix the remaining live-path findings (9–17)** in `docs/LIVE_PATH_FINDINGS.md` (1–8 are fixed) (from answering every model call by hand in six scenarios): metrics that measure the requested quantity, a real baseline/objective outside slip flow, a sanctioned "infeasible" outcome plus an energy-balance check, the 2D left-hand side, the dynamic-script sweep, auditor overwrites, and sandboxing of generated code.
 2. **Run a live model comparison** once `GEMINI_API_KEY` is available and item 1 is done: one repeat first to find crashes, then at least 3 repeats per configuration before ranking.
 3. **Decide the two open override questions** and adjust the pipeline accordingly.
 4. **Impossible requests**: verify with the `infeasible_perpetuum` reference case in a live run that the models set `request_feasible: false` (miner/auditor prompts explain it).
