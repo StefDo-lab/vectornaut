@@ -38,6 +38,12 @@ class EvaluationContext:
     critic_client: Any = None
     # The request's requirements ({name, criterion}), fixed per archive (see Archive.set_requirements).
     requirements: List[Dict[str, str]] = field(default_factory=list)
+    # The request's objective over the stated service life and the conventional baseline in the
+    # same condition (materials; fixed per archive, see Archive.set_framing).
+    objective_statement: str = ""
+    baseline_statement: str = ""
+    # Relevant values per relevance axis as named by the function analysis (not by elites).
+    relevant: Dict[str, List[str]] = field(default_factory=dict)
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -60,6 +66,12 @@ class ExplorerProfile:
     # Axes whose values must be relevant to the request; explore/fill_gap/diversify only use
     # relevant values (from the generator's function analysis plus the values of elites).
     relevance_axes: Tuple[str, ...] = ()
+    # Axes whose value pair decides whether a mixture can work at all (materials: mechanism and
+    # length scale). combine and explore prefer pairs that were feasible elsewhere; empty = no check.
+    compatibility_axes: Tuple[str, ...] = ()
+    # Axes that name where an idea comes from (materials: inspiration_origin). A fill_gap or
+    # diversify order that changes one must take the mechanism from the new origin.
+    origin_axes: Tuple[str, ...] = ()
 
     # ---- prompt text --------------------------------------------------
     def domain_brief(self) -> str:
@@ -74,6 +86,10 @@ class ExplorerProfile:
     def analysis_instructions(self, archive: Any) -> str:
         """Extra step-1 instructions (e.g. which values of a relevance axis matter)."""
         return ""
+
+    def framing_warnings(self, archive: Any) -> List[str]:
+        """Deterministic doubts about the stored objective/baseline statements (shown in prompts and reports)."""
+        return []
 
     def relevant_values_from_batch(self, batch: Any) -> Tuple[Dict[str, List[str]], List[str]]:
         """Relevant values per relevance axis named in a generator batch, and rejected tokens."""

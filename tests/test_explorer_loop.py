@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import math
 import os
 import tempfile
 import unittest
@@ -156,18 +157,29 @@ class MaterialsLoopTest(OfflineTestCase):
         evaluated = [e for e in archive.entries.values() if e["status"] == EVALUATED]
         self.assertTrue(evaluated)
         entry = evaluated[0]
-        self.assertEqual(entry["score_breakdown"]["basis"], "simulated")
+        self.assertIn(entry["score_breakdown"]["basis"], ("simulated", "simulated, critic-checked"))
         self.assertTrue(entry["score_breakdown"]["critic_used"])
         self.assertEqual(len(entry["score_breakdown"]["requirements"]), 3)
-        # Requirements come from the (mock) function analysis and are stored once on the archive.
+        self.assertEqual(entry["score_breakdown"]["objective_gain_source"], "critic")
+        # Requirements, objective and baseline come from the (mock) function analysis and are stored once.
         self.assertEqual([r["name"] for r in archive.requirements],
                          ["low_friction_drag", "non_toxic_antifouling", "multi_year_durability"])
-        self.assertEqual(archive.relevant_values("governing_quantity"), ["wall_shear", "flow_rate"])
+        self.assertIn("time-averaged", archive.objective_statement)
+        self.assertIn("after 12 months in service", archive.baseline_statement)
+        self.assertEqual(runner.ctx.baseline_statement, archive.baseline_statement)
+        self.assertEqual(archive.relevant_values("governing_quantity"), ["wall_shear", "flow_rate", "fouling_adhesion"])
+        self.assertEqual(runner.config.compatibility_axes, ("mechanism_class", "length_scale"))
+        self.assertEqual(runner.config.origin_axes, ("inspiration_origin",))
+        for record in archive.data["rounds"]:
+            self.assertIn("summary", record["strategy_notes"]["extrapolate"])
+        # From round 2 on, the generator prompt shows the stored framing.
+        prompt = build_prompt(runner.profile, runner.query, [], archive)
+        self.assertIn(f"- baseline: {archive.baseline_statement}", prompt)
         # Cold start: the explore slot has no relevant quantities yet and becomes a seed.
         self.assertEqual({o["strategy"] for o in archive.data["rounds"][0]["orders"]}, {"seed"})
         for entry_ in archive.entries.values():
             if entry_.get("strategy") == "explore":
-                self.assertIn(entry_["descriptors"]["governing_quantity"], ("wall_shear", "flow_rate"))
+                self.assertIn(entry_["descriptors"]["governing_quantity"], ("wall_shear", "flow_rate", "fouling_adhesion"))
         with open(os.path.join(archive.directory, entry["raw_result_path"]), encoding="utf-8") as f:
             raw = json.load(f)
         # The pipeline evaluated exactly the generated concept (no miner call, no re-mining).
@@ -177,11 +189,17 @@ class MaterialsLoopTest(OfflineTestCase):
             map_md = f.read()
         for heading in ("## Map: mechanism_class x length_scale", "## Requirements of the request",
                         "## Requirement coverage (critic ratings, elites)", "## Values never proposed",
-                        "| tier | req. coverage |", "Elites by evidence tier"):
+                        "| tier | points obj / sim / req | objective gain % |", "Elites by evidence tier",
+                        "- **Objective**:", "- **Baseline**:", "0.35 * objective_score + 0.15 * simulated_score"):
             self.assertIn(heading, map_md)
+        with open(os.path.join(archive.directory, "reports", "round_002.md"), encoding="utf-8") as f:
+            round_md = f.read()
+        self.assertIn("Extrapolation: ", round_md)
+        self.assertIn("- Baseline: ", round_md)
         with open(os.path.join(archive.directory, "reports", "archive_export.json"), encoding="utf-8") as f:
             export = json.load(f)
         self.assertEqual(len(export["requirements"]), 3)
+        self.assertEqual(export["baseline_statement"], archive.baseline_statement)
         self.assertTrue(all("evidence_tier" in e and "flags" in e for e in export["elites"]))
 
     def test_materials_mock_runs_are_deterministic(self):
@@ -197,6 +215,24 @@ class MaterialsLoopTest(OfflineTestCase):
             return {k: {kk: vv for kk, vv in v.items() if kk != "raw_result_path"} for k, v in data["entries"].items()}
 
         self.assertEqual(run("a"), run("b"))
+
+    def test_archive_with_the_old_vocabulary_is_refused_with_a_clear_message(self):
+        path = os.path.join(self.data_dir, "explorer", "materials", "archive.json")
+        os.makedirs(os.path.dirname(path))
+        axes = MATERIALS_SPACE.to_dict()
+        axes[3]["values"] = [v for v in axes[3]["values"] if v not in ("fouling_adhesion", "degradation_rate")]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"version": 2, "profile": "materials", "axes": axes, "queries": ["q"]}, f)
+        with self.assertRaises(ExplorerError) as ctx:
+            ExplorerRunner(MaterialsProfile(), "q", mock=True)
+        self.assertIn("fouling_adhesion", str(ctx.exception))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = main(["--profile", "materials", "--query", "q", "--rounds", "1", "--batch", "1", "--mock"])
+        self.assertEqual(code, 2)
+        self.assertIn("--archive NAME", err.getvalue())
+        # A separate map works.
+        ExplorerRunner(MaterialsProfile(), "q", mock=True, archive_name="v3")
 
 
 def _materials_candidate(order_id="r001-01", cell=None, **changes):
@@ -240,11 +276,14 @@ class MaterialsEvaluatorTest(OfflineTestCase):
         self.assertEqual(req.concept.design_name, "Concept r001-01")
         self.assertEqual(req.max_concept_attempts, 1)
         self.assertEqual((req.epochs, req.max_optimization_rounds, req.is_mock), (7, 2, True))
-        # 100 * gate * (0.5 * (1 - exp(-20/20)) + 0.5 * 0.5 unrated requirements), gate = 1
-        self.assertAlmostEqual(result.score, 100 * (0.5 * (1 - 0.36787944117) + 0.5 * 0.5), places=3)
+        # No critic: 100 * gate * (0.35 * 0.5 * (1 - exp(-12/10)) [own estimate, unchecked]
+        #                         + 0.15 * (1 - exp(-20/20)) + 0.5 * 0.5 [unrated requirements]), gate = 1
+        expected = 100 * (0.35 * 0.5 * (1 - math.exp(-1.2)) + 0.15 * (1 - math.exp(-1.0)) + 0.5 * 0.5)
+        self.assertAlmostEqual(result.score, expected, places=3)
         self.assertEqual(result.breakdown["basis"], "simulated")
         self.assertEqual(result.breakdown["evidence_tier"], "simulated")
         self.assertIn("requirements_unrated", result.breakdown["flags"])
+        self.assertIn("objective_gain_unchecked", result.breakdown["flags"])
 
     def test_rejection_marks_infeasible_and_failure_is_failed(self):
         result, _ = self.evaluate({"status": "rejected", "rejection": {"stage": "auditor", "reason": "2nd law"}})
@@ -265,9 +304,9 @@ class MaterialsEvaluatorTest(OfflineTestCase):
             self.assertEqual(result.breakdown["basis"], "estimated, not simulated")
             self.assertEqual(result.breakdown["evidence_tier"], "estimated")
             self.assertIn(flag, result.breakdown["flags"])
-            gain_score = (1 - 2.718281828 ** (-12.0 / 20.0)) * 0.5
-            # gate = 0.5 * 0.8 (warn); requirements unrated -> 0.5
-            self.assertAlmostEqual(result.score, 100 * 0.5 * 0.8 * (0.5 * gain_score + 0.5 * 0.5), places=3)
+            objective_score = (1 - math.exp(-12.0 / 10.0)) * 0.5
+            # gate = 0.5 * 0.8 (warn); no simulated part; requirements unrated -> 0.5
+            self.assertAlmostEqual(result.score, 100 * 0.5 * 0.8 * (0.35 * objective_score + 0.5 * 0.5), places=3)
         result = score_pipeline_result({"status": "completed", "simulator": {"performance_gain_pct": 5.0,
                                                                              "gain_basis": "baseline design"},
                                         "validation": {"status": "fail", "score": 0.9}}, cand)

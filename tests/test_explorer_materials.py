@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Materials explorer: evidence tiers, gain sanity, critic combination, requirements, prompts."""
+"""Materials explorer: evidence tiers, gain sanity, two-number critic scoring, requirements, framing, prompts."""
 import json
 import math
 import os
@@ -13,7 +13,9 @@ from vectornaut.explorer.archive import EVALUATED, IMPROVED, NOT_BETTER, Archive
 from vectornaut.explorer.generator import CandidateGenerator, build_prompt, check_batch, compact_context
 from vectornaut.explorer.profiles.base import EvaluationContext, PreparedCandidate
 from vectornaut.explorer.profiles.materials import (
-    ESTIMATED_SCORE_CAP, MATERIALS_SPACE, MaterialsProfile, critic_prompt, score_pipeline_result, to_miner_concept,
+    ESTIMATE_DISCOUNT, ESTIMATED_SCORE_CAP, MATERIALS_SPACE, OBJECTIVE_SCALE_PCT, RELABEL_FACTOR, SIM_SCALE_PCT,
+    W_OBJ, W_REQ, W_SIM, MaterialsProfile, critic_prompt, differs_strongly, framing_warnings, score_pipeline_result,
+    to_miner_concept,
 )
 from vectornaut.explorer.schemas import (
     BackOfEnvelope, DescriptorAssignment, MaterialsCandidate, MaterialsCandidateBatch, MaterialsCriticBatch,
@@ -23,9 +25,16 @@ from vectornaut.explorer import strategies as st
 
 CELL = {"mechanism_class": "graded_stiffness", "length_scale": "100_um",
         "inspiration_origin": "animal", "governing_quantity": "stress"}
+FOULING_CELL = dict(CELL, governing_quantity="fouling_adhesion")
 REQUIREMENTS = [{"name": "low_friction_drag", "criterion": "less drag than a standard coating"},
                 {"name": "non_toxic_antifouling", "criterion": "no biocide release"},
                 {"name": "multi_year_durability", "criterion": "several years in seawater"}]
+OBJECTIVE = "time-averaged hull friction drag over a 5-year docking interval, including fouling"
+BASELINE = "conventional biocide-free silicone foul-release coating after 12 months in service"
+
+
+def f(gain, scale):
+    return 1 - math.exp(-gain / scale) if gain > 0 else 0.0
 
 
 def candidate(order_id="r001-01", estimate=85.0, cell=None, **changes):
@@ -58,12 +67,29 @@ def pipeline_result(gain, status="pass", score=1.0, sanity_passed=None, basis="b
     }
 
 
-def review(order_id="r001-01", plausible=None, coverage=(), **changes):
-    fields = dict(order_id=order_id, plausible_gain_pct=plausible, plausible_gain_reasoning="literature",
+def review(order_id="r001-01", sim=None, obj=None, coverage=(), **changes):
+    fields = dict(order_id=order_id, plausible_simulated_benefit_pct=sim, plausible_objective_gain_pct=obj,
+                  plausible_gain_reasoning="literature",
                   key_assumption_issues=["gap chosen to match"], killer_risks=["wear"],
                   requirement_coverage=[RequirementRating(name=n, coverage=c, reason="r") for n, c in coverage])
     fields.update(changes)
     return MaterialsCriticReview(**fields)
+
+
+def full_coverage(value=1.0):
+    return [(r["name"], value) for r in REQUIREMENTS]
+
+
+class VocabularyTest(unittest.TestCase):
+    def test_fouling_control_quantities_are_in_the_vocabulary(self):
+        axis = MATERIALS_SPACE.axis("governing_quantity")
+        for value in ("fouling_adhesion", "degradation_rate"):
+            self.assertIn(value, axis.values)
+            self.assertIn(value, axis.value_help)
+        self.assertEqual(axis.values[-1], "other")
+        self.assertEqual(MATERIALS_SPACE.validate(dict(CELL, governing_quantity="Fouling Adhesion"))["governing_quantity"],
+                         "fouling_adhesion")
+        self.assertIn("fouling_adhesion", MATERIALS_SPACE.vocabulary_text())
 
 
 class GainSanityTest(unittest.TestCase):
@@ -76,8 +102,11 @@ class GainSanityTest(unittest.TestCase):
         self.assertEqual(b["evidence_tier"], "estimated")
         self.assertEqual(b["evidence_rank"], 0)
         self.assertIsNone(b["performance_gain_pct"])
+        self.assertIsNone(b["simulated_benefit_used_pct"])
         self.assertAlmostEqual(b["simulated_gain_pct"], 68857.88)      # kept for the record
-        self.assertEqual(b["used_gain_pct"], 85.0)                      # the candidate's estimate, discounted
+        self.assertEqual(b["objective_gain_pct"], 85.0)                 # the candidate's estimate, discounted
+        self.assertIn("objective_gain_unchecked", b["flags"])
+        self.assertEqual(b["objective_discount"], ESTIMATE_DISCOUNT)
         self.assertLessEqual(result.score, ESTIMATED_SCORE_CAP)
         self.assertEqual(b["gain_sanity"]["passed"], False)
 
@@ -87,7 +116,7 @@ class GainSanityTest(unittest.TestCase):
             self.assertIn("implausible_gain", b["flags"], gain)
             self.assertEqual(b["evidence_tier"], "estimated")
         b = score_pipeline_result(pipeline_result(19.0, sanity_passed=True), candidate()).breakdown
-        self.assertEqual((b["evidence_tier"], b["flags"]), ("simulated", ["requirements_unrated"]))
+        self.assertEqual((b["evidence_tier"], b["flags"]), ("simulated", ["objective_gain_unchecked", "requirements_unrated"]))
 
     def test_implausible_entry_never_becomes_elite_over_a_sound_one(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -113,38 +142,47 @@ class GainSanityTest(unittest.TestCase):
 class TierAndScoreTest(unittest.TestCase):
     def test_estimated_entry_has_a_lower_ceiling(self):
         huge = score_pipeline_result(pipeline_result(None, basis="none"), candidate(estimate=1000.0),
-                                     review=review(plausible=900.0, coverage=[(r["name"], 1.0) for r in REQUIREMENTS]),
-                                     requirements=REQUIREMENTS)
+                                     review=review(obj=900.0, coverage=full_coverage()), requirements=REQUIREMENTS)
         self.assertEqual(huge.score, ESTIMATED_SCORE_CAP)
         self.assertTrue(huge.breakdown["capped"])
         simulated = score_pipeline_result(pipeline_result(40.0), candidate(),
-                                          review=review(plausible=35.0, coverage=[(r["name"], 1.0) for r in REQUIREMENTS]),
+                                          review=review(sim=35.0, obj=35.0, coverage=full_coverage()),
                                           requirements=REQUIREMENTS)
         self.assertGreater(simulated.score, huge.score)
         self.assertEqual(simulated.breakdown["evidence_rank"], 2)
         self.assertGreater(simulated.breakdown["evidence_rank"], huge.breakdown["evidence_rank"])
 
     def test_breakdown_formula_matches_the_score(self):
-        for gain, cov in ((19.0, (1.0, 0.0, 0.5)), (0.13, (0.2, 0.2, 0.2)), (None, (0.9, 0.9, 0.9))):
+        cases = ((19.0, (1.0, 0.0, 0.5), False), (0.13, (0.2, 0.2, 0.2), False), (None, (0.9, 0.9, 0.9), False),
+                 (19.0, (0.8, 0.8, 0.8), True))
+        for gain, cov, relabelled in cases:
             res = score_pipeline_result(pipeline_result(gain, basis="none" if gain is None else "baseline_parameters"),
-                                        candidate(estimate=8.0), review=review(coverage=zip([r["name"] for r in REQUIREMENTS], cov)),
+                                        candidate(estimate=8.0),
+                                        review=review(sim=gain, obj=3.0, relabelled_analogue=relabelled,
+                                                      coverage=zip([r["name"] for r in REQUIREMENTS], cov)),
                                         requirements=REQUIREMENTS)
-            c = res.breakdown["components"]
-            expected = 100 * c["gate"] * (0.5 * c["gain_score"] + 0.5 * c["requirement_coverage"])
-            if res.breakdown["evidence_tier"] == "estimated":
+            b = res.breakdown
+            c = b["components"]
+            expected = 100 * c["gate"] * (W_OBJ * c["objective_score"] + W_SIM * c["simulated_score"]
+                                          + W_REQ * c["requirement_coverage"]) * b["relabel_factor"]
+            if b["evidence_tier"] == "estimated":
                 expected = min(expected, ESTIMATED_SCORE_CAP)
             self.assertAlmostEqual(res.score, expected, places=3)
-            self.assertIn("score = 100 * gate * (0.5 * gain_score + 0.5 * requirement_coverage)", res.breakdown["formula"])
-        # The old validity floor is gone: a 0.13 % gain with poor coverage scores little.
+            if not b["capped"]:
+                self.assertAlmostEqual(sum(b["contributions"].values()), res.score, places=2)
+            self.assertIn("score = 100 * gate * (0.35 * objective_score + 0.15 * simulated_score + "
+                          "0.5 * requirement_coverage) * relabel_factor", b["formula"])
+            self.assertEqual(b["weights"], {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ})
+        # No validity floor: a 0.13 % gain with poor coverage scores little.
         tiny = score_pipeline_result(pipeline_result(0.13, "warn", 0.956), candidate(estimate=50.0),
-                                     review=review(coverage=[(r["name"], 0.2) for r in REQUIREMENTS]),
+                                     review=review(sim=0.1, obj=0.1, coverage=[(r["name"], 0.2) for r in REQUIREMENTS]),
                                      requirements=REQUIREMENTS)
         self.assertLess(tiny.score, 10.0)
 
     def test_requirement_coverage_drives_the_score(self):
         def score(cov):
             return score_pipeline_result(pipeline_result(19.0), candidate(),
-                                         review=review(plausible=19.0, coverage=cov), requirements=REQUIREMENTS)
+                                         review=review(sim=19.0, obj=5.0, coverage=cov), requirements=REQUIREMENTS)
         good = score([("low_friction_drag", 0.9), ("non_toxic_antifouling", 0.9), ("multi_year_durability", 0.9)])
         poor = score([("low_friction_drag", 0.9), ("non_toxic_antifouling", 0.1), ("Multi Year Durability", 0.1)])
         self.assertGreater(good.score - poor.score, 25.0)
@@ -158,35 +196,155 @@ class TierAndScoreTest(unittest.TestCase):
         self.assertEqual(unrated.breakdown["requirement_coverage"], 0.5)
 
 
+class TwoNumberScoringTest(unittest.TestCase):
+    """The recorded failure: fouling-release concepts simulated 45-84 % lower release stress but scored ~0 gain."""
+
+    def score(self, gain=60.0, cell=None, relevant=("wall_shear", "fouling_adhesion"), **review_fields):
+        fields = dict(sim=50.0, obj=6.0, coverage=full_coverage(0.6))
+        fields.update(review_fields)
+        return score_pipeline_result(pipeline_result(gain), candidate(estimate=4.0, cell=cell or FOULING_CELL),
+                                     review=review(**fields), requirements=REQUIREMENTS,
+                                     relevant_quantities=list(relevant) if relevant is not None else None)
+
+    def test_simulated_fouling_release_benefit_and_objective_gain_both_count(self):
+        res = self.score()
+        b = res.breakdown
+        self.assertEqual(b["evidence_tier"], "simulated")
+        self.assertEqual(b["simulated_quantity"], "fouling_adhesion")
+        self.assertTrue(b["simulated_quantity_relevant"])
+        self.assertEqual(b["simulated_benefit_used_pct"], 60.0)          # 60 vs critic 50: within 50 %
+        self.assertEqual(b["objective_gain_pct"], 6.0)
+        self.assertEqual(b["objective_gain_source"], "critic")
+        self.assertEqual(b["objective_discount"], 1.0)
+        expected = 100 * (W_OBJ * f(6.0, OBJECTIVE_SCALE_PCT) + W_SIM * f(60.0, SIM_SCALE_PCT) + W_REQ * 0.6)
+        self.assertAlmostEqual(res.score, expected, places=3)
+        self.assertAlmostEqual(b["contributions"]["objective"], 100 * W_OBJ * f(6.0, OBJECTIVE_SCALE_PCT), places=3)
+        self.assertAlmostEqual(b["contributions"]["simulated"], 100 * W_SIM * f(60.0, SIM_SCALE_PCT), places=3)
+        # Zero objective gain still leaves the simulated benefit in the score (the old formula gave ~0).
+        zero = self.score(obj=0.0)
+        self.assertGreater(zero.breakdown["contributions"]["simulated"], 14.0)
+
+    def test_simulation_is_critic_checked(self):
+        b = self.score(gain=84.0, sim=20.0).breakdown
+        self.assertEqual(b["simulated_benefit_used_pct"], 20.0)
+        self.assertIn("model_assumption_sensitive", b["flags"])
+        self.assertEqual(b["basis"], "simulated, critic-checked")
+
+    def test_irrelevant_quantity_does_not_count_and_is_not_tier_simulated(self):
+        heat = dict(FOULING_CELL, governing_quantity="heat_flux")
+        b = self.score(cell=heat).breakdown
+        self.assertEqual(b["evidence_tier"], "estimated")
+        self.assertIn("simulated_quantity_irrelevant", b["flags"])
+        self.assertEqual(b["components"]["simulated_score"], 0.0)
+        self.assertIsNone(b["simulated_benefit_used_pct"])
+        self.assertEqual(b["simulated_gain_pct"], 60.0)                  # shown, not scored
+        self.assertEqual(b["objective_discount"], ESTIMATE_DISCOUNT)
+        self.assertIn("not among the relevant quantities", b["simulated_quantity_relevance"])
+        # The critic can also rule the quantity out ...
+        b = self.score(simulated_quantity_relevant=False).breakdown
+        self.assertEqual(b["evidence_tier"], "estimated")
+        self.assertIn("critic", b["simulated_quantity_relevance"])
+        # ... and without any relevance information the quantity counts.
+        b = self.score(cell=heat, relevant=None).breakdown
+        self.assertEqual(b["evidence_tier"], "simulated")
+
+    def test_relabelled_analogue_is_penalised(self):
+        plain = self.score()
+        relabelled = self.score(relabelled_analogue=True, relabel_reason="same as parent")
+        self.assertIn("relabelled_analogue", relabelled.breakdown["flags"])
+        self.assertAlmostEqual(relabelled.score, plain.score * RELABEL_FACTOR, places=3)
+        self.assertEqual(relabelled.breakdown["critic"]["relabel_reason"], "same as parent")
+
+    def test_non_conventional_baseline_is_flagged(self):
+        b = self.score(baseline_conventional=False, baseline_issue="parent concept").breakdown
+        self.assertIn("baseline_not_conventional", b["flags"])
+        self.assertEqual(b["critic"]["baseline_issue"], "parent concept")
+        self.assertNotIn("baseline_not_conventional", self.score(baseline_conventional=True).breakdown["flags"])
+
+    def test_without_critic_the_candidate_estimate_counts_half(self):
+        res = score_pipeline_result(pipeline_result(60.0), candidate(estimate=4.0, cell=FOULING_CELL))
+        b = res.breakdown
+        self.assertEqual((b["objective_gain_pct"], b["objective_discount"]), (4.0, ESTIMATE_DISCOUNT))
+        self.assertIn("objective_gain_unchecked", b["flags"])
+        self.assertAlmostEqual(b["components"]["objective_score"], f(4.0, OBJECTIVE_SCALE_PCT) * ESTIMATE_DISCOUNT,
+                               places=5)
+        none = score_pipeline_result(pipeline_result(60.0), candidate(back_of_envelope=None, cell=FOULING_CELL))
+        self.assertIn("objective_gain_missing", none.breakdown["flags"])
+        self.assertEqual(none.breakdown["components"]["objective_score"], 0.0)
+
+
+class DiffersStronglyTest(unittest.TestCase):
+    def test_cases_from_the_role_play(self):
+        self.assertTrue(differs_strongly(-28.7, -5.0))       # both negative, far apart (was not flagged)
+        self.assertFalse(differs_strongly(0.02, 0.0))        # noise below 1 pp (was flagged)
+        self.assertFalse(differs_strongly(0.5, 0.0))
+        self.assertTrue(differs_strongly(66.7, 0.5))
+        self.assertTrue(differs_strongly(30.0, 10.0))
+        self.assertFalse(differs_strongly(12.0, 10.0))
+        self.assertTrue(differs_strongly(5.0, -1.0))         # signs differ, |a - b| > 1 pp
+        self.assertFalse(differs_strongly(0.4, -0.4))        # signs differ, but within 1 pp
+        self.assertFalse(differs_strongly(-10.0, -6.0))      # 4 pp < 50 % of 10
+        self.assertTrue(differs_strongly(-10.0, -4.0))
+
+
 class CriticCombinationTest(unittest.TestCase):
     def score(self, simulated, plausible):
         return score_pipeline_result(pipeline_result(simulated), candidate(estimate=7.0),
-                                     review=review(plausible=plausible), requirements=REQUIREMENTS).breakdown
+                                     review=review(sim=plausible, obj=1.0), requirements=REQUIREMENTS).breakdown
 
-    def test_lower_value_is_used_when_simulation_and_critic_differ_by_more_than_2x(self):
+    def test_lower_value_is_used_when_simulation_and_critic_differ_strongly(self):
         b = self.score(30.0, 10.0)
-        self.assertEqual(b["used_gain_pct"], 10.0)
+        self.assertEqual(b["simulated_benefit_used_pct"], 10.0)
         self.assertIn("model_assumption_sensitive", b["flags"])
-        self.assertEqual((b["simulated_gain_pct"], b["critic_plausible_gain_pct"], b["estimated_gain_pct"]), (30.0, 10.0, 7.0))
+        self.assertEqual((b["simulated_gain_pct"], b["critic_simulated_benefit_pct"], b["estimated_gain_pct"]),
+                         (30.0, 10.0, 7.0))
         self.assertEqual(b["evidence_tier"], "simulated")
         b = self.score(5.0, 20.0)
-        self.assertEqual(b["used_gain_pct"], 5.0)
+        self.assertEqual(b["simulated_benefit_used_pct"], 5.0)
         self.assertIn("model_assumption_sensitive", b["flags"])
         b = self.score(5.0, -1.0)           # sign disagreement
-        self.assertEqual(b["used_gain_pct"], -1.0)
+        self.assertEqual(b["simulated_benefit_used_pct"], -1.0)
+        self.assertIn("model_assumption_sensitive", b["flags"])
+        b = self.score(-28.7, -5.0)         # both negative: now a disagreement, the lower one is used
+        self.assertEqual(b["simulated_benefit_used_pct"], -28.7)
         self.assertIn("model_assumption_sensitive", b["flags"])
 
-    def test_simulation_is_used_when_they_agree_within_2x(self):
+    def test_simulation_is_used_when_they_agree(self):
         b = self.score(12.0, 10.0)
-        self.assertEqual(b["used_gain_pct"], 12.0)
+        self.assertEqual(b["simulated_benefit_used_pct"], 12.0)
         self.assertNotIn("model_assumption_sensitive", b["flags"])
         self.assertEqual(b["critic"]["key_assumption_issues"], ["gap chosen to match"])
+        b = self.score(0.02, 0.0)           # noise is agreement
+        self.assertNotIn("model_assumption_sensitive", b["flags"])
 
-    def test_without_simulated_gain_the_lower_estimate_counts(self):
+    def test_without_simulated_gain_the_critic_objective_counts(self):
         b = score_pipeline_result(pipeline_result(0.0, basis="none"), candidate(estimate=15.0),
-                                  review=review(plausible=4.0)).breakdown
-        self.assertEqual((b["evidence_tier"], b["used_gain_pct"]), ("estimated", 4.0))
-        self.assertIn("critic", b["gain_source"])
+                                  review=review(obj=4.0)).breakdown
+        self.assertEqual((b["evidence_tier"], b["objective_gain_pct"]), ("estimated", 4.0))
+        self.assertIn("critic", b["objective_gain_source"])
+        self.assertEqual(b["objective_discount"], ESTIMATE_DISCOUNT)
+
+
+class FramingTest(unittest.TestCase):
+    QUERY = ("Entwickle eine bionisch inspirierte Beschichtung für Schiffsrümpfe, die den Reibungswiderstand senkt, "
+             "ohne giftige Antifouling-Wirkstoffe auszukommen, und mehrere Jahre im Salzwasser hält.")
+
+    def test_service_life_requests_need_an_in_service_baseline(self):
+        warnings = framing_warnings(self.QUERY, "hull friction drag", "clean standard foul-release coating")
+        self.assertEqual(len(warnings), 2)
+        self.assertEqual(framing_warnings(self.QUERY, OBJECTIVE, BASELINE), [])
+        self.assertEqual(framing_warnings("reduce pipe friction", "friction", "smooth pipe"), [])
+
+    def test_archive_stores_objective_and_baseline_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = Archive("materials", MATERIALS_SPACE, path=os.path.join(tmp, "a.json"))
+            self.assertEqual(archive.set_framing("", BASELINE, 1), {"objective": False, "baseline": True})
+            self.assertEqual(archive.set_framing(OBJECTIVE, "another baseline", 2), {"objective": True, "baseline": False})
+            self.assertEqual((archive.objective_statement, archive.baseline_statement), (OBJECTIVE, BASELINE))
+            self.assertEqual(archive.request_analysis["framing_round"], 1)
+            archive.save()
+            loaded = Archive.load("materials", MATERIALS_SPACE, path=archive.path)
+            self.assertEqual((loaded.objective_statement, loaded.baseline_statement), (OBJECTIVE, BASELINE))
 
 
 class FakeClient:
@@ -214,17 +372,23 @@ class CriticStageTest(unittest.TestCase):
         return [PreparedCandidate(order={"order_id": f"r001-0{i}"}, candidate=candidate(f"r001-0{i}"),
                                   descriptors=dict(CELL), concept={}) for i in (1, 2)]
 
-    def test_one_critic_call_per_batch_with_formulation_and_gains(self):
+    def test_one_critic_call_per_batch_with_formulation_gains_objective_and_parents(self):
         batch = MaterialsCriticBatch(reviews=[
-            review("r001-01", plausible=6.0, coverage=[("low_friction_drag", 0.8)]),
-            review("r001-02", plausible=40.0),
+            review("r001-01", sim=6.0, obj=2.0, coverage=[("low_friction_drag", 0.8)]),
+            review("r001-02", obj=40.0),
         ])
         client = FakeClient(batch)
         profile = MaterialsProfile(runner_factory=lambda: runner, critic_client=client)
         runner = Runner([pipeline_result(19.35), pipeline_result(68857.88, "warn", 0.948, sanity_passed=False)])
-        ctx = EvaluationContext(query="hull coating", mock=False, requirements=REQUIREMENTS)
+        ctx = EvaluationContext(query="hull coating", mock=False, requirements=REQUIREMENTS,
+                                objective_statement=OBJECTIVE, baseline_statement=BASELINE,
+                                relevant={"governing_quantity": ["wall_shear", "stress"]})
+        items = self.items()
+        items[0].order.update(strategy="diversify", context={"elite": {
+            "id": "e00001", "title": "Dolphin-skin graded elastomer", "summary": "graded modulus skin",
+            "cell": "mechanism_class=graded_stiffness, inspiration_origin=geology"}})
         with mock.patch.dict(os.environ, {"VECTORNAUT_MODEL_CRITIC": "critic-model"}):
-            first, second = profile.evaluate(self.items(), ctx)
+            first, second = profile.evaluate(items, ctx)
         self.assertEqual(len(client.calls), 1)
         model, prompt, config = client.calls[0]
         self.assertEqual(model, "critic-model")
@@ -232,13 +396,46 @@ class CriticStageTest(unittest.TestCase):
         for text in ("REQUEST: \"hull coating\"", "non_toxic_antifouling: no biocide release", "[r001-01]", "[r001-02]",
                      "formulation: d2u_dy2 = 0", "calibrated_gap=8.8e-05", "simulated gain: 19.35 %",
                      "REJECTED as implausible", "candidate's estimate: 85 %", "clean standard foul-release",
-                     "surface displacement", "uniform silicone"):
+                     "surface displacement", "uniform silicone", f"OBJECTIVE (fixed for this map): {OBJECTIVE}",
+                     f"CONVENTIONAL BASELINE (fixed for this map): {BASELINE}",
+                     "simulated quantity: stress (named by the function analysis: wall_shear, stress)",
+                     "search order: diversify; parent(s): 'Dolphin-skin graded elastomer'",
+                     "plausible_simulated_benefit_pct", "plausible_objective_gain_pct", "relabelled_analogue",
+                     "baseline_conventional", "inspiration: whale skin"):
             self.assertIn(text, prompt)
-        self.assertEqual(first.breakdown["used_gain_pct"], 6.0)          # 19.35 vs 6 -> lower, flagged
+        self.assertEqual(first.breakdown["simulated_benefit_used_pct"], 6.0)   # 19.35 vs 6 -> lower, flagged
+        self.assertEqual(first.breakdown["objective_gain_pct"], 2.0)
         self.assertIn("model_assumption_sensitive", first.breakdown["flags"])
         self.assertEqual(second.breakdown["evidence_tier"], "estimated")
-        self.assertEqual(second.breakdown["used_gain_pct"], 40.0)        # min(critic 40, estimate 85)
-        self.assertEqual(first.raw["critic_review"]["plausible_gain_pct"], 6.0)
+        self.assertEqual(second.breakdown["objective_gain_pct"], 40.0)         # the critic's objective gain
+        self.assertEqual(first.raw["critic_review"]["plausible_simulated_benefit_pct"], 6.0)
+        self.assertEqual(first.raw["critic_review"]["plausible_objective_gain_pct"], 2.0)
+
+    def test_irrelevant_quantity_from_the_context_reaches_the_score(self):
+        client = FakeClient(MaterialsCriticBatch(reviews=[review("r001-01", sim=19.0, obj=1.0),
+                                                          review("r001-02", sim=19.0, obj=1.0)]))
+        runner = Runner([pipeline_result(19.0), pipeline_result(19.0)])
+        profile = MaterialsProfile(runner_factory=lambda: runner, critic_client=client)
+        ctx = EvaluationContext(query="q", mock=False, relevant={"governing_quantity": ["wall_shear"]})
+        results = profile.evaluate(self.items(), ctx)
+        self.assertEqual(results[0].breakdown["evidence_tier"], "estimated")      # stress not relevant here
+        self.assertIn("simulated_quantity_irrelevant", results[0].breakdown["flags"])
+        self.assertIn("NOT named by the function analysis", client.calls[0][1])
+
+    def test_mock_critic_returns_both_numbers_and_flags_relabelled_copies(self):
+        profile = MaterialsProfile()
+        flagged = 0
+        for i in range(12):
+            order = {"order_id": f"r002-{i:02d}", "strategy": "diversify",
+                     "context": {"elite": {"title": "Parent", "cell": "mechanism_class=graded_stiffness, "
+                                           "inspiration_origin=plant"}}}
+            item = PreparedCandidate(order=order, candidate=candidate(order["order_id"]), descriptors=dict(CELL),
+                                     concept={})
+            rev = profile.mock_review(item, pipeline_result(10.0), REQUIREMENTS)
+            self.assertIsNotNone(rev.plausible_simulated_benefit_pct)
+            self.assertIsNotNone(rev.plausible_objective_gain_pct)
+            flagged += rev.relabelled_analogue
+        self.assertTrue(0 < flagged < 12)
 
     def test_failed_critic_keeps_the_simulation_and_flags_it(self):
         client = FakeClient(error=RuntimeError("quota"))
@@ -280,6 +477,26 @@ class ConceptHandoverTest(unittest.TestCase):
         bare = to_miner_concept(candidate(summary="", baseline="", main_risk="", novelty_vs_known="",
                                           back_of_envelope=None))
         self.assertEqual(bare.physical_mechanism, "graded modulus.")
+
+    def test_objective_and_conventional_baseline_reach_the_formulator_and_auditor(self):
+        text = to_miner_concept(candidate(), OBJECTIVE, BASELINE).physical_mechanism
+        self.assertIn(f"Objective of the request: {OBJECTIVE}.", text)
+        self.assertIn("Conventional baseline for the simulation (compare against this, never against a parent or "
+                      f"sibling concept): {BASELINE}.", text)
+
+    def test_pipeline_request_carries_the_framing_from_the_context(self):
+        seen = []
+
+        class Capture:
+            def run(self, request):
+                seen.append(request)
+                return pipeline_result(5.0)
+
+        profile = MaterialsProfile(runner_factory=Capture)
+        item = PreparedCandidate(order={"order_id": "r001-01"}, candidate=candidate(), descriptors=dict(CELL), concept={})
+        profile.evaluate([item], EvaluationContext(query="q", mock=True, use_critic=False,
+                                                   objective_statement=OBJECTIVE, baseline_statement=BASELINE))
+        self.assertIn(BASELINE, seen[0].concept.physical_mechanism)
 
 
 class ContextTruncationTest(unittest.TestCase):
@@ -326,14 +543,25 @@ class GeneratorAnalysisTest(unittest.TestCase):
             orders = [{"order_id": "r001-01", "strategy": "seed", "target": {}, "target_key": "", "context": {},
                        "rationale": "free", "parent_ids": []}]
             prompt = build_prompt(MaterialsProfile(), "q", orders, archive)
-            for text in ("baseline: name the baseline", "not a fouled or untreated", "REQUIREMENTS OF THE REQUEST: not extracted",
-                         "relevant_governing_quantities"):
+            for text in ("baseline: name the baseline", "never a fouled or untreated", "never a parent",
+                         "REQUIREMENTS OF THE REQUEST: not extracted", "relevant_governing_quantities",
+                         "OBJECTIVE AND BASELINE (step 1", "objective_statement", "baseline_statement",
+                         "after 12-24\n  months in service", "fouling_adhesion, degradation_rate", "relabelled analogue"):
                 self.assertIn(text, prompt)
             archive.set_requirements(REQUIREMENTS, 1)
             archive.add_relevant_values("governing_quantity", ["wall_shear"])
+            archive.set_framing(OBJECTIVE, "", 1)
             prompt = build_prompt(MaterialsProfile(), "q", orders, archive)
             self.assertIn("- non_toxic_antifouling: no biocide release", prompt)
             self.assertIn("RELEVANT GOVERNING QUANTITIES", prompt)
+            self.assertIn(f"Already stored: objective = {OBJECTIVE}; baseline = (none)", prompt)
+            archive.set_framing("", "clean standard foul-release coating", 2)
+            archive.register_query("hull coating lasting several years")
+            prompt = build_prompt(MaterialsProfile(), "q", orders, archive)
+            self.assertIn("OBJECTIVE AND BASELINE (fixed for this map", prompt)
+            self.assertIn(f"- objective: {OBJECTIVE}", prompt)
+            self.assertIn("- baseline: clean standard foul-release coating", prompt)
+            self.assertIn("Note: the request asks for years of service, but the baseline statement", prompt)
 
     def test_check_batch_reads_requirements_and_validates_relevant_values(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -344,9 +572,12 @@ class GeneratorAnalysisTest(unittest.TestCase):
                 function_analysis="f", requirements=[Requirement(name="low_friction_drag", criterion="c"),
                                                      Requirement(name="", criterion="dropped")],
                 relevant_governing_quantities=["Wall Shear", "drag", "stress"],
+                objective_statement="  time-averaged drag\n over 5 years ", baseline_statement=BASELINE,
                 candidates=[candidate("r001-01")])
             result = check_batch(MaterialsProfile(), orders, batch, archive)
         self.assertEqual(result.items[0].status, "ok")
+        self.assertEqual(result.batch_notes["objective_statement"], "time-averaged drag over 5 years")
+        self.assertEqual(result.batch_notes["baseline_statement"], BASELINE)
         self.assertEqual(result.batch_notes["requirements"], [{"name": "low_friction_drag", "criterion": "c"}])
         self.assertEqual(result.batch_notes["relevant_values"], {"governing_quantity": ["wall_shear", "stress"]})
         self.assertEqual(result.batch_notes["relevant_values_rejected"], ["drag"])
