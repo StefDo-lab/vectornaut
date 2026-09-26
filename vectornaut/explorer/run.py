@@ -84,10 +84,13 @@ class ExplorerRunner:
             config,
             compatibility_axes=tuple(config.compatibility_axes or getattr(profile, "compatibility_axes", ()) or ()),
             origin_axes=tuple(config.origin_axes or getattr(profile, "origin_axes", ()) or ()),
+            combine_anchor_axes=tuple(config.combine_anchor_axes or getattr(profile, "combine_anchor_axes", ()) or ()),
+            trend_group_axes=tuple(config.trend_group_axes or getattr(profile, "trend_group_axes", ()) or ()),
         )
         path = archive_path or default_archive_path(profile.name, archive_name)
         try:
-            self.archive = Archive.load(profile.name, profile.space, path=path, clock=clock)
+            self.archive = Archive.load(profile.name, profile.space, path=path, clock=clock,
+                                        migrate=profile.migrate_archive)
         except ArchiveCompatibilityError as err:
             raise ExplorerError(str(err))
         known = self.archive.data.get("queries") or []
@@ -97,6 +100,7 @@ class ExplorerRunner:
                 "request are not comparable: use --archive NAME for a separate map, or --allow-new-query to mix."
             )
         self.archive.declare_relevance_axes(getattr(profile, "relevance_axes", ()) or ())
+        self._update_preferences()
         self.out_dir = os.path.abspath(out_dir or os.path.join(self.archive.directory, "reports"))
         self.generator = CandidateGenerator(profile, client=client, mock=mock)
         self.ctx = EvaluationContext(query=self.query, mock=mock, epochs=epochs, opt_rounds=opt_rounds,
@@ -111,6 +115,14 @@ class ExplorerRunner:
         self.ctx.baseline_statement = archive.baseline_statement
         self.ctx.relevant = {axis: archive.stated_relevant_values(axis) for axis in archive.relevance_axes()}
 
+    def _update_preferences(self) -> Dict[str, List[str]]:
+        """Preferred axis values derived by the profile from the request and the stored requirements."""
+        changed = {}
+        for axis, (values, reason) in sorted(self.profile.preferred_values(self.query, self.archive.requirements).items()):
+            if self.archive.set_preferred_values(axis, values, reason):
+                changed[axis] = self.archive.preferred_values(axis)
+        return changed
+
     def _update_request_analysis(self, notes: Mapping[str, Any], round_no: int) -> Dict[str, Any]:
         """Stores the first requirement list, objective and baseline, and the relevant values named by the generator."""
         archive = self.archive
@@ -123,9 +135,10 @@ class ExplorerRunner:
                 new = archive.add_relevant_values(axis, values)
                 if new:
                     added[axis] = new
+        preferred = self._update_preferences()
         self._sync_context()
         return {"requirements_stored": stored, "objective_stored": framing["objective"],
-                "baseline_stored": framing["baseline"], "relevant_added": added}
+                "baseline_stored": framing["baseline"], "relevant_added": added, "preferred_changed": preferred}
 
     # ------------------------------------------------------------------
     def run_round(self, batch: int, run_id: str) -> Dict[str, Any]:
@@ -161,6 +174,7 @@ class ExplorerRunner:
                 "trend": (order.get("context") or {}).get("trend"), "item_status": item.status,
                 "entry_id": None, "entry_status": None, "outcome": None, "on_target": None, "score": None,
                 "evidence_tier": None, "flags": [], "requirement_coverage": None, "objective_gain_pct": None,
+                "tiebreak": None,
                 "title": getattr(item.candidate, "title", None) if item.candidate is not None else None,
                 "note": "; ".join(item.issues)[:300],
             }
@@ -197,7 +211,8 @@ class ExplorerRunner:
                             "on_target": entry["on_target"], "score": entry["score"],
                             "evidence_tier": breakdown.get("evidence_tier"), "flags": list(breakdown.get("flags") or []),
                             "requirement_coverage": breakdown.get("requirement_coverage"),
-                            "objective_gain_pct": breakdown.get("objective_gain_pct")})
+                            "objective_gain_pct": breakdown.get("objective_gain_pct"),
+                            "tiebreak": entry.get("tiebreak")})
             order_logs.append(log)
 
         record = {

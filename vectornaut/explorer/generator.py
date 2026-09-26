@@ -163,14 +163,14 @@ def build_prompt(profile: ExplorerProfile, query: str, orders: Sequence[Mapping[
     if requirements:
         requirements_text = (
             "REQUIREMENTS OF THE REQUEST (fixed for this map; a critic rates every candidate against each of them,\n"
-            "and requirement coverage is half of the score; repeat them in `requirements`):\n"
+            "and requirement coverage is a large share of the score; repeat them in `requirements`):\n"
             + "\n".join(f"- {r['name']}: {r['criterion']}" for r in requirements)
         )
     else:
         requirements_text = (
             "REQUIREMENTS OF THE REQUEST: not extracted yet. In step 1, list every explicit or clearly implied\n"
             "requirement in `requirements` (3-6 items: short snake_case name + one-line criterion). A critic\n"
-            "will rate every candidate against them, and coverage is half of the score."
+            "will rate every candidate against them, and coverage is a large share of the score."
         )
     analysis_text = profile.analysis_instructions(archive)
 

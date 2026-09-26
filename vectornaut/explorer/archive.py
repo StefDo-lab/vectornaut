@@ -21,13 +21,19 @@ Elites are compared by evidence first, then score: an entry's ``score_breakdown`
 an ``evidence_rank`` (materials: 2 = simulated, 1 = estimated, 0 = estimated after an
 implausible simulation). A lower-ranked entry never replaces a higher-ranked elite, and a
 higher-ranked entry replaces a lower-ranked one regardless of score. Entries without a rank
-(business) all rank equal, so only the score decides.
+(business) all rank equal, so only the score decides. Scores within TIE_EPSILON points are a
+tie when both entries carry a ``tiebreak`` key (materials: critic objective gain, fewer killer
+risks, simulated benefit used): the better key wins (``tiebreak: improved_on_tiebreak`` on the
+new entry, or ``kept_on_tiebreak`` when a slightly higher score loses); equal keys fall back to
+"strictly higher score".
 
 Versioning: ``version`` is ARCHIVE_VERSION. An older archive whose axes (names *and* values)
-equal the profile's is migrated on load (the version is raised and ``migrated_from`` noted);
-an archive built with a different vocabulary is refused with an explanation, because its
-cells and scores are not comparable (version 3 added ``governing_quantity`` values for
-fouling control and changed the materials score). A newer archive is refused as well.
+equal the profile's is migrated on load (the version is raised and ``migrated_from`` noted;
+the profile may re-score entries on the way, see ``Archive.load(migrate=...)``); an archive
+built with a different vocabulary is refused with an explanation, because its cells and scores
+are not comparable (version 3 added ``governing_quantity`` values for fouling control and changed
+the materials score; version 4 changed the materials score again, re-scores version-3 entries
+from their stored breakdowns and adds preferred axis values). A newer archive is refused as well.
 
 Writes are atomic (temp file + ``os.replace``). Entry ids are sequential and the file is
 written with sorted keys, so the same inputs give the same file except for timestamps
@@ -38,12 +44,14 @@ import math
 import os
 import tempfile
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from vectornaut.explorer.descriptors import DescriptorSpace
 from vectornaut.storage import data_path
 
-ARCHIVE_VERSION = 3
+ARCHIVE_VERSION = 4
+# Two scores within this many points are a tie within a cell (decided by the tiebreak key).
+TIE_EPSILON = 1.0
 
 
 class ArchiveCompatibilityError(ValueError):
@@ -79,6 +87,37 @@ def evidence_rank(entry: Mapping[str, Any]) -> int:
 def rank_key(entry: Mapping[str, Any]) -> tuple:
     """(evidence rank, score): the larger key is the better entry."""
     return (evidence_rank(entry), float(entry.get("score") or 0.0))
+
+
+# Outcomes of a tie decided by the tiebreak key (stored as entry["tiebreak"]).
+IMPROVED_ON_TIEBREAK = "improved_on_tiebreak"
+KEPT_ON_TIEBREAK = "kept_on_tiebreak"
+
+
+def tiebreak_key(entry: Mapping[str, Any]) -> Optional[tuple]:
+    """The entry's tiebreak key (larger is better; missing numbers rank lowest), or None."""
+    values = (entry.get("score_breakdown") or {}).get("tiebreak")
+    if not isinstance(values, (list, tuple)) or not values:
+        return None
+    return tuple(_finite(v) if _finite(v) is not None else -math.inf for v in values)
+
+
+def compare_entries(new: Mapping[str, Any], current: Mapping[str, Any],
+                    epsilon: float = TIE_EPSILON) -> Tuple[bool, bool]:
+    """
+    (new is better, decided by the tiebreak?). Evidence rank first; at equal rank, scores within
+    ``epsilon`` points are a tie decided by the tiebreak keys when both entries have one and the
+    keys differ; otherwise the strictly higher score wins (ties keep the current entry).
+    """
+    rank_new, rank_cur = evidence_rank(new), evidence_rank(current)
+    if rank_new != rank_cur:
+        return rank_new > rank_cur, False
+    score_new, score_cur = float(new.get("score") or 0.0), float(current.get("score") or 0.0)
+    if abs(score_new - score_cur) <= epsilon:
+        key_new, key_cur = tiebreak_key(new), tiebreak_key(current)
+        if key_new is not None and key_cur is not None and key_new != key_cur:
+            return key_new > key_cur, True
+    return score_new > score_cur, False
 
 
 def _utc_now() -> str:
@@ -119,7 +158,8 @@ class Archive:
             "targets": {},
             "infeasible": {},
             "request_analysis": {"requirements": [], "requirements_round": None, "relevant": {},
-                                 "objective_statement": "", "baseline_statement": "", "framing_round": None},
+                                 "objective_statement": "", "baseline_statement": "", "framing_round": None,
+                                 "preferred": {}, "preferred_reason": {}},
             "rounds": [],
             "round_counter": 0,
             "next_entry": 1,
@@ -136,7 +176,13 @@ class Archive:
 
     @classmethod
     def load(cls, profile: str, space: DescriptorSpace, path: Optional[str] = None,
-             clock: Optional[Callable[[], str]] = None) -> "Archive":
+             clock: Optional[Callable[[], str]] = None,
+             migrate: Optional[Callable[["Archive", int], Dict[str, Any]]] = None) -> "Archive":
+        """
+        Loads (or starts) an archive. ``migrate(archive, from_version)`` is called after an older,
+        vocabulary-compatible archive was loaded (the profile's re-scoring); a summary it returns
+        is appended to ``migrations``.
+        """
         archive = cls(profile, space, path=path, clock=clock)
         if os.path.exists(archive.path):
             with open(archive.path, "r", encoding="utf-8") as f:
@@ -156,7 +202,40 @@ class Archive:
             analysis.update(base.get("request_analysis") or {})
             base["request_analysis"] = analysis
             archive.data = base
+            old_version = data.get("migrated_now")
+            base.pop("migrated_now", None)
+            if old_version is not None and migrate is not None:
+                summary = migrate(archive, int(old_version))
+                if summary:
+                    base.setdefault("migrations", []).append(dict(summary, from_version=int(old_version),
+                                                                  to_version=ARCHIVE_VERSION))
         return archive
+
+    def recompute_elites(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Rebuilds the elite of every cell from the evaluated entries in id order with the current
+        comparison rule (after a re-scoring). Returns the changed cells as
+        {cell: {"from": old id, "to": new id, "tiebreak": decided by the tiebreak key?}}.
+        Historical ``outcome`` fields of the entries are left as recorded.
+        """
+        old = dict(self.elites)
+        elites: Dict[str, str] = {}
+        by_tiebreak: Dict[str, bool] = {}
+        for entry_id in sorted(self.entries):
+            entry = self.entries[entry_id]
+            cell = entry.get("cell")
+            if entry.get("status") != EVALUATED or entry.get("score") is None or not cell:
+                continue
+            current = self.entries.get(elites.get(cell, ""))
+            if current is None:
+                elites[cell], by_tiebreak[cell] = entry_id, False
+                continue
+            better, tiebreak = compare_entries(entry, current)
+            if better:
+                elites[cell], by_tiebreak[cell] = entry_id, tiebreak
+        self.data["elites"] = elites
+        return {cell: {"from": old.get(cell), "to": new, "tiebreak": by_tiebreak[cell]}
+                for cell, new in sorted(elites.items()) if old.get(cell) != new}
 
     def _check_version(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Refuses newer archives and archives with another vocabulary; migrates older compatible ones."""
@@ -191,6 +270,7 @@ class Archive:
         if version < ARCHIVE_VERSION:
             data = dict(data)
             data["migrated_from"] = version
+            data["migrated_now"] = version
             data["version"] = ARCHIVE_VERSION
         return data
 
@@ -389,6 +469,38 @@ class Archive:
                 return False
         return True
 
+    # ---- preferred values (e.g. biological origins for a bio-inspired request) ----
+    def set_preferred_values(self, axis: str, values: Sequence[str], reason: str) -> bool:
+        """
+        Stores the preferred values of an axis (validated tokens, in axis order) and why. Unlike
+        relevant values, elites do not widen them: fill_gap, diversify, combine and extrapolate only
+        target preferred values, explore reaches the others at a low weight. Returns True if changed.
+        """
+        axis_obj = self.space.axis(axis)
+        cleaned = sorted({v for v in values or () if v in axis_obj.values}, key=axis_obj.index)
+        preferred = self.request_analysis.setdefault("preferred", {})
+        reasons = self.request_analysis.setdefault("preferred_reason", {})
+        if not cleaned or (preferred.get(axis) == cleaned and reasons.get(axis) == reason):
+            return False
+        preferred[axis] = cleaned
+        reasons[axis] = reason
+        return True
+
+    def preferred_values(self, axis: str) -> Optional[List[str]]:
+        """Preferred values of an axis, or None if the axis has no preference."""
+        values = (self.request_analysis.get("preferred") or {}).get(axis)
+        return list(values) if values else None
+
+    def preferred_axes(self) -> List[str]:
+        return [name for name in self.space.names if self.preferred_values(name)]
+
+    def is_preferred(self, cell: Mapping[str, str]) -> bool:
+        """False if the (full or partial) cell uses a non-preferred value of an axis with preferences."""
+        for axis in self.preferred_axes():
+            if axis in cell and cell[axis] not in self.preferred_values(axis):
+                return False
+        return True
+
     # ---- proposal statistics per axis value -----------------------------
     def value_counts(self, axis: str) -> Dict[str, int]:
         """Proposals (placed candidates of any status) per value of one axis."""
@@ -450,7 +562,8 @@ class Archive:
         Records one candidate. Returns the stored entry; ``entry["outcome"]`` says
         whether it became a new elite, improved a cell, or neither. An elite is only
         replaced by stronger evidence or, at equal evidence rank, by a strictly higher score
-        (ties keep the older entry).
+        (ties keep the older entry); scores within TIE_EPSILON with differing tiebreak keys are
+        decided by the key (``entry["tiebreak"]`` records it, see ``compare_entries``).
         """
         entry_id = f"e{int(self.data['next_entry']):05d}"
         self.data["next_entry"] = int(self.data["next_entry"]) + 1
@@ -498,12 +611,16 @@ class Archive:
             if current is None:
                 entry["outcome"] = NEW_ELITE
                 self.elites[cell_key] = entry_id
-            elif rank_key(entry) > rank_key(current):
-                entry["outcome"] = IMPROVED
-                entry["replaced"] = current_id
-                self.elites[cell_key] = entry_id
             else:
-                entry["outcome"] = NOT_BETTER
+                better, by_tiebreak = compare_entries(entry, current)
+                if better:
+                    entry["outcome"] = IMPROVED
+                    entry["replaced"] = current_id
+                    self.elites[cell_key] = entry_id
+                else:
+                    entry["outcome"] = NOT_BETTER
+                if by_tiebreak:
+                    entry["tiebreak"] = IMPROVED_ON_TIEBREAK if better else KEPT_ON_TIEBREAK
         self.entries[entry_id] = entry
         return entry
 

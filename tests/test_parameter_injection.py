@@ -17,6 +17,7 @@ from vectornaut.config import (
     ParameterProposal,
 )
 from vectornaut.solver_dispatcher import dispatch_and_solve
+from vectornaut.solvers.parsing import auto_detect_and_inject_missing_params, derivative_names
 
 
 UI_METADATA = {
@@ -177,6 +178,45 @@ class TestParameterInjection2D(unittest.TestCase):
         self.assertEqual(len(sim.solution_primary), 400)
         self.assertEqual(auditor.audited_parameters_dict.get("volumetric_source"), 1.0)
         self.assertEqual(auditor.audited_parameters_dict.get("T_hot"), 300.0)
+
+
+
+class TestDerivativeNamesAreNotParameters(unittest.TestCase):
+    """Derivative notations of multi-character variables must not be injected as parameters = 1.0."""
+
+    def _inject(self, equation, bcs, ivs, dvs, params=None):
+        return auto_detect_and_inject_missing_params(equation, bcs, ivs, dvs, dict(params or {}))
+
+    def test_multi_character_coordinate_1d(self):
+        # The recorded v3 explorer run: coordinate 'xi', dependents 'u' and 'c'.
+        injected = self._inject("D * d2c_dxi2 - k * dc_dxi = 0",
+                                ["c(0) = 1", "dc_dxi(1) = 0", "du_dxi(0) = 0", "d2u_dxi2(1) = 0"],
+                                ["xi"], ["c", "u"], {"D": 1e-9})
+        for name in ("d2c_dxi2", "dc_dxi", "du_dxi", "d2u_dxi2"):
+            self.assertNotIn(name, injected)
+        self.assertEqual(injected["k"], 1.0)          # a real missing parameter is still injected
+
+    def test_multi_character_names_2d_and_subscripts(self):
+        injected = self._inject("d2Phi_dxi2 + d2Phi_deta2 + d2Phi_dxideta + Phi_xi + Phi_etaeta = src",
+                                ["Phi(0, eta) = 0", "dPhi_deta(xi, 1) = 0"], ["xi", "eta"], ["Phi"], {})
+        self.assertEqual(sorted(injected), ["src"])
+
+    def test_derivative_names_cover_the_solver_notations(self):
+        names = derivative_names(["X", "Y"], ["U"])
+        for name in ("dU_dX", "dU_dY", "d2U_dX2", "d2U_dY2", "d2U_dXdY", "d2U_dYdX", "U_X", "U_XX", "U_XY",
+                     "U_YX"):
+            self.assertIn(name, names)
+
+    def test_one_letter_rule_and_fallback(self):
+        # Historical rule stays: dp_dx is never injected, even if p is not a listed variable.
+        self.assertNotIn("dp_dx", self._inject("d2u_dy2 = dp_dx / mu", ["u(0) = 0"], ["y"], ["u"], {"mu": 1e-3}))
+        # Without variable names, short multi-character derivative names are skipped too ...
+        self.assertNotIn("dc_dxi", self._inject("dc_dxi = 0", [], [], [], {}))
+        # ... but long descriptive parameter names are still injected.
+        injected = self._inject("d2u_dy2 = density_dimensionless", ["u(0) = 0"], [], [], {})
+        self.assertIn("density_dimensionless", injected)
+        injected = self._inject("d2u_dy2 = diameter_duct", ["u(0) = 0"], ["y"], ["u"], {})
+        self.assertIn("diameter_duct", injected)
 
 
 if __name__ == "__main__":

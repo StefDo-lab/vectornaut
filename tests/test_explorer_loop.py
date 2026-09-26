@@ -10,11 +10,13 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from vectornaut.explorer.archive import EVALUATED, FAILED, IMPROVED, INFEASIBLE, Archive
+from vectornaut.explorer.archive import EVALUATED, FAILED, IMPROVED, IMPROVED_ON_TIEBREAK, INFEASIBLE, TIE_EPSILON, Archive
 from vectornaut.explorer.generator import CandidateGenerator, build_prompt
 from vectornaut.explorer.profiles.base import EvaluationContext, PreparedCandidate
 from vectornaut.explorer.profiles.business import BusinessProfile
-from vectornaut.explorer.profiles.materials import MATERIALS_SPACE, MaterialsProfile, score_pipeline_result
+from vectornaut.explorer.profiles.materials import (
+    MATERIALS_SPACE, OBJECTIVE_SCALE_PCT, SIM_SCALE_PCT, W_OBJ, W_REQ, W_SIM, MaterialsProfile, score_pipeline_result,
+)
 from vectornaut.explorer.run import ExplorerError, ExplorerRunner, main
 from vectornaut.explorer.schemas import (
     BackOfEnvelope, DescriptorAssignment, MaterialsCandidate, MaterialsCandidateBatch,
@@ -45,14 +47,17 @@ class OfflineTestCase(unittest.TestCase):
 
 
 def assert_elite_invariants(test, archive):
-    """Elites are the best evaluated entry of their cell; replacements were strict improvements."""
+    """
+    Elites are the best evaluated entry of their cell (within the tie epsilon, where the tiebreak
+    decides); replacements were strict improvements or won a tie on the tiebreak key.
+    """
     for key, elite_id in archive.elites.items():
         elite = archive.entries[elite_id]
         test.assertEqual(elite["status"], EVALUATED)
         same_cell = [e for e in archive.entries.values() if e.get("cell") == key and e["status"] == EVALUATED]
-        test.assertEqual(max(e["score"] for e in same_cell), elite["score"])
+        test.assertLessEqual(max(e["score"] for e in same_cell) - elite["score"], TIE_EPSILON)
     for entry in archive.entries.values():
-        if entry.get("outcome") == IMPROVED:
+        if entry.get("outcome") == IMPROVED and entry.get("tiebreak") != IMPROVED_ON_TIEBREAK:
             test.assertGreater(entry["score"], archive.entries[entry["replaced"]]["score"])
 
 
@@ -179,7 +184,8 @@ class MaterialsLoopTest(OfflineTestCase):
         self.assertEqual({o["strategy"] for o in archive.data["rounds"][0]["orders"]}, {"seed"})
         for entry_ in archive.entries.values():
             if entry_.get("strategy") == "explore":
-                self.assertIn(entry_["descriptors"]["governing_quantity"], ("wall_shear", "flow_rate", "fouling_adhesion"))
+                where = entry_["descriptors"] or archive.space.parse_key(entry_["target_key"])
+                self.assertIn(where["governing_quantity"], ("wall_shear", "flow_rate", "fouling_adhesion"))
         with open(os.path.join(archive.directory, entry["raw_result_path"]), encoding="utf-8") as f:
             raw = json.load(f)
         # The pipeline evaluated exactly the generated concept (no miner call, no re-mining).
@@ -190,7 +196,7 @@ class MaterialsLoopTest(OfflineTestCase):
         for heading in ("## Map: mechanism_class x length_scale", "## Requirements of the request",
                         "## Requirement coverage (critic ratings, elites)", "## Values never proposed",
                         "| tier | points obj / sim / req | objective gain % |", "Elites by evidence tier",
-                        "- **Objective**:", "- **Baseline**:", "0.35 * objective_score + 0.15 * simulated_score"):
+                        "- **Objective**:", "- **Baseline**:", "0.45 * objective_score + 0.1 * simulated_score"):
             self.assertIn(heading, map_md)
         with open(os.path.join(archive.directory, "reports", "round_002.md"), encoding="utf-8") as f:
             round_md = f.read()
@@ -215,6 +221,51 @@ class MaterialsLoopTest(OfflineTestCase):
             return {k: {kk: vv for kk, vv in v.items() if kk != "raw_result_path"} for k, v in data["entries"].items()}
 
         self.assertEqual(run("a"), run("b"))
+
+    def test_bionic_request_keeps_targeted_orders_on_biological_origins(self):
+        query = "Develop a bio-inspired hull coating that lowers friction drag for years"
+        runner = ExplorerRunner(MaterialsProfile(), query, seed=2, mock=True, epochs=5, clock=lambda: FROZEN)
+        self.run_quiet(runner.run, 3, 6)
+        archive = runner.archive
+        self.assertEqual(archive.preferred_values("inspiration_origin"), ["plant", "animal", "microbe"])
+        self.assertEqual(runner.config.combine_anchor_axes, ("governing_quantity", "mechanism_class"))
+        self.assertEqual(runner.config.trend_group_axes, ("mechanism_class",))
+        targeted = [e for e in archive.entries.values() if e["strategy"] in ("fill_gap", "diversify", "combine",
+                                                                            "extrapolate")]
+        self.assertTrue(targeted)
+        for entry in targeted:
+            origin = archive.space.parse_key(entry["target_key"]).get("inspiration_origin")
+            self.assertIn(origin, (None, "plant", "animal", "microbe"), entry["target_key"])
+        for record in archive.data["rounds"][1:]:
+            self.assertIn("slots", record["strategy_notes"]["extrapolate"])
+            if not record["strategy_notes"]["extrapolate"]["slots"]["allocated"]:
+                self.assertNotIn("extrapolate", record["strategy_notes"]["planned"])
+        with open(os.path.join(archive.directory, "reports", "map.md"), encoding="utf-8") as f:
+            self.assertIn("Preferred `inspiration_origin` values", f.read())
+        prompt = build_prompt(runner.profile, runner.query, [], archive)
+        self.assertIn("PREFERRED INSPIRATION ORIGINS", prompt)
+
+    def test_version_3_archive_is_migrated_and_rescored_by_the_runner(self):
+        runner = ExplorerRunner(MaterialsProfile(), "q", seed=1, mock=True, epochs=5, clock=lambda: FROZEN)
+        self.run_quiet(runner.run, 1, 3)
+        path = runner.archive.path
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        data["version"] = 3
+        scores = {k: e["score"] for k, e in data["entries"].items()}
+        for entry in data["entries"].values():
+            if entry["score"] is not None:
+                entry["score"] = 1.0                      # as scored by the old formula
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        again = ExplorerRunner(MaterialsProfile(), "q", seed=1, mock=True, epochs=5, clock=lambda: FROZEN)
+        self.assertEqual(again.archive.data["version"], 4)
+        self.assertEqual(again.archive.data["migrations"][0]["from_version"], 3)
+        for entry_id, score in scores.items():
+            if score is not None:
+                self.assertAlmostEqual(again.archive.entries[entry_id]["score"], score, places=3)
+        self.run_quiet(again.run, 1, 3)
+        assert_elite_invariants(self, again.archive)
 
     def test_archive_with_the_old_vocabulary_is_refused_with_a_clear_message(self):
         path = os.path.join(self.data_dir, "explorer", "materials", "archive.json")
@@ -276,9 +327,10 @@ class MaterialsEvaluatorTest(OfflineTestCase):
         self.assertEqual(req.concept.design_name, "Concept r001-01")
         self.assertEqual(req.max_concept_attempts, 1)
         self.assertEqual((req.epochs, req.max_optimization_rounds, req.is_mock), (7, 2, True))
-        # No critic: 100 * gate * (0.35 * 0.5 * (1 - exp(-12/10)) [own estimate, unchecked]
-        #                         + 0.15 * (1 - exp(-20/20)) + 0.5 * 0.5 [unrated requirements]), gate = 1
-        expected = 100 * (0.35 * 0.5 * (1 - math.exp(-1.2)) + 0.15 * (1 - math.exp(-1.0)) + 0.5 * 0.5)
+        # No critic: 100 * gate * (W_OBJ * 0.5 * (1 - exp(-12/OBJECTIVE_SCALE)) [own estimate, unchecked]
+        #                         + W_SIM * (1 - exp(-20/SIM_SCALE)) + W_REQ * 0.5 [unrated requirements]), gate = 1
+        expected = 100 * (W_OBJ * 0.5 * (1 - math.exp(-12.0 / OBJECTIVE_SCALE_PCT))
+                          + W_SIM * (1 - math.exp(-20.0 / SIM_SCALE_PCT)) + W_REQ * 0.5)
         self.assertAlmostEqual(result.score, expected, places=3)
         self.assertEqual(result.breakdown["basis"], "simulated")
         self.assertEqual(result.breakdown["evidence_tier"], "simulated")
@@ -304,9 +356,9 @@ class MaterialsEvaluatorTest(OfflineTestCase):
             self.assertEqual(result.breakdown["basis"], "estimated, not simulated")
             self.assertEqual(result.breakdown["evidence_tier"], "estimated")
             self.assertIn(flag, result.breakdown["flags"])
-            objective_score = (1 - math.exp(-12.0 / 10.0)) * 0.5
+            objective_score = (1 - math.exp(-12.0 / OBJECTIVE_SCALE_PCT)) * 0.5
             # gate = 0.5 * 0.8 (warn); no simulated part; requirements unrated -> 0.5
-            self.assertAlmostEqual(result.score, 100 * 0.5 * 0.8 * (0.35 * objective_score + 0.5 * 0.5), places=3)
+            self.assertAlmostEqual(result.score, 100 * 0.5 * 0.8 * (W_OBJ * objective_score + W_REQ * 0.5), places=3)
         result = score_pipeline_result({"status": "completed", "simulator": {"performance_gain_pct": 5.0,
                                                                              "gain_basis": "baseline design"},
                                         "validation": {"status": "fail", "score": 0.9}}, cand)

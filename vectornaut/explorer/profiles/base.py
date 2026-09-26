@@ -72,6 +72,23 @@ class ExplorerProfile:
     # Axes that name where an idea comes from (materials: inspiration_origin). A fill_gap or
     # diversify order that changes one must take the mechanism from the new origin.
     origin_axes: Tuple[str, ...] = ()
+    # combine: axes whose value the child takes from the stronger parent (evidence tier, then
+    # score). The first is always anchored; each further one only if the weaker parent's value
+    # was never evaluated together with the anchored value (materials: governing_quantity, then
+    # mechanism_class). Empty = free mixing.
+    combine_anchor_axes: Tuple[str, ...] = ()
+    # extrapolate: marginal trends (best score per ordinal value) only within one value of these
+    # axes (materials: mechanism_class). Empty = marginal over everything.
+    trend_group_axes: Tuple[str, ...] = ()
+
+    # ---- request analysis -----------------------------------------------
+    def preferred_values(self, query: str, requirements: Sequence[Mapping[str, Any]]) -> Dict[str, Tuple[List[str], str]]:
+        """Preferred values per axis derived from the request and its requirements: {axis: (values, reason)}."""
+        return {}
+
+    def migrate_archive(self, archive: Any, from_version: int) -> Optional[Dict[str, Any]]:
+        """Adapts an older, vocabulary-compatible archive after loading (e.g. re-scoring); returns a summary."""
+        return None
 
     # ---- prompt text --------------------------------------------------
     def domain_brief(self) -> str:

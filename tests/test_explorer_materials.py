@@ -9,13 +9,13 @@ from types import SimpleNamespace
 from unittest import mock
 
 from vectornaut.config import ParameterProposal
-from vectornaut.explorer.archive import EVALUATED, IMPROVED, NOT_BETTER, Archive
+from vectornaut.explorer.archive import EVALUATED, IMPROVED, NOT_BETTER, TIE_EPSILON, Archive
 from vectornaut.explorer.generator import CandidateGenerator, build_prompt, check_batch, compact_context
 from vectornaut.explorer.profiles.base import EvaluationContext, PreparedCandidate
 from vectornaut.explorer.profiles.materials import (
     ESTIMATE_DISCOUNT, ESTIMATED_SCORE_CAP, MATERIALS_SPACE, OBJECTIVE_SCALE_PCT, RELABEL_FACTOR, SIM_SCALE_PCT,
-    W_OBJ, W_REQ, W_SIM, MaterialsProfile, critic_prompt, differs_strongly, framing_warnings, score_pipeline_result,
-    to_miner_concept,
+    W_OBJ, W_REQ, W_SIM, MaterialsProfile, critic_prompt, differs_strongly, framing_warnings, rescore_breakdown,
+    score_pipeline_result, to_miner_concept,
 )
 from vectornaut.explorer.schemas import (
     BackOfEnvelope, DescriptorAssignment, MaterialsCandidate, MaterialsCandidateBatch, MaterialsCriticBatch,
@@ -170,8 +170,8 @@ class TierAndScoreTest(unittest.TestCase):
             self.assertAlmostEqual(res.score, expected, places=3)
             if not b["capped"]:
                 self.assertAlmostEqual(sum(b["contributions"].values()), res.score, places=2)
-            self.assertIn("score = 100 * gate * (0.35 * objective_score + 0.15 * simulated_score + "
-                          "0.5 * requirement_coverage) * relabel_factor", b["formula"])
+            self.assertIn("score = 100 * gate * (0.45 * objective_score + 0.1 * simulated_score + "
+                          "0.45 * requirement_coverage) * relabel_factor", b["formula"])
             self.assertEqual(b["weights"], {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ})
         # No validity floor: a 0.13 % gain with poor coverage scores little.
         tiny = score_pipeline_result(pipeline_result(0.13, "warn", 0.956), candidate(estimate=50.0),
@@ -185,7 +185,8 @@ class TierAndScoreTest(unittest.TestCase):
                                          review=review(sim=19.0, obj=5.0, coverage=cov), requirements=REQUIREMENTS)
         good = score([("low_friction_drag", 0.9), ("non_toxic_antifouling", 0.9), ("multi_year_durability", 0.9)])
         poor = score([("low_friction_drag", 0.9), ("non_toxic_antifouling", 0.1), ("Multi Year Durability", 0.1)])
-        self.assertGreater(good.score - poor.score, 25.0)
+        self.assertAlmostEqual(good.score - poor.score, 100 * W_REQ * (0.9 - 1.1 / 3), places=3)
+        self.assertGreater(good.score - poor.score, 20.0)
         self.assertAlmostEqual(poor.breakdown["requirement_coverage"], (0.9 + 0.1 + 0.1) / 3, places=4)
         self.assertEqual([r["coverage"] for r in poor.breakdown["requirements"]], [0.9, 0.1, 0.1])
         partial = score([("low_friction_drag", 1.0), ("unknown", 0.0)])
@@ -212,17 +213,18 @@ class TwoNumberScoringTest(unittest.TestCase):
         self.assertEqual(b["evidence_tier"], "simulated")
         self.assertEqual(b["simulated_quantity"], "fouling_adhesion")
         self.assertTrue(b["simulated_quantity_relevant"])
-        self.assertEqual(b["simulated_benefit_used_pct"], 60.0)          # 60 vs critic 50: within 50 %
+        self.assertEqual(b["simulated_benefit_used_pct"], 50.0)          # 60 vs critic 50: the lower one
+        self.assertNotIn("model_assumption_sensitive", b["flags"])      # ... but they do not differ strongly
         self.assertEqual(b["objective_gain_pct"], 6.0)
         self.assertEqual(b["objective_gain_source"], "critic")
         self.assertEqual(b["objective_discount"], 1.0)
-        expected = 100 * (W_OBJ * f(6.0, OBJECTIVE_SCALE_PCT) + W_SIM * f(60.0, SIM_SCALE_PCT) + W_REQ * 0.6)
+        expected = 100 * (W_OBJ * f(6.0, OBJECTIVE_SCALE_PCT) + W_SIM * f(50.0, SIM_SCALE_PCT) + W_REQ * 0.6)
         self.assertAlmostEqual(res.score, expected, places=3)
         self.assertAlmostEqual(b["contributions"]["objective"], 100 * W_OBJ * f(6.0, OBJECTIVE_SCALE_PCT), places=3)
-        self.assertAlmostEqual(b["contributions"]["simulated"], 100 * W_SIM * f(60.0, SIM_SCALE_PCT), places=3)
+        self.assertAlmostEqual(b["contributions"]["simulated"], 100 * W_SIM * f(50.0, SIM_SCALE_PCT), places=3)
         # Zero objective gain still leaves the simulated benefit in the score (the old formula gave ~0).
         zero = self.score(obj=0.0)
-        self.assertGreater(zero.breakdown["contributions"]["simulated"], 14.0)
+        self.assertGreater(zero.breakdown["contributions"]["simulated"], 9.0)
 
     def test_simulation_is_critic_checked(self):
         b = self.score(gain=84.0, sim=20.0).breakdown
@@ -309,13 +311,24 @@ class CriticCombinationTest(unittest.TestCase):
         self.assertEqual(b["simulated_benefit_used_pct"], -28.7)
         self.assertIn("model_assumption_sensitive", b["flags"])
 
-    def test_simulation_is_used_when_they_agree(self):
+    def test_the_lower_value_is_used_even_when_they_agree(self):
+        # v3 role-play: 8 of 13 elites used the higher simulated number (critic at 50-100 % of it).
         b = self.score(12.0, 10.0)
-        self.assertEqual(b["simulated_benefit_used_pct"], 12.0)
-        self.assertNotIn("model_assumption_sensitive", b["flags"])
+        self.assertEqual(b["simulated_benefit_used_pct"], 10.0)
+        self.assertNotIn("model_assumption_sensitive", b["flags"])     # no strong disagreement: no flag
+        self.assertIn("critic", b["simulated_benefit_source"])
         self.assertEqual(b["critic"]["key_assumption_issues"], ["gap chosen to match"])
+        b = self.score(49.9, 30.0)          # the recorded pilot-whale case
+        self.assertEqual(b["simulated_benefit_used_pct"], 30.0)
+        b = self.score(10.0, 12.0)          # the critic above the simulation: the simulation counts
+        self.assertEqual(b["simulated_benefit_used_pct"], 10.0)
+        self.assertIn("not above the critic", b["simulated_benefit_source"])
         b = self.score(0.02, 0.0)           # noise is agreement
         self.assertNotIn("model_assumption_sensitive", b["flags"])
+        self.assertEqual(b["simulated_benefit_used_pct"], 0.0)
+        # Without a critic value the simulation counts as it is.
+        b = score_pipeline_result(pipeline_result(12.0), candidate(), review=review(sim=None, obj=1.0)).breakdown
+        self.assertEqual(b["simulated_benefit_used_pct"], 12.0)
 
     def test_without_simulated_gain_the_critic_objective_counts(self):
         b = score_pipeline_result(pipeline_result(0.0, basis="none"), candidate(estimate=15.0),
@@ -401,7 +414,8 @@ class CriticStageTest(unittest.TestCase):
                      "simulated quantity: stress (named by the function analysis: wall_shear, stress)",
                      "search order: diversify; parent(s): 'Dolphin-skin graded elastomer'",
                      "plausible_simulated_benefit_pct", "plausible_objective_gain_pct", "relabelled_analogue",
-                     "baseline_conventional", "inspiration: whale skin"):
+                     "baseline_conventional", "inspiration: whale skin", "proxy_by_construction",
+                     "baseline that contains the"):
             self.assertIn(text, prompt)
         self.assertEqual(first.breakdown["simulated_benefit_used_pct"], 6.0)   # 19.35 vs 6 -> lower, flagged
         self.assertEqual(first.breakdown["objective_gain_pct"], 2.0)
@@ -586,6 +600,151 @@ class GeneratorAnalysisTest(unittest.TestCase):
         b = score_pipeline_result(pipeline_result(10.0), candidate(baseline="")).breakdown
         self.assertIn("baseline_unstated", b["flags"])
         self.assertEqual(MaterialsProfile().sanity_issues(candidate(baseline=""), CELL), [])
+
+
+# The v3 role-play (hull coating): simulated %, critic simulated %, critic objective %, requirement coverage.
+V3_CASES = {
+    "glacier_soft_bed": (79.3, 55.0, 1.5, 0.425),
+    "pack_ice_tiles": (78.3, 60.0, 1.5, 0.4167),
+    "pilot_whale_soft_skin": (49.9, 30.0, 1.0, 0.50),
+    "palm_fibres": (51.3, 35.0, 1.0, 0.4833),
+    "oil_free_palm_leaching": (77.8, 60.0, 0.8, 0.45),
+    "bound_hydration_leaching": (99.2, 80.0, 0.7, 0.4417),
+    "graded_tie_layer": (55.3, 35.0, 0.3, 0.4917),
+}
+V3_PROXIES = ("oil_free_palm_leaching", "bound_hydration_leaching")
+
+
+class ObjectiveDrivenScoringTest(unittest.TestCase):
+    """P2/P3: the objective term dominates differences; proxies by construction lose the simulated term."""
+
+    def score(self, name, proxy=False):
+        sim, critic_sim, objective, coverage = V3_CASES[name]
+        return score_pipeline_result(pipeline_result(sim), candidate(estimate=2.0, cell=FOULING_CELL),
+                                     review=review(sim=critic_sim, obj=objective, coverage=full_coverage(coverage),
+                                                   proxy_by_construction=proxy,
+                                                   proxy_reason="leaching flux vs an oil-containing baseline"),
+                                     requirements=REQUIREMENTS, relevant_quantities=["fouling_adhesion"])
+
+    def test_one_percent_objective_outweighs_requirement_noise_and_saturated_simulation(self):
+        gain = 100 * W_OBJ * (f(1.5, OBJECTIVE_SCALE_PCT) - f(0.5, OBJECTIVE_SCALE_PCT))
+        req_noise = 100 * W_REQ * (0.50 - 0.42)                 # spread of the v3 coverage ratings
+        sim_spread = 100 * W_SIM * (f(80.0, SIM_SCALE_PCT) - f(25.0, SIM_SCALE_PCT))
+        self.assertGreater(gain, 10.0)
+        self.assertGreater(gain, 2 * req_noise)
+        self.assertGreater(gain, 2 * sim_spread)
+
+    def test_v3_ranking_tracks_the_critic_objective_gain(self):
+        scores = {name: self.score(name, proxy=name in V3_PROXIES).score for name in V3_CASES}
+        order = sorted(scores, key=lambda n: -scores[n])
+        self.assertEqual(set(order[:2]), {"glacier_soft_bed", "pack_ice_tiles"})
+        self.assertEqual(set(order[2:4]), {"pilot_whale_soft_skin", "palm_fibres"})
+        for proxy in V3_PROXIES:          # the leaching proxies rank below every compliance-release concept
+            self.assertLess(scores[proxy], min(scores[n] for n in order[:4]))
+        self.assertLess(scores["graded_tie_layer"], min(scores[n] for n in order[:4]))   # 0.3 % objective
+        # Glacier and pack-ice are a tie (< TIE_EPSILON); the tiebreak prefers pack-ice's higher critic benefit.
+        self.assertLess(abs(scores["glacier_soft_bed"] - scores["pack_ice_tiles"]), TIE_EPSILON)
+
+    def test_proxy_by_construction_zeroes_the_simulated_term(self):
+        plain = self.score("bound_hydration_leaching")
+        proxy = self.score("bound_hydration_leaching", proxy=True)
+        b = proxy.breakdown
+        self.assertIn("proxy_by_construction", b["flags"])
+        self.assertEqual(b["components"]["simulated_score"], 0.0)
+        self.assertIsNone(b["simulated_benefit_used_pct"])
+        self.assertIn("proxy", b["simulated_benefit_source"])
+        self.assertEqual(b["evidence_tier"], "simulated")            # the tier and the objective stay
+        self.assertEqual(b["objective_discount"], 1.0)
+        self.assertEqual(b["critic"]["proxy_reason"], "leaching flux vs an oil-containing baseline")
+        self.assertAlmostEqual(plain.score - proxy.score, plain.breakdown["contributions"]["simulated"], places=3)
+        self.assertEqual(b["contributions"]["simulated"], 0.0)
+        self.assertFalse(MaterialsCriticReview(order_id="x").proxy_by_construction)
+        self.assertIn("proxy_by_construction", MaterialsCriticReview.model_json_schema()["properties"])
+
+    def test_tiebreak_key_is_stored(self):
+        b = self.score("pack_ice_tiles").breakdown
+        self.assertEqual(b["tiebreak"], [1.5, -1.0, 60.0])           # objective gain, -killer risks, sim. used
+        self.assertIsNone(score_pipeline_result(pipeline_result(10.0), candidate()).breakdown["tiebreak"])
+
+
+class PreferredOriginTest(unittest.TestCase):
+    """P4: a bionic / bio-inspired request prefers biological origins."""
+
+    def test_bio_keywords_in_the_request_or_requirements(self):
+        profile = MaterialsProfile()
+        german = profile.preferred_values(FramingTest.QUERY, [])
+        self.assertEqual(german["inspiration_origin"][0], ["plant", "animal", "microbe"])
+        self.assertIn("bionisch", german["inspiration_origin"][1])
+        for query in ("A bio-inspired hull coating", "Biomimetic riblets", "bionic skin", "Bionik-Beschichtung"):
+            self.assertIn("inspiration_origin", profile.preferred_values(query, []), query)
+        req = [{"name": "bionic_mechanism", "criterion": "The mechanism is genuinely derived from a biological model."}]
+        self.assertIn("bionic_mechanism", profile.preferred_values("Reduce hull drag", req)["inspiration_origin"][1])
+        # Fouling is biological, but that is not a request for a biological model.
+        self.assertEqual(profile.preferred_values("Reduce drag of a ship hull coating",
+                                                  [{"name": "fouling_control", "criterion": "limits biological fouling"}]),
+                         {})
+
+    def test_prompt_names_the_preferred_origins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = Archive("materials", MATERIALS_SPACE, path=os.path.join(tmp, "a.json"))
+            archive.set_preferred_values("inspiration_origin", ["plant", "animal", "microbe"], "the request asks ...")
+            prompt = build_prompt(MaterialsProfile(), "q", [], archive)
+        self.assertIn("PREFERRED INSPIRATION ORIGINS: plant, animal, microbe", prompt)
+
+
+class ArchiveV3MigrationTest(unittest.TestCase):
+    """Version 3 -> 4: entries are re-scored from their breakdowns and the elites rebuilt (tiebreak)."""
+
+    def test_v3_archive_is_rescored_and_the_tie_goes_to_pack_ice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = Archive("materials", MATERIALS_SPACE, path=os.path.join(tmp, "archive.json"))
+            profile = MaterialsProfile()
+            ids = {}
+            for name in ("glacier_soft_bed", "pack_ice_tiles", "pilot_whale_soft_skin"):
+                res = ObjectiveDrivenScoringTest.score(ObjectiveDrivenScoringTest(), name)
+                breakdown = dict(res.breakdown)
+                breakdown.pop("tiebreak")                      # version 3 had no tiebreak key ...
+                cell = dict(FOULING_CELL, inspiration_origin="atmosphere_ocean") if name != "pilot_whale_soft_skin" \
+                    else dict(FOULING_CELL)
+                entry = archive.add_entry(round_no=1, run_id="t", order={"order_id": name, "strategy": "seed"},
+                                          title=name, concept={}, descriptors=cell, status=EVALUATED,
+                                          score=res.score, score_breakdown=breakdown)
+                ids[name] = entry["id"]
+            key = MATERIALS_SPACE.cell_key(dict(FOULING_CELL, inspiration_origin="atmosphere_ocean"))
+            archive.data["elites"][key] = ids["glacier_soft_bed"]         # ... and kept the older entry
+            for entry in archive.entries.values():                         # ... and scored with other constants
+                entry["score"] = 40.0
+            archive.data["version"] = 3
+            archive.save()
+            loaded = Archive.load("materials", MATERIALS_SPACE, path=archive.path, migrate=profile.migrate_archive)
+            self.assertEqual(loaded.data["version"], 4)
+            self.assertEqual(loaded.data["migrated_from"], 3)
+            migration = loaded.data["migrations"][-1]
+            self.assertEqual(migration["rescored_entries"], 3)
+            self.assertEqual(migration["elite_changes"][key],
+                             {"from": ids["glacier_soft_bed"], "to": ids["pack_ice_tiles"], "tiebreak": True})
+            pack = loaded.entries[ids["pack_ice_tiles"]]
+            self.assertAlmostEqual(pack["score"], ObjectiveDrivenScoringTest.score(
+                ObjectiveDrivenScoringTest(), "pack_ice_tiles").score, places=3)
+            self.assertEqual(pack["score_breakdown"]["rescored_from"]["score"], 40.0)
+            self.assertEqual(pack["score_breakdown"]["tiebreak"], [1.5, -1.0, 60.0])
+            self.assertIn("0.45 * objective_score", pack["score_breakdown"]["formula"])
+            # Loading again does not migrate twice.
+            loaded.save()
+            again = Archive.load("materials", MATERIALS_SPACE, path=archive.path, migrate=profile.migrate_archive)
+            self.assertEqual(len(again.data["migrations"]), 1)
+
+    def test_rescore_uses_the_lower_number_and_keeps_the_estimated_cap(self):
+        # The recorded pilot-whale elite: simulated 49.9 %, critic 30 %: version 3 used 49.9.
+        res = ObjectiveDrivenScoringTest.score(ObjectiveDrivenScoringTest(), "pilot_whale_soft_skin")
+        old = dict(res.breakdown, simulated_benefit_used_pct=49.9, flags=[])
+        score, new = rescore_breakdown(old)
+        self.assertEqual(new["simulated_benefit_used_pct"], 30.0)
+        self.assertAlmostEqual(score, res.score, places=3)
+        estimated = score_pipeline_result(pipeline_result(None, basis="none"), candidate(estimate=1000.0),
+                                          review=review(obj=900.0, coverage=full_coverage()), requirements=REQUIREMENTS)
+        self.assertEqual(rescore_breakdown(estimated.breakdown)[0], ESTIMATED_SCORE_CAP)
+        self.assertIsNone(rescore_breakdown({"basis": "business"}))
 
 
 if __name__ == "__main__":

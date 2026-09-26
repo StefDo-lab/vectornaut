@@ -7,7 +7,8 @@ import tempfile
 import unittest
 
 from vectornaut.explorer.archive import (
-    ARCHIVE_VERSION, EVALUATED, FAILED, IMPROVED, INVALID, NEW_ELITE, NOT_BETTER, Archive, ArchiveCompatibilityError,
+    ARCHIVE_VERSION, EVALUATED, FAILED, IMPROVED, IMPROVED_ON_TIEBREAK, INVALID, KEPT_ON_TIEBREAK, NEW_ELITE, NOT_BETTER,
+    TIE_EPSILON, Archive, ArchiveCompatibilityError, compare_entries,
 )
 from vectornaut.explorer.descriptors import NOMINAL, ORDINAL, Axis, DescriptorError, DescriptorSpace
 from vectornaut.explorer.profiles.business import BUSINESS_SPACE
@@ -741,6 +742,230 @@ class SchedulerTest(ArchiveTestCase):
         for bad in ("magic=1", "refine", "refine=-1", "refine=0"):
             with self.assertRaises(ValueError):
                 st.parse_weights(bad)
+
+
+class TiebreakTest(ArchiveTestCase):
+    """P7: a refinement within TIE_EPSILON of its parent wins on the critic's objective gain and fewer risks."""
+
+    @staticmethod
+    def tb(objective, risks=1, simulated=10.0):
+        return dict(SIMULATED, tiebreak=[objective, -float(risks), simulated])
+
+    def test_tie_is_decided_by_the_tiebreak_key(self):
+        where = cell("a", "s1", "x")
+        first = self.add(where, 52.2, breakdown=self.tb(1.5, 3, 55.0))          # glacier soft bed
+        better = self.add(where, 52.0, breakdown=self.tb(1.5, 3, 60.0))         # pack-ice: same gain, better sim.
+        self.assertEqual(better["outcome"], IMPROVED)
+        self.assertEqual(better["tiebreak"], IMPROVED_ON_TIEBREAK)
+        self.assertEqual(better["replaced"], first["id"])
+        # A slightly higher score with a lower critic objective gain loses the tie.
+        kept = self.add(where, 52.9, breakdown=self.tb(1.0, 1, 90.0))
+        self.assertEqual((kept["outcome"], kept["tiebreak"]), (NOT_BETTER, KEPT_ON_TIEBREAK))
+        self.assertEqual(self.archive.elite_for(where)["id"], better["id"])
+        # Fewer killer risks break a tie at equal objective gain.
+        fewer = self.add(where, 51.5, breakdown=self.tb(1.5, 2, 1.0))
+        self.assertEqual(fewer["tiebreak"], IMPROVED_ON_TIEBREAK)
+        # Beyond the epsilon the score decides as before.
+        clear = self.add(where, 51.5 + TIE_EPSILON + 0.5, breakdown=self.tb(0.1, 5, 0.0))
+        self.assertEqual(clear["outcome"], IMPROVED)
+        self.assertNotIn("tiebreak", clear)
+
+    def test_without_tiebreak_keys_the_strict_score_rule_stays(self):
+        where = cell("b", "s1", "x")
+        self.add(where, 50.0)
+        self.assertEqual(self.add(where, 50.0)["outcome"], NOT_BETTER)
+        self.assertEqual(self.add(where, 50.5)["outcome"], IMPROVED)       # business: no tiebreak key
+        # Equal keys fall back to the strict score rule; evidence rank still comes first.
+        other = cell("c", "s1", "x")
+        self.add(other, 40.0, breakdown=self.tb(1.0))
+        self.assertEqual(self.add(other, 40.5, breakdown=self.tb(1.0))["outcome"], IMPROVED)
+        est = dict(ESTIMATED, tiebreak=[9.0, 0.0, 0.0])
+        self.assertEqual(self.add(other, 40.4, breakdown=est)["outcome"], NOT_BETTER)
+        self.assertEqual(compare_entries({"score": 1.0, "score_breakdown": self.tb(None)},
+                                         {"score": 1.0, "score_breakdown": self.tb(0.0)}), (False, True))
+
+    def test_recompute_elites_reports_changes(self):
+        where = cell("a", "s1", "x")
+        first = self.add(where, 40.8, breakdown=self.tb(1.5, 3, 55.0))
+        second = self.add(where, 40.4, breakdown=self.tb(1.5, 3, 60.0))
+        self.assertEqual(second["tiebreak"], IMPROVED_ON_TIEBREAK)
+        self.archive.data["elites"][SPACE.cell_key(where)] = first["id"]      # as a v3 archive stored it
+        changes = self.archive.recompute_elites()
+        self.assertEqual(changes, {SPACE.cell_key(where): {"from": first["id"], "to": second["id"], "tiebreak": True}})
+        self.assertEqual(self.archive.recompute_elites(), {})
+
+
+class PreferredValuesTest(ArchiveTestCase):
+    """P4: preferred origins (bio-inspired request) restrict fill_gap/diversify/combine/extrapolate; explore keeps a low weight."""
+
+    CONFIG = st.StrategyConfig(origin_axes=("origin",))
+
+    def setUp(self):
+        super().setUp()
+        self.assertTrue(self.archive.set_preferred_values("origin", ["x", "bogus"], "bio request"))
+        self.assertFalse(self.archive.set_preferred_values("origin", ["x"], "bio request"))
+
+    def test_archive_stores_and_checks_preferences(self):
+        self.assertEqual(self.archive.preferred_values("origin"), ["x"])
+        self.assertIsNone(self.archive.preferred_values("mech"))
+        self.assertFalse(self.archive.is_preferred(cell("a", "s1", "y")))
+        self.assertTrue(self.archive.is_preferred({"size": "s1"}))
+        self.archive.save()
+        loaded = Archive.load("test", SPACE, path=self.archive.path)
+        self.assertEqual(loaded.preferred_values("origin"), ["x"])
+        self.assertEqual(loaded.request_analysis["preferred_reason"], {"origin": "bio request"})
+
+    def test_fill_gap_diversify_and_combine_keep_preferred_origins(self):
+        # The recorded case: under-explored origins were pushed although the request is bio-inspired.
+        self.add(cell("a", "s3", "x"), 60.0)
+        self.add(cell("b", "s3", "x"), 40.0)
+        self.add(cell("c", "s1", "x"), 30.0)
+        self.add(cell("c", "s5", "y"), 45.0)                     # a non-preferred elite exists
+        for seed in range(5):
+            orders = (st.fill_gap(self.archive, random.Random(seed), 20, set(), self.CONFIG)
+                      + st.diversify(self.archive, random.Random(seed), 6, set(), self.CONFIG)
+                      + st.combine(self.archive, random.Random(seed), 6, set(), self.CONFIG))
+            self.assertTrue(orders)
+            for order in orders:
+                self.assertEqual(order["target"].get("origin", "x"), "x", order)
+        # Without the preference the same archive yields origin=y targets.
+        free = self.new_archive(name="free.json")
+        for c, s in ((cell("a", "s3", "x"), 60.0), (cell("b", "s3", "x"), 40.0), (cell("c", "s1", "x"), 30.0)):
+            self.add(c, s, archive=free)
+        self.assertIn("y", {o["target"]["origin"] for o in st.fill_gap(free, random.Random(0), 20, set(), self.CONFIG)})
+
+    def test_explore_reaches_other_origins_only_at_a_low_weight(self):
+        self.add(cell("a", "s3", "x"), 60.0)
+
+        def share(factor):
+            other = total = 0
+            config = st.StrategyConfig(nonpreferred_explore_factor=factor)
+            for seed in range(40):
+                for order in st.explore(self.archive, random.Random(seed), 2, set(), config):
+                    total += 1
+                    other += order["target"]["origin"] != "x"
+            return other / total
+
+        low, flat = share(0.1), share(1.0)
+        self.assertGreater(low, 0.0)
+        self.assertLess(low, flat / 2)
+        self.assertEqual(share(0.0), 0.0)
+        order = next(o for seed in range(40) for o in st.explore(self.archive, random.Random(seed), 3, set(),
+                                                                  st.StrategyConfig())
+                     if o["target"]["origin"] == "y")
+        self.assertEqual(order["context"]["outside_preferred"], ["origin=y"])
+        self.assertIn("outside the values the request prefers", order["rationale"])
+
+    def test_extrapolation_into_a_non_preferred_cell_is_not_proposed(self):
+        for size, score in (("s1", 10.0), ("s2", 20.0), ("s3", 30.0)):
+            self.add(cell("a", size, "y"), score, breakdown=SIMULATED)
+        statuses = {(t["mode"], t["status"]) for t in st.find_trends(self.archive)}
+        self.assertEqual(statuses, {("slice", "not_preferred"), ("marginal", "proposed")})   # marginal: origin free
+        orders = st.extrapolate(self.archive, random.Random(0), 3, set(), st.StrategyConfig())
+        self.assertEqual([o["target"] for o in orders], [{"size": "s4"}])
+        info = st.explain_trends(self.archive)
+        self.assertIn("does not prefer", info["trends"][0]["reason"])
+        # No qualifying slice trend: the schedule gives extrapolate no slot.
+        diagnostics = {}
+        st.schedule(self.archive, 3, random.Random(0), round_no=2, weights={"extrapolate": 1.0, "refine": 1.0},
+                    diagnostics=diagnostics)
+        self.assertFalse(diagnostics["extrapolate"]["slots"]["allocated"])
+
+
+ANCHORS = st.StrategyConfig(combine_anchor_axes=("origin", "mech"))
+
+
+class CombineAnchorTest(ArchiveTestCase):
+    """P5: combine takes the governing quantity (here: origin) from the stronger parent, never from an estimate."""
+
+    def test_anchor_comes_from_the_stronger_parent_even_if_it_scores_lower(self):
+        # The recorded case: an estimated-tier parent (score 15.4) gave its governing quantity to the child.
+        estimated = self.add(cell("c", "s1", "y"), 60.0, breakdown=ESTIMATED)
+        simulated = self.add(cell("a", "s4", "x"), 35.0, breakdown=SIMULATED)
+        self.add(cell("c", "s3", "x"), 20.0, breakdown=SIMULATED)          # proves mech=c works with origin=x
+        for seed in range(10):
+            for order in st.combine(self.archive, random.Random(seed), 3, set(), ANCHORS):
+                if set(order["parent_ids"]) != {estimated["id"], simulated["id"]}:
+                    continue
+                self.assertEqual(order["target"]["origin"], "x")
+                self.assertEqual(order["context"]["anchored"]["origin"]["from"],
+                                 "A" if order["parent_ids"][0] == simulated["id"] else "B")
+                self.assertIn("stronger parent", order["rationale"])
+                self.assertNotIn("mech", order["context"]["anchored"])      # mech=c is proven with origin=x
+
+    def test_unproven_mechanism_is_anchored_too(self):
+        strong = self.add(cell("a", "s4", "x"), 50.0, breakdown=SIMULATED)
+        weak = self.add(cell("b", "s1", "y"), 40.0, breakdown=SIMULATED)
+        targets = set()
+        for seed in range(10):
+            for order in st.combine(self.archive, random.Random(seed), 1, set(), ANCHORS):
+                targets.add(order["target_key"])
+                self.assertEqual((order["target"]["mech"], order["target"]["origin"]), ("a", "x"))
+                self.assertIn("never produced a working concept", order["context"]["anchored"]["mech"]["why"])
+        self.assertTrue(targets)
+        self.assertEqual(sorted(st.proven_anchor_pairs(self.archive, ANCHORS)["mech"]), [("a", "x"), ("b", "y")])
+        # Nothing left to mix (only the anchored axes differ): the pair is skipped.
+        archive = self.new_archive(name="skip.json")
+        self.add(cell("a", "s1", "x"), 50.0, archive=archive, breakdown=SIMULATED)
+        self.add(cell("b", "s1", "y"), 40.0, archive=archive, breakdown=SIMULATED)
+        self.assertEqual(st.combine(archive, random.Random(0), 2, set(), ANCHORS), [])
+        self.assertTrue(st.combine(archive, random.Random(0), 2, set(), st.StrategyConfig()))
+        self.assertEqual(sorted([strong["id"], weak["id"]]), sorted(order["parent_ids"]))
+
+
+class ExtrapolateSlotsTest(ArchiveTestCase):
+    """P6: extrapolate slots only with a qualifying slice trend; marginal fits stay within one mechanism."""
+
+    def test_no_slot_without_a_qualifying_slice_trend(self):
+        self.add(cell("a", "s1", "x"), 10.0, breakdown=SIMULATED)
+        self.add(cell("b", "s2", "y"), 25.0, breakdown=SIMULATED)
+        self.add(cell("c", "s3", "x"), 38.0, breakdown=SIMULATED)          # a marginal trend only
+        diagnostics = {}
+        weights = {"extrapolate": 1.0, "fill_gap": 1.0}
+        orders = st.schedule(self.archive, 4, random.Random(0), round_no=2, weights=weights, diagnostics=diagnostics)
+        self.assertNotIn(st.EXTRAPOLATE, diagnostics["planned"])
+        self.assertEqual(len(orders), 4)
+        slots = diagnostics["extrapolate"]["slots"]
+        self.assertFalse(slots["allocated"])
+        self.assertIn("no qualifying slice trend", slots["reason"])
+        # With a qualifying slice trend the slot is allocated and used.
+        for size, score in (("s1", 10.0), ("s2", 20.0), ("s3", 30.0)):
+            self.add(cell("a", size, "y"), score, breakdown=SIMULATED)
+        diagnostics = {}
+        orders = st.schedule(self.archive, 4, random.Random(0), round_no=3, weights=weights, diagnostics=diagnostics)
+        self.assertTrue(diagnostics["extrapolate"]["slots"]["allocated"])
+        self.assertIn(st.EXTRAPOLATE, {o["strategy"] for o in orders})
+        self.assertIn("slice trend along size", diagnostics["extrapolate"]["slots"]["reason"])
+
+    def test_only_extrapolate_weighted_still_fills_the_batch(self):
+        self.add(cell("a", "s1", "x"), 10.0)
+        diagnostics = {}
+        orders = st.schedule(self.archive, 3, random.Random(0), round_no=2, weights={"extrapolate": 1.0},
+                             diagnostics=diagnostics)
+        self.assertEqual(len(orders), 3)
+        self.assertIn("only weighted strategy", diagnostics["extrapolate"]["slots"]["reason"])
+
+    def test_marginal_trends_stay_within_one_group_value(self):
+        # Rising best-per-size scores, but across mechanisms: no marginal fit with grouping.
+        self.add(cell("a", "s1", "x"), 10.0)
+        self.add(cell("b", "s2", "y"), 25.0)
+        self.add(cell("c", "s3", "x"), 38.0)
+        grouped = st.StrategyConfig(trend_group_axes=("mech",))
+        self.assertEqual(st.find_trends(self.archive, grouped), [])
+        self.assertEqual({t["mode"] for t in st.find_trends(self.archive)}, {"marginal"})
+        # Within one mechanism (different origins) the marginal trend gives a target with the mechanism fixed.
+        for size, origin, score in (("s1", "x", 11.0), ("s2", "y", 21.0), ("s3", "x", 31.0)):
+            self.add(cell("b", size, origin), score)
+        trends = [t for t in st.find_trends(self.archive, grouped) if t["mode"] == "marginal"]
+        self.assertEqual(len(trends), 1)
+        self.assertEqual((trends[0]["fixed"], trends[0]["status"]), ({"mech": "b"}, "proposed"))
+        self.assertEqual(trends[0]["target"], {"mech": "b", "size": "s4"})
+
+    def test_proxy_gains_do_not_form_trends(self):
+        proxy = dict(SIMULATED, flags=["proxy_by_construction"])
+        for size, score in (("s1", 10.0), ("s2", 20.0), ("s3", 30.0)):
+            self.add(cell("a", size, "x"), score, breakdown=proxy)
+        self.assertEqual(st.find_trends(self.archive), [])
 
 
 if __name__ == "__main__":
