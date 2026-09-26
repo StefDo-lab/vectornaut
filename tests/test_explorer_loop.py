@@ -17,7 +17,8 @@ from vectornaut.explorer.generator import CandidateGenerator, build_prompt
 from vectornaut.explorer.profiles.base import EvaluationContext, PreparedCandidate
 from vectornaut.explorer.profiles.business import BusinessProfile
 from vectornaut.explorer.profiles.materials import (
-    MATERIALS_SPACE, OBJECTIVE_SCALE_PCT, SIM_SCALE_PCT, W_OBJ, W_REQ, W_SIM, MaterialsProfile, score_pipeline_result,
+    MATERIALS_SPACE, OBJECTIVE_SCALE_PCT, SIM_SCALE_PCT, W_OBJ, W_REQ, W_SIM, MaterialsProfile, ScoringConfig,
+    score_pipeline_result,
 )
 from vectornaut.explorer.run import ExplorerError, ExplorerRunner, main
 from vectornaut.explorer.schemas import (
@@ -154,8 +155,10 @@ class BusinessLoopTest(OfflineTestCase):
 
 class MaterialsLoopTest(OfflineTestCase):
     def test_three_mock_rounds_through_the_mock_pipeline(self):
+        # Version 6: this test pins the pre-analyst path (the generator frames the request in round 1,
+        # cold-start seeds) and the version-5 formula; the analysis-first loop is in test_explorer_v6.py.
         runner = ExplorerRunner(MaterialsProfile(), "Reduce drag of a ship hull coating", seed=1, mock=True,
-                                epochs=5, clock=lambda: FROZEN)
+                                epochs=5, clock=lambda: FROZEN, analyst=False, scoring="legacy")
         summary = self.run_quiet(runner.run, 3, 3)
         archive = runner.archive
         self.assertEqual(summary["rounds"], [1, 2, 3])
@@ -198,7 +201,8 @@ class MaterialsLoopTest(OfflineTestCase):
             map_md = f.read()
         for heading in ("## Map: mechanism_class x length_scale", "## Requirements of the request",
                         "## Requirement coverage (critic ratings, elites)", "## Values never proposed",
-                        "| tier | points obj / sim / req | objective gain used % |", "Elites by evidence tier",
+                        "| evidence (tier) | points obj / sim / req | objective gain used % |",
+                        "Elites by evidence tier",
                         "- **Objective**:", "- **Baseline**:", "0.45 * objective_score + 0.1 * simulated_score"):
             self.assertIn(heading, map_md)
         with open(os.path.join(archive.directory, "reports", "round_002.md"), encoding="utf-8") as f:
@@ -317,7 +321,8 @@ class _Runner:
 class MaterialsEvaluatorTest(OfflineTestCase):
     def evaluate(self, outcome, use_critic=False):
         runner = _Runner(outcome)
-        profile = MaterialsProfile(runner_factory=lambda: runner)
+        # Version 6: pins the version-5 formula (the filter scoring is tested in test_explorer_v6.py).
+        profile = MaterialsProfile(runner_factory=lambda: runner, scoring="legacy")
         item = PreparedCandidate(order={"order_id": "r001-01"}, candidate=_materials_candidate(),
                                  descriptors=dict(MATERIAL_CELL), concept={})
         ctx = EvaluationContext(query="q", mock=True, epochs=7, opt_rounds=2, use_critic=use_critic)
@@ -355,7 +360,8 @@ class MaterialsEvaluatorTest(OfflineTestCase):
                                 ({"performance_gain_pct": None}, "gain_unavailable"),
                                 ({"performance_gain_pct": float("nan")}, "implausible_gain")):
             result = score_pipeline_result({"status": "completed", "simulator": simulator,
-                                            "validation": {"status": "warn", "score": 0.5}}, cand)
+                                            "validation": {"status": "warn", "score": 0.5}}, cand,
+                                           scoring=ScoringConfig.legacy())
             self.assertEqual(result.breakdown["basis"], "estimated, not simulated")
             self.assertEqual(result.breakdown["evidence_tier"], "estimated")
             self.assertIn(flag, result.breakdown["flags"])
@@ -364,7 +370,8 @@ class MaterialsEvaluatorTest(OfflineTestCase):
             self.assertAlmostEqual(result.score, 100 * 0.5 * 0.8 * (W_OBJ * objective_score + W_REQ * 0.5), places=3)
         result = score_pipeline_result({"status": "completed", "simulator": {"performance_gain_pct": 5.0,
                                                                              "gain_basis": "baseline design"},
-                                        "validation": {"status": "fail", "score": 0.9}}, cand)
+                                        "validation": {"status": "fail", "score": 0.9}}, cand,
+                                       scoring=ScoringConfig.legacy())
         self.assertEqual(result.breakdown["basis"], "simulated")
         self.assertEqual(result.breakdown["components"]["gate"], 0.0)
         self.assertEqual(result.score, 0.0)

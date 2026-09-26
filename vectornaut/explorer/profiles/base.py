@@ -47,6 +47,10 @@ class EvaluationContext:
     # The archive's objective scale (materials: percent, with its source; None = profile default).
     objective_scale_pct: Optional[float] = None
     objective_scale_source: str = "default"
+    # Archive version 6: the stored scoring configuration (materials: ScoringConfig.to_dict(); {} =
+    # profile default) and a compact text of the analyst's problem analysis for the critic ("" = none).
+    scoring: Dict[str, Any] = field(default_factory=dict)
+    analysis_text: str = ""
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -96,9 +100,31 @@ class ExplorerProfile:
         """Adapts an older, vocabulary-compatible archive after loading (e.g. re-scoring); returns a summary."""
         return None
 
-    def update_scoring(self, archive: Any, round_no: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def update_scoring(self, archive: Any, round_no: Optional[int] = None, force: bool = False) -> Optional[Dict[str, Any]]:
         """Recomputes archive-level scoring parameters (materials: the objective scale) and re-scores; summary or None."""
         return None
+
+    # ---- analysis-first stage (archive version 6) -------------------------
+    # Schema of the analyst's answer (materials: ProblemAnalysis); None = the profile has no analyst.
+    analysis_schema: Optional[Type[BaseModel]] = None
+
+    def analyst_prompt(self, query: str, archive: Any) -> str:
+        raise NotImplementedError
+
+    def mock_analysis(self, query: str) -> BaseModel:
+        raise NotImplementedError
+
+    def default_scoring(self) -> Dict[str, Any]:
+        """The scoring configuration for a new or migrated archive ({} = the profile has only one)."""
+        return {}
+
+    def normalize_scoring(self, config: Mapping[str, Any]) -> Dict[str, Any]:
+        """Validated scoring configuration (raises ValueError for an unknown mode)."""
+        return dict(config or {})
+
+    def relevant_values_from_analysis(self, analysis: Any) -> Tuple[Dict[str, List[str]], List[str]]:
+        """Relevant values per relevance axis named by the analyst, and rejected tokens."""
+        return self.relevant_values_from_batch(analysis)
 
     # ---- prompt text --------------------------------------------------
     def domain_brief(self) -> str:

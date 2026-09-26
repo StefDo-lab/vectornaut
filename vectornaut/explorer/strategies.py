@@ -37,6 +37,12 @@ archive and within the batch. Orders that change an origin axis (materials:
 inspiration_origin) demand a mechanism taken from the new origin (no relabelled copies).
 - seed:        no target; samples where the model proposes ideas by itself (cold start).
 
+Direct-answer seeds (archive version 6, strategy ``seed_direct``, written by the analyst before the
+first round) anchor the search: they are worth ``seed_anchor_bonus`` more as the source of fill_gap
+and diversify orders (the rotation penalty still applies), refine picks them ``refine_seed_factor``
+times as often, and combine prefers pairs with a seed (``combine_prefer_seeds``). Orders built on a
+seed say so ("find a better or clearly more novel variant than the direct answer").
+
 "Under-explored" is measured per axis value: ``concentration(axis) / (1 + proposals with
 that value)``, where concentration is the share of proposals held by the axis' most
 common value. A value nobody proposed on an axis where every proposal shares one value
@@ -57,6 +63,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
+from vectornaut.explorer.analyst import SEED_DIRECT
 from vectornaut.explorer.archive import EVALUATED, Archive, evidence_rank, rank_key
 from vectornaut.explorer.descriptors import DescriptorSpace
 
@@ -131,6 +138,24 @@ class StrategyConfig:
     # explore: weight factor for a cell with a value of a soft relevance axis (materials: a mechanism
     # class) that the function analysis did not name; fill_gap and diversify never target such values.
     soft_irrelevant_explore_factor: float = 0.1
+    # Direct-answer seeds (strategy seed_direct): bonus on their source value (fill_gap, diversify),
+    # refine weight factor, and whether combine prefers pairs with a seed.
+    seed_anchor_bonus: float = 0.15
+    refine_seed_factor: float = 2.0
+    combine_prefer_seeds: bool = True
+
+
+def is_seed(entry: Mapping[str, Any]) -> bool:
+    """True for an analyst's direct-answer seed."""
+    return entry.get("strategy") == SEED_DIRECT
+
+
+def seed_note(entry: Mapping[str, Any]) -> str:
+    """Rationale addition for an order built on a direct-answer seed."""
+    if not is_seed(entry):
+        return ""
+    return (f" '{entry.get('title')}' is one of the analyst's direct answers: find a concept that beats it on the "
+            "objective, or is clearly more novel at a comparable gain.")
 
 
 def parse_weights(spec: Optional[str]) -> Dict[str, float]:
@@ -237,7 +262,8 @@ def source_uses(archive: Archive, batch: Sequence[Mapping[str, Any]] = ()) -> Di
 
 def source_value(entry: Mapping[str, Any], uses: Mapping[str, int], config: StrategyConfig) -> float:
     """How attractive an elite is as the source of a new order: score/100 minus the rotation penalty."""
-    return float(entry.get("score") or 0.0) / 100.0 - config.source_penalty * math.log1p(uses.get(entry["id"], 0))
+    bonus = config.seed_anchor_bonus if is_seed(entry) else 0.0
+    return float(entry.get("score") or 0.0) / 100.0 + bonus - config.source_penalty * math.log1p(uses.get(entry["id"], 0))
 
 
 class PairKnowledge:
@@ -363,7 +389,8 @@ def refine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConfi
             for parent in entry.get("parent_ids") or []:
                 refined[parent] += 1
     pool = list(elites)
-    weights = [max(float(e.get("score") or 0.0), 1.0) / (1 + refined[e["id"]]) for e in pool]
+    weights = [max(float(e.get("score") or 0.0), 1.0) / (1 + refined[e["id"]])
+               * (config.refine_seed_factor if is_seed(e) else 1.0) for e in pool]
     orders = []
     while pool and len(orders) < n:
         idx = _weighted_pick(rng, pool, weights)
@@ -389,6 +416,7 @@ def refine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConfi
             rationale=(
                 f"Refine elite '{elite.get('title')}' (score {float(elite.get('score') or 0):.1f}) inside its own cell. "
                 f"Keep every descriptor; {focus}. It must be a better variant with a new title, not the same idea."
+                + seed_note(elite)
             ),
             parent_ids=[elite["id"]],
         ))
@@ -502,7 +530,7 @@ def fill_gap(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCon
                 f"(served as a source {gap['source_uses']} time(s) before). "
                 f"Only {gap['attempts']} earlier attempt(s) landed or aimed here. "
                 f"Find a concept that works with {changed}={gap['cell'][changed]}."
-                + origin_note(config, changed, gap["cell"][changed])
+                + origin_note(config, changed, gap["cell"][changed]) + seed_note(best)
             ),
             parent_ids=[e["id"] for e, _ in top],
         ))
@@ -674,7 +702,8 @@ def combine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
             if d < 2 or tuple(sorted((a["id"], b["id"]))) in combined_before:
                 continue
             pairs.append((d, float(a.get("score") or 0) + float(b.get("score") or 0), a, b))
-    pairs.sort(key=lambda p: (-p[0], -p[1], p[2]["cell"], p[3]["cell"]))
+    pairs.sort(key=lambda p: (-(config.combine_prefer_seeds and (is_seed(p[2]) or is_seed(p[3]))), -p[0], -p[1],
+                              p[2]["cell"], p[3]["cell"]))
 
     orders = []
     used = set(taken)
@@ -731,7 +760,7 @@ def combine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
             rationale=(
                 f"Cross two distant elites (distance {distance}): '{a.get('title')}' ({a.get('score'):.1f}) and "
                 f"'{b.get('title')}' ({b.get('score'):.1f}). Combine the working principle of both in the mixed cell "
-                f"{space.describe(child)} ({why})." + anchor_text
+                f"{space.describe(child)} ({why})." + anchor_text + seed_note(a) + seed_note(b)
             ),
             parent_ids=[a["id"], b["id"]],
         ))
@@ -964,7 +993,7 @@ def diversify(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCo
                     f"The archive is least diverse along {name}: {share:.0f} % of all proposals share one value, and "
                     f"{name}={value} has {count} proposal(s). Keep the other descriptors of elite '{elite.get('title')}' "
                     f"and find a concept that really works with {name}={value} (not a relabelled copy)."
-                    + origin_note(config, name, value)
+                    + origin_note(config, name, value) + seed_note(elite)
                 ),
                 parent_ids=[elite["id"]],
             ))
