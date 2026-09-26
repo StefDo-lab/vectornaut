@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Response schemas of the explorer's model calls (generator, business critic, materials critic).
+Response schemas of the explorer's model calls (analyst, generator, business critic, materials critic).
 
 Like the pipeline schemas in ``vectornaut.config`` they avoid free-form dicts (Gemini
 response schemas handle lists of objects better), so descriptors are a list of
@@ -45,6 +45,10 @@ class MaterialsCandidate(CandidateBase):
     domain: str = Field(default="", description="Scientific domain, e.g. Fluid Dynamics, Thermodynamics, Structural Mechanics")
     physical_mechanism: str = Field(default="", description="The physical mechanism and how it maps onto the request")
     parameters: List[ParameterProposal] = Field(default_factory=list, description="Physical parameters with SI values and plausible bounds, enough to build a 1D/2D steady model")
+    # Archive version 6 (optional, so older answers still parse).
+    scope_extension: bool = Field(default=False, description="True if the concept acts on a lever outside the request's literal wording (e.g. the windows of a request that names walls/coatings) that the problem analysis justified; say why in scope_extension_reason")
+    scope_extension_reason: str = Field(default="", description="If scope_extension: which justified lever it targets and why (from the problem analysis)")
+    self_critique: str = Field(default="", description="(deep mode) The strongest objection against your own estimate and design, and what it does to the number (the back_of_envelope value is the estimate AFTER this critique)")
 
 
 class UnitEconomicsInputs(BaseModel):
@@ -110,6 +114,12 @@ class RequirementRating(BaseModel):
     reason: str = Field(default="", description="One line: why")
 
 
+class HardCheck(BaseModel):
+    name: str = Field(description="Check name, exactly as listed: processing_stability, manufacturability, field_record, geometry_applicability, physical_bounds")
+    passed: Optional[bool] = Field(default=None, description="False if the concept fails this check (a hard failure), true if it passes, null if it cannot be judged")
+    reason: str = Field(default="", description="One line with the numbers (e.g. 'calcite decomposes above ~825 C, the glaze fires at 1000-1200 C')")
+
+
 class MaterialsCriticReview(BaseModel):
     order_id: str = Field(description="order_id of the reviewed candidate")
     plausible_simulated_benefit_pct: Optional[float] = Field(default=None, description="Your best estimate of the real-world improvement of the candidate's OWN simulated quantity (its governing_quantity, e.g. fouling release stress), in percent, against the conventional baseline (positive = better); null if it cannot be estimated. Do not copy the simulated number")
@@ -126,7 +136,61 @@ class MaterialsCriticReview(BaseModel):
     key_assumption_issues: List[str] = Field(default_factory=list, description="Modelling choices that drive the simulated gain (free parameters, gap sizes, laminar models of turbulent flow, missing losses), most important first")
     killer_risks: List[str] = Field(default_factory=list, description="Risks that could make the concept unworkable in practice, most severe first")
     requirement_coverage: List[RequirementRating] = Field(default_factory=list, description="One rating per listed requirement")
+    # Archive version 6 (optional, so older answers still parse).
+    hard_checks: List[HardCheck] = Field(default_factory=list, description="One entry per hard check of the checklist (processing_stability, manufacturability, field_record, geometry_applicability, physical_bounds)")
+    simulation_contradicts_claim: Optional[bool] = Field(default=None, description="True if the simulation result contradicts the candidate's claimed mechanism or benefit (e.g. the model shows no effect or the opposite sign for the physics the claim relies on); false if it is consistent; null if the simulation says nothing about the claim. The simulation is only a consistency check, not a measure of the benefit")
+    simulation_consistency_note: str = Field(default="", description="One line: what the simulation shows relative to the claim")
+    novelty_rating: Optional[float] = Field(default=None, description="0..1: how new the concept is compared with known products and the literature (0 = a known commercial product or textbook solution, 0.5 = a known idea in a new combination or application, 1 = no known precedent)")
+    novelty_reason: str = Field(default="", description="One line naming the closest known product or publication")
+    scope_extension_legitimate: Optional[bool] = Field(default=None, description="Only for candidates marked as scope extensions: true if acting on that lever still answers the request (the problem analysis justifies it), false if it sidesteps the request; null otherwise")
+    scope_extension_note: str = Field(default="", description="One line on the scope extension, if any")
 
 
 class MaterialsCriticBatch(BaseModel):
     reviews: List[MaterialsCriticReview] = Field(default_factory=list, description="Exactly one review per candidate")
+
+
+# ---------------------------------------------------------------------------
+# Analysis-first stage (archive version 6): one deep, system-level analysis of the request
+# before any candidate batch, with the analyst's own best direct answers as seeds.
+# ---------------------------------------------------------------------------
+
+class LoadComponent(BaseModel):
+    name: str = Field(description="One contribution to the load, loss or failure the request is about, e.g. 'solar gain through glazing'")
+    share_pct: Optional[float] = Field(default=None, description="Rough share of the total, in percent (the shares should add up to ~100)")
+    rough_value: str = Field(default="", description="Rough absolute number with unit and the assumption behind it, e.g. '~150 W/m2 of window at 600 W/m2 irradiance, g = 0.25'")
+    reasoning: str = Field(default="", description="One line: where the number comes from")
+
+
+class Lever(BaseModel):
+    name: str = Field(description="A way to reduce the load/loss (a lever), e.g. 'external shading of windows'")
+    acts_on: str = Field(default="", description="Which load component(s) it acts on")
+    expected_magnitude_pct: Optional[float] = Field(default=None, description="Rough achievable improvement of the objective in percent, against the conventional baseline")
+    within_literal_scope: bool = Field(default=True, description="False if the request's literal wording excludes this lever (e.g. windows for a request that says 'coating or facade structure')")
+    extension_justified: Optional[bool] = Field(default=None, description="For a lever outside the literal scope: true if extending the scope to it is justified (it is where the load comes from and it still serves the request's intent)")
+    note: str = Field(default="", description="One line: why this magnitude, and (outside the scope) why the extension is or is not justified")
+
+
+class DirectConcept(MaterialsCandidate):
+    order_id: str = Field(default="", description="Leave empty (assigned by the explorer)")
+    key_physics: str = Field(default="", description="The key physics with numbers: what does what, by how much, under which conditions")
+    realistic_benefit_pct: Optional[float] = Field(default=None, description="Realistic improvement of the OBJECTIVE against the conventional in-service baseline, in percent, after your own critique")
+    benefit_reasoning: str = Field(default="", description="How the realistic benefit follows from the load breakdown (share of the load it acts on x effect size, minus losses)")
+    risks: List[str] = Field(default_factory=list, description="The main risks, most severe first (processing, durability, field record, cost)")
+
+
+class ProblemAnalysis(BaseModel):
+    system_analysis: str = Field(default="", description="A deep system-level analysis of the request: where the load, loss or failure actually comes from, in a few paragraphs with rough numbers")
+    load_breakdown: List[LoadComponent] = Field(default_factory=list, description="Quantitative breakdown of the load/loss/failure into its contributions (rough numbers), largest first")
+    levers: List[Lever] = Field(default_factory=list, description="The main levers, ranked by expected magnitude (largest first)")
+    scope_extension_justified: bool = Field(default=False, description="True if at least one lever outside the literal wording of the request is large enough and still serves its intent, so candidates may target it (they are marked as scope extensions)")
+    scope_extension_reason: str = Field(default="", description="Why the scope may (or may not) be extended beyond the literal wording")
+    conventional_baseline: str = Field(default="", description="The conventional solution in service (not freshly applied), with its typical performance numbers")
+    objective_statement: str = Field(default="", description="The request's main benefit stated as it applies over the stated service life and conditions (time average including ageing/fouling where relevant)")
+    baseline_statement: str = Field(default="", description="The conventional state-of-the-art solution a concept must beat on that objective, in the same (in-service) condition")
+    target_gain_pct: Optional[float] = Field(default=None, description="The numeric improvement of the objective the request asks for, in percent, or a realistic target from the lever ranking; null if none")
+    requirements: List[Requirement] = Field(default_factory=list, description="Every explicit or clearly implied requirement (3-6), each with a name, a one-line criterion and priority must/nice")
+    relevant_mechanism_classes: List[str] = Field(default_factory=list, description="mechanism_class tokens (from the vocabulary) that can deliver the main levers")
+    relevant_governing_quantities: List[str] = Field(default_factory=list, description="governing_quantity tokens (from the vocabulary) that measure a benefit the request asks for")
+    relevant_inspiration_origins: List[str] = Field(default_factory=list, description="inspiration_origin tokens (from the vocabulary) worth searching (information only)")
+    direct_concepts: List[DirectConcept] = Field(default_factory=list, description="Your best 3 concepts as a careful direct answer: reasoned deeply, each with key physics and numbers, a realistic benefit against the baseline and the main risks; they seed the map")

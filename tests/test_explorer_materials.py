@@ -14,8 +14,8 @@ from vectornaut.explorer.generator import CandidateGenerator, build_prompt, chec
 from vectornaut.explorer.profiles.base import EvaluationContext, PreparedCandidate
 from vectornaut.explorer.profiles.materials import (
     ESTIMATE_DISCOUNT, ESTIMATED_SCORE_CAP, MATERIALS_SPACE, OBJECTIVE_SCALE_PCT, RELABEL_FACTOR, SIM_SCALE_PCT,
-    W_OBJ, W_REQ, W_SIM, MaterialsProfile, critic_prompt, differs_strongly, framing_warnings, rescore_breakdown,
-    score_pipeline_result, to_miner_concept,
+    W_OBJ, W_REQ, W_SIM, MaterialsProfile, ScoringConfig, critic_prompt, differs_strongly, framing_warnings,
+    rescore_breakdown as _rescore_breakdown, score_pipeline_result as _score_pipeline_result, to_miner_concept,
 )
 from vectornaut.explorer.schemas import (
     BackOfEnvelope, DescriptorAssignment, MaterialsCandidate, MaterialsCandidateBatch, MaterialsCriticBatch,
@@ -31,6 +31,23 @@ REQUIREMENTS = [{"name": "low_friction_drag", "criterion": "less drag than a sta
                 {"name": "multi_year_durability", "criterion": "several years in seawater"}]
 OBJECTIVE = "time-averaged hull friction drag over a 5-year docking interval, including fouling"
 BASELINE = "conventional biocide-free silicone foul-release coating after 12 months in service"
+
+
+# Archive version 6 made the evaluator a filter (scoring mode "filter", the default: simulated weight 0,
+# validator as a gate, critic-reviewed entries rank equal). The tests in this module pin the version-5
+# formula they were written for, which stays available as scoring mode "legacy" (--scoring legacy);
+# the filter scoring is tested in tests/test_explorer_v6.py.
+LEGACY = ScoringConfig.legacy()
+
+
+def score_pipeline_result(*args, **kwargs):
+    kwargs.setdefault("scoring", LEGACY)
+    return _score_pipeline_result(*args, **kwargs)
+
+
+def rescore_breakdown(*args, **kwargs):
+    kwargs.setdefault("scoring", LEGACY)
+    return _rescore_breakdown(*args, **kwargs)
 
 
 def f(gain, scale):
@@ -711,7 +728,7 @@ class ArchiveV3MigrationTest(unittest.TestCase):
     def test_v3_archive_is_rescored_and_the_tie_goes_to_pack_ice(self):
         with tempfile.TemporaryDirectory() as tmp:
             archive = Archive("materials", MATERIALS_SPACE, path=os.path.join(tmp, "archive.json"))
-            profile = MaterialsProfile()
+            profile = MaterialsProfile(scoring="legacy")       # version 6: pins the version-5 formula
             ids = {}
             for name in ("glacier_soft_bed", "pack_ice_tiles", "pilot_whale_soft_skin"):
                 res = ObjectiveDrivenScoringTest.score(ObjectiveDrivenScoringTest(), name)

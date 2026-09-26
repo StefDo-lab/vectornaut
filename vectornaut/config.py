@@ -199,9 +199,12 @@ MODEL_STAGES = (
     "script_generator",
     "test_generator",
     "chat",
-    # Idea-space explorer (vectornaut/explorer): candidate generator and business critic.
+    # Idea-space explorer (vectornaut/explorer): candidate generator, critic (both profiles) and the
+    # analysis-first stage (one deep system-level analysis + direct-answer seeds per archive).
+    # A stronger model can be set per stage, e.g. VECTORNAUT_MODEL_CRITIC=gemini-3.1-pro-preview.
     "explorer",
     "critic",
+    "analyst",
 )
 
 # Thinking levels accepted by google-genai's ThinkingConfig.thinking_level.

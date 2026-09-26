@@ -2,8 +2,15 @@
 """
 Explorer loop and command line.
 
-    python -m vectornaut.explorer --profile materials --query "..." --rounds 3 --batch 6 --mock
+    python -m vectornaut.explorer --profile materials --query "..." --rounds 3 --mock
     python -m vectornaut.explorer --profile business  --query "..." --rounds 3 --batch 6 --seed 7
+
+Analysis first (materials, archive version 6; --no-analyst to skip): when a map is created, one
+analyst call analyses the request at system level (load breakdown, levers ranked by magnitude, scope
+decision, conventional in-service baseline, objective, target, requirements, relevant values) and gives
+its own best 3 concepts; they are stored and evaluated as `seed_direct` entries (analysis round 1)
+before any search round. The generator then runs in --depth deep (3 deep candidates per round) unless
+--depth broad is given; the evaluator is a feasibility/consistency filter (--scoring filter, default).
 
 Each round: schedule search orders from the archive -> generate one candidate per order
 (one model call, which also extracts the request's requirements and relevant values) ->
@@ -23,11 +30,16 @@ import sys
 from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from vectornaut.explorer import report
+from vectornaut.explorer.analyst import (
+    MAX_DIRECT_CONCEPTS, ProblemAnalyst, analysis_brief, analysis_notes, analysis_to_dict, complete_direct_concept,
+    seed_orders,
+)
 from vectornaut.explorer.archive import (
     EVALUATED, FAILED, INFEASIBLE, INVALID, REJECTED, Archive, ArchiveCompatibilityError, default_archive_path,
 )
 from vectornaut.explorer.generator import (
-    MISSING, OK, REJECTED as ITEM_REJECTED, INVALID as ITEM_INVALID, TARGET_INFEASIBLE, CandidateGenerator,
+    DEFAULT_BATCH, DEPTH_BROAD, DEPTH_DEEP, DEPTHS, MISSING, OK, REJECTED as ITEM_REJECTED, INVALID as ITEM_INVALID,
+    TARGET_INFEASIBLE, CandidateGenerator, GenerationResult, check_batch,
 )
 from vectornaut.explorer.profiles import PROFILE_NAMES, get_profile
 from vectornaut.explorer.profiles.base import EvaluationContext, ExplorerProfile, PreparedCandidate
@@ -64,6 +76,10 @@ class ExplorerRunner:
         verbose: bool = False,
         clock: Optional[Callable[[], str]] = None,
         strategy_config: Optional[StrategyConfig] = None,
+        analyst: Optional[bool] = None,
+        depth: Optional[str] = None,
+        scoring: Optional[str] = None,
+        sim_weight: Optional[float] = None,
     ):
         if not (query or "").strip():
             raise ExplorerError("--query must not be empty.")
@@ -102,13 +118,60 @@ class ExplorerRunner:
         self.archive.declare_relevance_axes(getattr(profile, "relevance_axes", ()) or (),
                                             soft=getattr(profile, "soft_relevance_axes", ()) or ())
         self._update_preferences()
-        # Archive-level scoring (materials: the objective scale) is brought up to date on start.
-        self.startup_scoring = profile.update_scoring(self.archive, None)
+        # Analysis-first stage (archive version 6): on by default where the profile has an analyst.
+        self.analyst = ProblemAnalyst(profile, client=client, mock=mock)
+        if analyst and not self.analyst.supported:
+            raise ExplorerError(f"The {profile.name} profile has no analyst stage; run it without --analyst.")
+        self.use_analyst = self.analyst.supported if analyst is None else bool(analyst)
+        if depth is not None and depth not in DEPTHS:
+            raise ExplorerError(f"--depth must be one of {', '.join(DEPTHS)}.")
+        self.depth_requested = depth
+        # Scoring configuration (materials: filter / legacy, simulated-benefit weight), stored per archive.
+        forced = self._configure_scoring(scoring, sim_weight)
+        # Archive-level scoring (materials: the objective scale) is brought up to date on start; a changed
+        # scoring configuration re-scores every entry.
+        self.startup_scoring = profile.update_scoring(self.archive, None, force=forced)
         self.out_dir = os.path.abspath(out_dir or os.path.join(self.archive.directory, "reports"))
-        self.generator = CandidateGenerator(profile, client=client, mock=mock)
+        self.generator = CandidateGenerator(profile, client=client, mock=mock, depth=self.depth)
         self.ctx = EvaluationContext(query=self.query, mock=mock, epochs=epochs, opt_rounds=opt_rounds,
                                      use_critic=use_critic, verbose=verbose)
         self._sync_context()
+
+    @property
+    def depth(self) -> str:
+        """Generator depth: as requested, else deep when the map has (or is about to get) a problem analysis."""
+        if self.depth_requested:
+            return self.depth_requested
+        analysed = self.archive.problem_analysis is not None
+        pending = self.use_analyst and self.archive.round_counter == 0
+        return DEPTH_DEEP if analysed or pending else DEPTH_BROAD
+
+    def default_batch(self) -> int:
+        return DEFAULT_BATCH[self.depth]
+
+    def _configure_scoring(self, mode: Optional[str], sim_weight: Optional[float]) -> bool:
+        """
+        Stores the scoring configuration on the archive: the profile's default for a new or unconfigured
+        archive, changed by an explicit mode or simulated-benefit weight. Returns True if an existing
+        configuration changed (then every entry is re-scored).
+        """
+        default = self.profile.default_scoring()
+        if not default:
+            if mode not in (None, "") or sim_weight is not None:
+                raise ExplorerError(f"The {self.profile.name} profile has no --scoring / --sim-weight options.")
+            return False
+        current = self.archive.scoring
+        wanted = dict(current or default)
+        if mode:
+            wanted["mode"] = mode
+        if sim_weight is not None:
+            wanted["sim_weight"] = sim_weight
+        try:
+            wanted = self.profile.normalize_scoring(wanted)
+        except ValueError as err:
+            raise ExplorerError(str(err))
+        changed = self.archive.set_scoring(wanted)
+        return bool(changed and current)
 
     def _sync_context(self) -> None:
         """Copies the fixed request analysis (requirements, objective, baseline, relevant values) into the context."""
@@ -120,6 +183,8 @@ class ExplorerRunner:
         scale = archive.objective_scale
         self.ctx.objective_scale_pct = scale.get("pct")
         self.ctx.objective_scale_source = scale.get("source") or "default"
+        self.ctx.scoring = archive.scoring
+        self.ctx.analysis_text = analysis_brief(archive.problem_analysis) if archive.problem_analysis else ""
 
     def _update_preferences(self) -> Dict[str, List[str]]:
         """Preferred axis values derived by the profile from the request and the stored requirements."""
@@ -154,9 +219,50 @@ class ExplorerRunner:
                 "preferred_changed": preferred, "scoring_update": scoring}
 
     # ------------------------------------------------------------------
+    def run_analysis(self, run_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Analysis-first stage: once, when the map is created (no round yet, no stored analysis) and the
+        analyst is on. One analyst call; the analysis is stored (framing, requirements, relevant values,
+        scope decision) and its direct concepts are checked and evaluated as ``seed_direct`` entries in
+        round 1 (like every other candidate: pipeline + critic). Returns the round record or None.
+        """
+        archive = self.archive
+        if not self.use_analyst or archive.problem_analysis is not None or archive.round_counter > 0:
+            return None
+        started = archive.clock()
+        analysis, prompt = self.analyst.analyse(self.query, archive)
+        round_no = archive.next_round()
+        archive.set_problem_analysis(analysis_to_dict(analysis), round_no)
+        relevant, dropped = self.profile.relevant_values_from_analysis(analysis)
+        notes = analysis_notes(analysis, relevant, dropped)
+        analysis_update = self._update_request_analysis(notes, round_no)
+        concepts = [complete_direct_concept(c) for c in list(getattr(analysis, "direct_concepts", None) or [])]
+        ignored = [f"direct concept {i} ignored (only the best {MAX_DIRECT_CONCEPTS} seed the map): "
+                   f"{getattr(c, 'title', '')}" for i, c in enumerate(concepts[MAX_DIRECT_CONCEPTS:],
+                                                                      MAX_DIRECT_CONCEPTS + 1)]
+        concepts = concepts[:MAX_DIRECT_CONCEPTS]
+        orders = seed_orders(self.profile.space, len(concepts), round_no)
+        for order, concept in zip(orders, concepts):
+            concept.order_id = order["order_id"]
+        batch = type("DirectAnswer", (), {"candidates": concepts})()
+        generation = check_batch(self.profile, orders, batch, archive, prompt=prompt)
+        generation.batch_notes = notes
+        generation.unmatched.extend(ignored)
+        order_logs = self._evaluate_generation(generation, round_no, run_id)
+        scoring = self._rescore_after_round(order_logs, round_no)
+        self.generator.depth = self.depth
+        record = {
+            "round": round_no, "kind": "analysis", "run_id": run_id, "seed": self.seed, "query": self.query,
+            "mock": self.mock, "orders": order_logs, "batch_notes": notes, "unmatched": generation.unmatched,
+            "request_analysis_update": analysis_update, "strategy_notes": {}, "scoring_update": scoring,
+            "objective_scale": archive.objective_scale, "started_at": started, "finished_at": archive.clock(),
+        }
+        archive.log_round(record)
+        archive.save()
+        return record
+
     def run_round(self, batch: int, run_id: str) -> Dict[str, Any]:
         archive = self.archive
-        space = self.profile.space
         started = archive.clock()
         round_no = archive.next_round()
         rng = random.Random(f"{self.seed}:{round_no}")
@@ -167,8 +273,43 @@ class ExplorerRunner:
             if order["target"]:
                 archive.count_target(order["target"])
 
+        self.generator.depth = self.depth
         generation = self.generator.generate(self.query, orders, archive)
         analysis_update = self._update_request_analysis(generation.batch_notes, round_no)
+        order_logs = self._evaluate_generation(generation, round_no, run_id)
+        scoring = self._rescore_after_round(order_logs, round_no)
+
+        record = {
+            "round": round_no, "run_id": run_id, "seed": self.seed, "query": self.query, "mock": self.mock,
+            "depth": self.generator.depth,
+            "orders": order_logs, "batch_notes": generation.batch_notes, "unmatched": generation.unmatched,
+            "request_analysis_update": analysis_update, "strategy_notes": diagnostics,
+            "scoring_update": scoring, "objective_scale": archive.objective_scale,
+            "started_at": started, "finished_at": archive.clock(),
+        }
+        archive.log_round(record)
+        archive.save()
+        return record
+
+    def _rescore_after_round(self, order_logs: List[Dict[str, Any]], round_no: int) -> Optional[Dict[str, Any]]:
+        """The objective scale follows the archive (materials): re-score everything if it changed."""
+        archive = self.archive
+        scoring = self.profile.update_scoring(archive, round_no)
+        if scoring:
+            for log in order_logs:
+                entry = archive.entries.get(log.get("entry_id") or "")
+                if entry is not None and entry.get("status") == EVALUATED:
+                    breakdown = entry.get("score_breakdown") or {}
+                    log.update({"score": entry["score"], "flags": list(breakdown.get("flags") or []),
+                                "objective_gain_pct": breakdown.get("objective_gain_pct"),
+                                "tiebreak": entry.get("tiebreak")})
+            self._sync_context()
+        return scoring
+
+    def _evaluate_generation(self, generation: GenerationResult, round_no: int, run_id: str) -> List[Dict[str, Any]]:
+        """Evaluates the checked candidates of one batch and stores every item in the archive; returns the order logs."""
+        archive = self.archive
+        space = self.profile.space
         prepared: List[PreparedCandidate] = []
         for item in generation.items:
             if item.status == OK:
@@ -234,29 +375,7 @@ class ExplorerRunner:
                             "objective_gain_pct": breakdown.get("objective_gain_pct"),
                             "tiebreak": entry.get("tiebreak")})
             order_logs.append(log)
-
-        # The objective scale follows the archive (materials): re-score everything if it changed.
-        scoring = self.profile.update_scoring(archive, round_no)
-        if scoring:
-            for log in order_logs:
-                entry = archive.entries.get(log.get("entry_id") or "")
-                if entry is not None and entry.get("status") == EVALUATED:
-                    breakdown = entry.get("score_breakdown") or {}
-                    log.update({"score": entry["score"], "flags": list(breakdown.get("flags") or []),
-                                "objective_gain_pct": breakdown.get("objective_gain_pct"),
-                                "tiebreak": entry.get("tiebreak")})
-            self._sync_context()
-
-        record = {
-            "round": round_no, "run_id": run_id, "seed": self.seed, "query": self.query, "mock": self.mock,
-            "orders": order_logs, "batch_notes": generation.batch_notes, "unmatched": generation.unmatched,
-            "request_analysis_update": analysis_update, "strategy_notes": diagnostics,
-            "scoring_update": scoring, "objective_scale": archive.objective_scale,
-            "started_at": started, "finished_at": archive.clock(),
-        }
-        archive.log_round(record)
-        archive.save()
-        return record
+        return order_logs
 
     def write_reports(self, record: Optional[Mapping[str, Any]] = None) -> Dict[str, str]:
         os.makedirs(self.out_dir, exist_ok=True)
@@ -276,13 +395,26 @@ class ExplorerRunner:
         paths.update({"map": map_path, "export": export_path})
         return paths
 
-    def run(self, rounds: int, batch: int) -> Dict[str, Any]:
+    def run(self, rounds: int, batch: Optional[int] = None) -> Dict[str, Any]:
+        """
+        ``rounds`` search rounds with ``batch`` orders each (default: 3 in deep mode, 6 in broad mode).
+        A new map starts with the analysis round (analyst on), which does not count towards ``rounds``.
+        """
+        if batch is None:
+            batch = self.default_batch()
         if rounds < 1 or batch < 1:
             raise ExplorerError("--rounds and --batch must be >= 1.")
         self.archive.register_query(self.query)
         run_id = f"run-{self.archive.round_counter + 1:03d}"
         records = []
         paths: Dict[str, str] = {}
+        analysis_record = self.run_analysis(run_id)
+        if analysis_record is not None:
+            records.append(analysis_record)
+            paths = self.write_reports(analysis_record)
+            print(f"[explorer] round {analysis_record['round']} (analysis): " + ", ".join(
+                f"{o['order_id']} seed_direct -> {o['outcome'] or o['entry_status'] or o['item_status']}"
+                for o in analysis_record["orders"]))
         for _ in range(rounds):
             record = self.run_round(batch, run_id)
             records.append(record)
@@ -298,6 +430,9 @@ class ExplorerRunner:
             "archive": self.archive.path,
             "elites": len(self.archive.elites),
             "entries": len(self.archive.entries),
+            "analysis": self.archive.problem_analysis is not None,
+            "depth": self.depth,
+            "batch": batch,
             "reports": paths,
             "strategy_stats": report.strategy_stats(self.archive, rounds=[r["round"] for r in records]),
         }
@@ -309,7 +444,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--profile", required=True, choices=PROFILE_NAMES)
     parser.add_argument("--query", required=True, help="The request the map is built for")
     parser.add_argument("--rounds", type=int, default=3)
-    parser.add_argument("--batch", type=int, default=6, help="Search orders (= candidates) per round")
+    parser.add_argument("--batch", type=int, default=None,
+                        help="Search orders (= candidates) per round (default: 3 with --depth deep, 6 with broad)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--strategy-weights", default=None,
                         help="e.g. refine=0.2,fill_gap=0.25,extrapolate=0.15,combine=0.15,diversify=0.15,explore=0.1")
@@ -324,6 +460,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-slope", type=float, default=StrategyConfig.min_slope,
                         help="Smallest score change per ordinal step that counts as a trend")
     parser.add_argument("--verbose", action="store_true", help="Show pipeline output")
+    analyst = parser.add_mutually_exclusive_group()
+    analyst.add_argument("--analyst", dest="analyst", action="store_const", const=True, default=None,
+                         help="Analysis-first stage for a new map (default where the profile has one: materials)")
+    analyst.add_argument("--no-analyst", dest="analyst", action="store_const", const=False,
+                         help="Skip the analysis-first stage (the generator frames the request, as before version 6)")
+    parser.add_argument("--depth", choices=DEPTHS, default=None,
+                        help="deep: few candidates with a quantitative estimate and a self-critique each (default "
+                             "when the map has a problem analysis); broad: more, shorter candidates")
+    parser.add_argument("--scoring", choices=("filter", "legacy"), default=None,
+                        help="materials: 'filter' (default: the simulation is a feasibility/consistency gate) or "
+                             "'legacy' (version-5 score); changing it re-scores the archive")
+    parser.add_argument("--sim-weight", type=float, default=None,
+                        help="materials, filter scoring: weight of the critic-capped simulated benefit (default 0; "
+                             "the weights are renormalised)")
     return parser
 
 
@@ -336,7 +486,8 @@ def runner_from_args(args: argparse.Namespace, client: Any = None) -> ExplorerRu
         get_profile(args.profile), args.query, seed=args.seed, weights=weights, mock=args.mock, client=client,
         archive_name=args.archive, out_dir=args.out, epochs=args.epochs, opt_rounds=args.opt_rounds,
         use_critic=not args.no_critic, allow_new_query=args.allow_new_query, verbose=args.verbose,
-        strategy_config=StrategyConfig(min_slope=args.min_slope),
+        strategy_config=StrategyConfig(min_slope=args.min_slope), analyst=args.analyst, depth=args.depth,
+        scoring=args.scoring, sim_weight=args.sim_weight,
     )
 
 
@@ -348,7 +499,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"[explorer] {err}", file=sys.stderr)
         return 2
     print(json.dumps({k: summary[k] for k in ("status", "profile", "run_id", "rounds", "archive", "elites",
-                                               "entries", "reports")}, indent=2, ensure_ascii=False))
+                                               "entries", "analysis", "depth", "batch", "reports")},
+                     indent=2, ensure_ascii=False))
     return 0
 
 

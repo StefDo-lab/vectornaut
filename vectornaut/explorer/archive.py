@@ -17,7 +17,10 @@ Layout of ``archive.json``::
                                         the relevant values of "relevance axes" (hard, and soft
                                         ones such as materials' mechanism_class), preferred
                                         values, and the objective scale used for scoring (with
-                                        its source and history; see the materials profile)
+                                        its source and history; see the materials profile);
+                                        version 6: the analyst's problem analysis (load breakdown,
+                                        levers, scope decision, direct-answer seeds; fixed once
+                                        set) and the scoring configuration (mode and weights)
     rounds       [round log]            orders, outcomes and strategy yield per round
     round_counter, next_entry
 
@@ -38,8 +41,9 @@ built with a different vocabulary is refused with an explanation, because its ce
 are not comparable (version 3 added ``governing_quantity`` values for fouling control and changed
 the materials score; version 4 changed the materials score again, re-scores version-3 entries
 from their stored breakdowns and adds preferred axis values; version 5 re-scores again with a
-per-archive objective scale, must/nice requirements and the conventional-equivalent gain). A newer
-archive is refused as well.
+per-archive objective scale, must/nice requirements and the conventional-equivalent gain; version 6
+adds the problem analysis and re-scores with the evaluator used as a filter, not a ranking signal).
+A newer archive is refused as well.
 
 Writes are atomic (temp file + ``os.replace``). Entry ids are sequential and the file is
 written with sorted keys, so the same inputs give the same file except for timestamps
@@ -55,7 +59,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 from vectornaut.explorer.descriptors import DescriptorSpace
 from vectornaut.storage import data_path
 
-ARCHIVE_VERSION = 5
+ARCHIVE_VERSION = 6
 # Two scores within this many points are a tie within a cell (decided by the tiebreak key).
 TIE_EPSILON = 1.0
 # Soft relevance axes: besides the values named by the function analysis, the values of the top
@@ -182,7 +186,8 @@ class Archive:
                                  "soft_relevance": [],
                                  "objective_statement": "", "baseline_statement": "", "framing_round": None,
                                  "target_gain_pct": None, "target_round": None, "objective_scale": {},
-                                 "preferred": {}, "preferred_reason": {}},
+                                 "preferred": {}, "preferred_reason": {},
+                                 "problem_analysis": None, "analysis_round": None, "scoring": {}},
             "rounds": [],
             "round_counter": 0,
             "next_entry": 1,
@@ -457,6 +462,34 @@ class Archive:
         history.append({"pct": pct, "source": source, "round": round_no})
         self.request_analysis["objective_scale"] = {"pct": pct, "source": source, "detail": detail,
                                                     "round": round_no, "history": history}
+        return True
+
+    # ---- problem analysis (analysis-first stage, version 6) ---------------
+    @property
+    def problem_analysis(self) -> Optional[Dict[str, Any]]:
+        """The analyst's stored problem analysis (dict), or None (old archives, analyst off)."""
+        value = self.request_analysis.get("problem_analysis")
+        return value if isinstance(value, dict) and value else None
+
+    def set_problem_analysis(self, analysis: Mapping[str, Any], round_no: int) -> bool:
+        """Stores the problem analysis once (like the framing), so later rounds stay comparable."""
+        if self.problem_analysis is not None or not analysis:
+            return False
+        self.request_analysis["problem_analysis"] = dict(analysis)
+        self.request_analysis["analysis_round"] = round_no
+        return True
+
+    @property
+    def scoring(self) -> Dict[str, Any]:
+        """The stored scoring configuration ({mode, sim_weight, ...}); {} if never set (profile default)."""
+        return dict(self.request_analysis.get("scoring") or {})
+
+    def set_scoring(self, config: Mapping[str, Any]) -> bool:
+        """Stores the scoring configuration; returns True if it changed (the caller re-scores)."""
+        config = dict(config or {})
+        if self.scoring == config:
+            return False
+        self.request_analysis["scoring"] = config
         return True
 
     def stated_relevant_values(self, axis: str) -> List[str]:

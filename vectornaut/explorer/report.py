@@ -4,10 +4,17 @@ import math
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
+from vectornaut.explorer.analyst import SEED_DIRECT
 from vectornaut.explorer.archive import (
     EVALUATED, FAILED, IMPROVED, IMPROVED_ON_TIEBREAK, INFEASIBLE, INVALID, NEW_ELITE, NOT_BETTER, REJECTED, Archive,
+    rank_key,
 )
 from vectornaut.explorer.strategies import STRATEGIES, StrategyConfig, find_trends, gap_candidates
+
+# Strategies in report order (the analyst's direct-answer seeds first).
+REPORT_STRATEGIES = (SEED_DIRECT,) + tuple(STRATEGIES)
+# Number of best map finds compared with the direct-answer seeds.
+COMPARE_TOP = 3
 
 STAT_KEYS = ("orders", "candidates", "evaluated", "new_elite", "improved", "improved_on_tiebreak", "not_better",
              "failed", "infeasible", "invalid", "rejected", "missing", "off_target", "elites_now")
@@ -31,7 +38,7 @@ def _table(headers: Sequence[str], rows: Iterable[Sequence[Any]]) -> str:
 def strategy_stats(archive: Archive, rounds: Optional[Iterable[int]] = None) -> Dict[str, Dict[str, int]]:
     """Yield per strategy from the round logs: how many orders became new elites, improved a cell, ..."""
     wanted = set(rounds) if rounds is not None else None
-    stats = {name: {key: 0 for key in STAT_KEYS} for name in STRATEGIES}
+    stats = {name: {key: 0 for key in STAT_KEYS} for name in REPORT_STRATEGIES}
     for record in archive.data["rounds"]:
         if wanted is not None and record.get("round") not in wanted:
             continue
@@ -67,7 +74,7 @@ def _stats_table(stats: Mapping[str, Mapping[str, int]]) -> str:
     headers = ["strategy", "orders", "evaluated", "new elite", "improved", "not better", "failed", "infeasible",
                "invalid/rejected", "missing", "off target", "elites now"]
     rows = []
-    for name in STRATEGIES:
+    for name in REPORT_STRATEGIES:
         if name not in stats:
             continue
         s = stats[name]
@@ -100,27 +107,198 @@ def _elites_table(archive: Archive, limit: Optional[int] = None) -> str:
         return "_No elites yet._"
     if _has_tiers(elites):
         rows = []
+        novelty = any("novelty" in ((e.get("score_breakdown") or {}).get("contributions") or {}) for e in elites)
+        keys = ("objective", "simulated", "requirements") + (("novelty",) if novelty else ())
         for i, e in enumerate(elites, 1):
             b = e.get("score_breakdown") or {}
             parts = b.get("contributions") or {}
-            split = " / ".join(_fmt_num(parts.get(k), 1) for k in ("objective", "simulated", "requirements")) \
-                if parts else "–"
-            rows.append([i, _fmt_score(e.get("score")), b.get("evidence_tier") or "–", split,
+            split = " / ".join(_fmt_num(parts.get(k), 1) for k in keys) if parts else "–"
+            tier = b.get("evidence_label") or b.get("evidence_tier") or "–"
+            if b.get("evidence_label") and b.get("evidence_tier"):
+                tier = f"{b['evidence_label']} ({b['evidence_tier']})"
+            rows.append([i, _fmt_score(e.get("score")), tier, split,
                          _fmt_num(b.get("objective_gain_pct"), 1), _fmt_num(b.get("critic_objective_gain_pct"), 1),
                          _fmt_num(b.get("conventional_equivalent_gain_pct"), 1),
                          _fmt_num(b.get("simulated_benefit_used_pct"), 1),
                          _fmt_num(b.get("simulated_gain_pct"), 1), b.get("simulated_quantity") or "–",
-                         _fmt_num(b.get("requirement_coverage")),
-                         _flags(e), e.get("title"), space.describe(e.get("descriptors") or {}), e.get("strategy"),
-                         e.get("round"), e["id"]])
-        return _table(["#", "score", "tier", "points obj / sim / req", "objective gain used %", "critic obj. %",
+                         _fmt_num(b.get("requirement_coverage")), _fmt_num(b.get("novelty_rating")),
+                         _hard_text(b), _flags(e), e.get("title"), space.describe(e.get("descriptors") or {}),
+                         e.get("strategy"), e.get("round"), e["id"]])
+        return _table(["#", "score", "evidence (tier)", "points " + " / ".join(
+                           {"objective": "obj", "simulated": "sim", "requirements": "req", "novelty": "nov"}[k]
+                           for k in keys), "objective gain used %", "critic obj. %",
                        "conv. equivalent %", "sim. benefit used %",
-                       "simulated %", "simulated quantity", "req. coverage", "flags", "title", "cell", "strategy",
-                       "round", "entry"], rows)
+                       "simulated %", "simulated quantity", "req. coverage", "novelty", "hard checks", "flags", "title",
+                       "cell", "strategy", "round", "entry"], rows)
     rows = [[i, _fmt_score(e.get("score")), (e.get("score_breakdown") or {}).get("basis", ""), e.get("title"),
              space.describe(e.get("descriptors") or {}), e.get("strategy"), e.get("round"), e["id"]]
             for i, e in enumerate(elites, 1)]
     return _table(["#", "score", "basis", "title", "cell", "strategy", "round", "entry"], rows)
+
+
+def _hard_text(breakdown: Mapping[str, Any]) -> str:
+    failures = breakdown.get("hard_check_failures") or []
+    if failures:
+        return "FAILED: " + "; ".join(f"{f.get('name')} ({f.get('reason')})" for f in failures)
+    checks = (breakdown.get("critic") or {}).get("hard_checks") or []
+    return "passed" if checks else "–"
+
+
+def _analysis_section(archive: Archive) -> str:
+    """The analyst's problem analysis (archive version 6): load breakdown, levers, scope, baseline, seeds."""
+    analysis = archive.problem_analysis
+    if not analysis:
+        return ""
+    lines = [f"By the analyst before the first search round (round {archive.request_analysis.get('analysis_round')}); "
+             "it fixed the framing of this map.\n"]
+    if analysis.get("system_analysis"):
+        lines.append(_md(analysis["system_analysis"]) + "\n")
+    loads = analysis.get("load_breakdown") or []
+    if loads:
+        lines.append("**Where the load comes from**\n")
+        lines.append(_table(["component", "share %", "rough value", "reasoning"],
+                            [[x.get("name"), _fmt_num(x.get("share_pct"), 0), x.get("rough_value") or "–",
+                              x.get("reasoning") or "–"] for x in loads]) + "\n")
+    levers = analysis.get("levers") or []
+    if levers:
+        lines.append("**Levers, ranked by expected magnitude**\n")
+        lines.append(_table(["#", "lever", "acts on", "expected %", "within literal scope", "extension justified",
+                             "note"],
+                            [[i, x.get("name"), x.get("acts_on") or "–", _fmt_num(x.get("expected_magnitude_pct"), 0),
+                              "yes" if x.get("within_literal_scope", True) else "no",
+                              {True: "yes", False: "no", None: "–"}[x.get("extension_justified")],
+                              x.get("note") or "–"] for i, x in enumerate(levers, 1)]) + "\n")
+    verdict = "justified" if analysis.get("scope_extension_justified") else "not justified"
+    lines.append(f"- **Scope extension**: {verdict} ({_md(analysis.get('scope_extension_reason') or '–')})")
+    if analysis.get("conventional_baseline"):
+        lines.append(f"- **Conventional in-service baseline**: {_md(analysis['conventional_baseline'])}")
+    origins = analysis.get("relevant_inspiration_origins") or []
+    if origins:
+        lines.append(f"- **Relevant origins (information)**: {', '.join(origins)}")
+    seeds = analysis.get("direct_concepts") or []
+    if seeds:
+        by_title = {e.get("title"): e for e in archive.entries.values() if e.get("strategy") == SEED_DIRECT}
+        rows = []
+        for seed in seeds:
+            entry = by_title.get(seed.get("title")) or {}
+            rows.append([seed.get("title"), _fmt_num(seed.get("realistic_benefit_pct"), 1),
+                         "yes" if seed.get("scope_extension") else "no", seed.get("key_physics") or "–",
+                         "; ".join(seed.get("risks") or []) or "–", entry.get("id") or "–",
+                         entry.get("status") or "–", _fmt_score(entry.get("score"))])
+        lines.append("\n**Direct-answer seeds** (the analyst's best 3, evaluated like every other candidate)\n")
+        lines.append(_table(["title", "analyst's realistic benefit %", "scope extension", "key physics", "risks",
+                             "entry", "status", "score"], rows))
+    return "\n".join(lines)
+
+
+def _is_scored(entry: Mapping[str, Any]) -> bool:
+    b = entry.get("score_breakdown") or {}
+    return entry.get("status") == EVALUATED and entry.get("score") is not None and \
+        "validator_failed" not in (b.get("flags") or [])
+
+
+def _candidate_row(entry: Mapping[str, Any]) -> Dict[str, Any]:
+    b = entry.get("score_breakdown") or {}
+    return {
+        "id": entry.get("id"), "title": entry.get("title"), "strategy": entry.get("strategy"),
+        "score": entry.get("score"), "objective_gain_pct": b.get("objective_gain_pct"),
+        "critic_objective_gain_pct": b.get("critic_objective_gain_pct"),
+        "novelty_rating": b.get("novelty_rating"), "requirement_coverage": b.get("requirement_coverage"),
+        "must_min_coverage": b.get("must_min_coverage"),
+        "hard_check_failed": bool(b.get("hard_check_failures")), "evidence_label": b.get("evidence_label"),
+        "scope_extension": bool(b.get("scope_extension")), "flags": list(b.get("flags") or []),
+    }
+
+
+def map_vs_direct(archive: Archive, top: int = COMPARE_TOP) -> Optional[Dict[str, Any]]:
+    """
+    The direct-answer seeds against the best map finds (evaluated, not excluded by the gate, not seeds;
+    best by evidence rank and score): best net critic objective gain, best novelty, best requirement
+    coverage (mean and weakest must) and best score of each side, with a verdict per measure.
+    None when the archive has no seed entries.
+    """
+    seeds = [e for e in archive.entries.values() if e.get("strategy") == SEED_DIRECT]
+    if not seeds:
+        return None
+    scored_seeds = sorted((e for e in seeds if _is_scored(e)), key=lambda e: (rank_key(e), e["id"]), reverse=True)
+    finds = sorted((e for e in archive.entries.values() if e.get("strategy") != SEED_DIRECT and _is_scored(e)),
+                   key=lambda e: (rank_key(e), e["id"]), reverse=True)[:top]
+
+    def best(rows: Sequence[Mapping[str, Any]], key: str) -> Optional[float]:
+        values = [r[key] for r in rows if isinstance(r.get(key), (int, float))]
+        return max(values) if values else None
+
+    seed_rows = [_candidate_row(e) for e in scored_seeds]
+    find_rows = [_candidate_row(e) for e in finds]
+    verdicts = {}
+    for key, label in (("objective_gain_pct", "objective gain (critic, net of the conventional equivalent)"),
+                       ("novelty_rating", "novelty (critic)"), ("requirement_coverage", "requirement coverage (mean)"),
+                       ("must_min_coverage", "weakest must-requirement"), ("score", "score")):
+        a, b = best(find_rows, key), best(seed_rows, key)
+        if a is None or b is None:
+            result = "n/a"
+        else:
+            result = "map" if a > b + 1e-9 else ("direct" if b > a + 1e-9 else "tie")
+        verdicts[key] = {"label": label, "map": a, "direct": b, "better": result}
+    overall = verdicts["objective_gain_pct"]["better"]
+    return {"seeds": seed_rows, "unscored_seeds": [e["id"] for e in seeds if not _is_scored(e)],
+            "best_map_finds": find_rows, "verdicts": verdicts,
+            "map_beat_direct_on_objective": overall == "map" if overall != "n/a" else None}
+
+
+def _comparison_section(archive: Archive) -> str:
+    data = map_vs_direct(archive)
+    if data is None:
+        return ""
+    lines = [f"The best {COMPARE_TOP} map finds (evaluated, not excluded by the validator gate, seeds left out; "
+             "best by evidence rank and score) against the analyst's direct-answer seeds. The objective gain is the "
+             "critic's, net of the conventional equivalent.\n"]
+
+    def rows(items: Sequence[Mapping[str, Any]], side: str) -> List[List[Any]]:
+        return [[side, r["id"], r["title"], _fmt_score(r["score"]), _fmt_num(r["objective_gain_pct"], 1),
+                 _fmt_num(r["novelty_rating"]), _fmt_num(r["requirement_coverage"]), _fmt_num(r["must_min_coverage"]),
+                 "FAILED" if r["hard_check_failed"] else "–", "yes" if r["scope_extension"] else "no",
+                 r.get("evidence_label") or "–"] for r in items]
+
+    table_rows = rows(data["seeds"], "direct") + rows(data["best_map_finds"], "map")
+    lines.append(_table(["side", "entry", "title", "score", "objective gain %", "novelty", "req. coverage",
+                         "min must", "hard check", "scope ext.", "evidence"], table_rows) if table_rows
+                 else "_Nothing evaluated yet._")
+    if data["unscored_seeds"]:
+        lines.append(f"\nSeeds without a usable score (failed, rejected or excluded by the gate): "
+                     f"{', '.join(data['unscored_seeds'])}")
+    lines.append("")
+    for key, v in data["verdicts"].items():
+        lines.append(f"- {v['label']}: map best {_fmt_num(v['map'], 2)} vs direct best {_fmt_num(v['direct'], 2)} -> "
+                     f"**{v['better']}**")
+    beat = data["map_beat_direct_on_objective"]
+    lines.append("\n**Verdict**: " + (
+        "the map found a concept with a larger critic objective gain than the direct answer." if beat else
+        "the direct answer is still ahead (or level) on the critic objective gain." if beat is False else
+        "not decidable yet (no critic objective gains on one side)."))
+    return "\n".join(lines)
+
+
+def _scope_extension_section(archive: Archive) -> str:
+    """Scored concepts that act outside the request's literal wording (flag scope_extension)."""
+    rows = []
+    for entry in archive.ranked_elites() + [e for e in archive.entries.values() if e.get("id") not in archive.elites.values()]:
+        b = entry.get("score_breakdown") or {}
+        if entry.get("status") != EVALUATED or "scope_extension" not in (b.get("flags") or []):
+            continue
+        critic = b.get("critic") or {}
+        legit = critic.get("scope_extension_legitimate")
+        rows.append([entry["id"], entry.get("title"), entry.get("strategy"), _fmt_score(entry.get("score")),
+                     _fmt_num(b.get("objective_gain_pct"), 1), b.get("scope_extension_reason") or "–",
+                     {True: "legitimate", False: "NOT legitimate", None: "–"}[legit],
+                     critic.get("scope_extension_note") or "–",
+                     "yes" if entry["id"] in archive.elites.values() else "no"])
+    if not rows:
+        return "_No scope extensions._"
+    return ("Concepts that act on a lever outside the request's literal wording (justified by the problem analysis). "
+            "They are scored like the others (no penalty); the critic states whether the extension is legitimate.\n\n"
+            + _table(["entry", "title", "strategy", "score", "objective gain %", "lever / reason", "critic",
+                      "critic note", "elite"], rows))
 
 
 def _framing_section(archive: Archive, profile: Any) -> str:
@@ -407,9 +585,20 @@ def render_map(archive: Archive, profile: Any, query: str) -> str:
         f"Query: \"{query}\"  \nArchive: `{archive.path}`  \nRounds so far: {archive.round_counter}",
         f"> {basis_note}",
         "## Coverage\n\n" + _coverage(archive),
+    ]
+    analysis = _analysis_section(archive)
+    if analysis:
+        parts.append("## Problem analysis (analysis first)\n\n" + analysis)
+    parts += [
         "## Requirements of the request\n\n" + _framing_section(archive, profile) + _requirements_section(archive),
         "## Elites (best per cell)\n\n" + _elites_table(archive, limit=25),
     ]
+    comparison = _comparison_section(archive)
+    if comparison:
+        parts.append("## Did the map beat the direct answer?\n\n" + comparison)
+    if archive.problem_analysis is not None or any(
+            "scope_extension" in ((e.get("score_breakdown") or {}).get("flags") or []) for e in archive.entries.values()):
+        parts.append("## Scope extensions\n\n" + _scope_extension_section(archive))
     if archive.requirements:
         parts.append("## Requirement coverage (critic ratings, elites)\n\n" + _requirement_coverage_table(archive))
     parts += [
@@ -448,10 +637,11 @@ def render_round(archive: Archive, profile: Any, record: Mapping[str, Any]) -> s
             scoring_text += (f" Changed from {update['previous_objective_scale_pct']:g} %: {update.get('rescored_entries', 0)} "
                              f"entries re-scored, {len(update.get('elite_changes') or {})} elite(s) changed; scores in "
                              "the table are after re-scoring.")
+    kind = " (analysis first: the analyst's direct-answer seeds)" if record.get("kind") == "analysis" else ""
     parts = [
-        f"# Explorer round {record.get('round')} ({profile.name})",
+        f"# Explorer round {record.get('round')} ({profile.name}){kind}",
         f"Query: \"{record.get('query')}\"  \nRun: {record.get('run_id')}, seed {record.get('seed')}, "
-        f"batch {len(record.get('orders', []))}",
+        f"batch {len(record.get('orders', []))}" + (f", depth {record['depth']}" if record.get("depth") else ""),
         "## Orders and outcomes\n\n" + _table(
             ["order", "strategy", "target", "result", "score", "tier", "objective gain %", "req. coverage", "flags",
              "title", "on target", "note"], rows) + (f"\n\n{scoring_text}" if scoring_text else ""),
@@ -489,10 +679,14 @@ def export(archive: Archive, profile: Any, query: str) -> Dict[str, Any]:
         "relevant_values": {axis: archive.relevant_values(axis) for axis in archive.all_relevance_axes()},
         "target_gain_pct": archive.target_gain_pct,
         "objective_scale": archive.objective_scale,
+        "scoring": archive.scoring,
+        "problem_analysis": archive.problem_analysis,
+        "map_vs_direct": map_vs_direct(archive),
         "elites": [
             {**{k: e.get(k) for k in ("id", "title", "descriptors", "cell", "score", "score_breakdown", "strategy",
                                       "round", "parent_ids", "raw_result_path")},
              "evidence_tier": (e.get("score_breakdown") or {}).get("evidence_tier"),
+             "evidence_label": (e.get("score_breakdown") or {}).get("evidence_label"),
              "flags": list((e.get("score_breakdown") or {}).get("flags") or []),
              "requirement_coverage": (e.get("score_breakdown") or {}).get("requirement_coverage")}
             for e in archive.ranked_elites()

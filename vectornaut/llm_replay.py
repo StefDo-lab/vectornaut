@@ -30,6 +30,10 @@ candidate: --opt-rounds). Every invocation rebuilds the explorer archive from sc
 <session>/data/explorer, so the search orders, and therefore the prompts, are the same
 on each rerun. The result summary goes to <session>/result.json, the cumulative map
 report to <session>/report.md and all reports to <session>/explorer_reports/.
+
+Materials maps start with the analyst call (schema ProblemAnalysis, call 01; archive version 6) unless
+--no-analyst is given. Sessions recorded before version 6 need --no-analyst --depth broad --scoring
+legacy to replay their first calls (their prompts still differ in the new critic checklist).
 """
 import argparse
 import hashlib
@@ -51,8 +55,9 @@ CLIENT_MODULES = (
     "vectornaut.script_generator",
     "vectornaut.test_generator",
 )
-# Explorer modules that obtain a client through get_client() (generator, business and materials critic).
+# Explorer modules that obtain a client through get_client() (analyst, generator, business and materials critic).
 EXPLORER_CLIENT_MODULES = (
+    "vectornaut.explorer.analyst",
     "vectornaut.explorer.generator",
     "vectornaut.explorer.profiles.business",
     "vectornaut.explorer.profiles.materials",
@@ -210,9 +215,12 @@ def run_explorer_session(
     opt_rounds: int = 1,
     use_critic: bool = True,
     solver_memo: bool = True,
+    analyst: Optional[bool] = None,
+    depth: Optional[str] = None,
+    scoring: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Explorer run whose model calls (generator, critic, pipeline stages) are answered from the session.
+    Explorer run whose model calls (analyst, generator, critic, pipeline stages) are answered from the session.
     ``solver_memo``: memoise analytical solves in <session>/solver_memo (kept across reruns).
     """
     session_dir = os.path.abspath(session_dir)
@@ -241,7 +249,7 @@ def run_explorer_session(
             runner = ExplorerRunner(
                 get_profile(profile), query, seed=seed, weights=parse_weights(weights), mock=False,
                 client=client, out_dir=os.path.join(session_dir, "explorer_reports"), epochs=epochs,
-                opt_rounds=opt_rounds, use_critic=use_critic,
+                opt_rounds=opt_rounds, use_critic=use_critic, analyst=analyst, depth=depth, scoring=scoring,
             )
             summary = runner.run(rounds, batch)
             status = {"status": "complete", "calls": client.calls, "elites": summary["elites"]}
@@ -276,7 +284,12 @@ def main(argv=None) -> int:
     explorer.add_argument("--seed", type=int, default=0)
     explorer.add_argument("--strategy-weights", default=None)
     explorer.add_argument("--opt-rounds", type=int, default=1, help="Pipeline optimization rounds per materials candidate")
-    explorer.add_argument("--no-critic", action="store_true", help="Business profile: skip the critic call")
+    explorer.add_argument("--no-critic", action="store_true", help="Skip the critic call")
+    explorer.add_argument("--no-analyst", action="store_true",
+                          help="Skip the analysis-first stage (needed to replay sessions recorded before version 6)")
+    explorer.add_argument("--depth", choices=("deep", "broad"), default=None,
+                          help="Generator depth (default: deep when the map has a problem analysis)")
+    explorer.add_argument("--scoring", choices=("filter", "legacy"), default=None, help="Materials scoring mode")
     parser.add_argument("--no-solver-memo", action="store_true",
                         help="Do not memoise analytical solves in <session>/solver_memo")
     args = parser.parse_args(argv)
@@ -288,6 +301,7 @@ def main(argv=None) -> int:
             args.session, args.profile, args.query, args.rounds, args.batch, seed=args.seed,
             weights=args.strategy_weights, epochs=args.epochs or 40, opt_rounds=args.opt_rounds,
             use_critic=not args.no_critic, solver_memo=not args.no_solver_memo,
+            analyst=False if args.no_analyst else None, depth=args.depth, scoring=args.scoring,
         )
     else:
         status = run_session(args.session, args.query, args.epochs or 200, args.rounds,

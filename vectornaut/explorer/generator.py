@@ -22,9 +22,18 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from vectornaut.config import get_client, get_model_name, get_thinking_config
-from vectornaut.explorer.archive import Archive, normalize_priority
+from vectornaut.explorer.analyst import SEED_DIRECT, analysis_brief
+from vectornaut.explorer.archive import EVALUATED, Archive, normalize_priority
 from vectornaut.explorer.descriptors import DescriptorError, normalize_token
 from vectornaut.explorer.profiles.base import ExplorerProfile
+
+# Generator depth: "deep" = few candidates, each with a quantitative estimate and a self-critique
+# (default when the analyst ran); "broad" = the previous behaviour (more, shorter candidates).
+DEPTH_DEEP = "deep"
+DEPTH_BROAD = "broad"
+DEPTHS = (DEPTH_DEEP, DEPTH_BROAD)
+# Default batch size per depth (--batch overrides).
+DEFAULT_BATCH = {DEPTH_DEEP: 3, DEPTH_BROAD: 6}
 
 # Item statuses after checking.
 OK = "ok"
@@ -139,7 +148,14 @@ def neighbourhood_titles(archive: Archive, orders: Sequence[Mapping[str, Any]], 
     return sorted(titles)[:limit]
 
 
-def build_prompt(profile: ExplorerProfile, query: str, orders: Sequence[Mapping[str, Any]], archive: Archive) -> str:
+def seed_scores(archive: Archive) -> Dict[str, float]:
+    """Scores of the evaluated direct-answer seeds by title (for the analysis brief)."""
+    return {e.get("title"): e.get("score") for e in archive.entries.values()
+            if e.get("strategy") == SEED_DIRECT and e.get("status") == EVALUATED and e.get("score") is not None}
+
+
+def build_prompt(profile: ExplorerProfile, query: str, orders: Sequence[Mapping[str, Any]], archive: Archive,
+                 depth: str = DEPTH_BROAD) -> str:
     space = profile.space
     lines: List[str] = []
     for order in orders:
@@ -177,6 +193,19 @@ def build_prompt(profile: ExplorerProfile, query: str, orders: Sequence[Mapping[
             "score, and failing a 'must' requirement costs up to half of it."
         )
     analysis_text = profile.analysis_instructions(archive)
+    problem = archive.problem_analysis
+    brief = analysis_brief(problem, seed_scores=seed_scores(archive)) if problem else ""
+    problem_text = (f"\nPROBLEM ANALYSIS (by the analyst before the search; it fixes the framing of this map: build on it,\n"
+                    f"target the largest levers, and look for concepts that beat the direct-answer seeds or are clearly\n"
+                    f"more novel):\n{brief}\n") if brief else ""
+    step1 = ("1. Function analysis (function_analysis, requirements): the problem analysis above fixes the framing;\n"
+             "   restate the functions briefly and repeat the stored requirements." if brief else
+             "1. Function analysis (function_analysis, requirements): which functions must a solution to the\n"
+             "   request deliver, independent of any particular solution, and which requirements must it meet?")
+    extra_rules = "\n".join(text for text in (
+        profile.scope_instructions(archive) if hasattr(profile, "scope_instructions") else "",
+        profile.depth_instructions(depth) if hasattr(profile, "depth_instructions") else "",
+    ) if text)
 
     return f"""You are the Explorer of Vectornaut. Vectornaut keeps a map of the idea space for a request:
 every concept is placed in one cell of a fixed grid of descriptor axes, and the best concept
@@ -185,7 +214,7 @@ concepts, one step beyond a trend, mixtures of distant good concepts). Answer ev
 with one concrete candidate, or say that the target cell cannot contain a working concept.
 
 REQUEST: "{query}"
-
+{problem_text}
 DOMAIN: {profile.domain_brief()}
 
 WHAT THE EVALUATOR CAN CHECK (propose only concepts it can evaluate):
@@ -195,8 +224,7 @@ THE MAP (closed vocabulary: use exactly these axis names and value tokens):
 {space.vocabulary_text()}
 
 WORK IN FOUR STEPS
-1. Function analysis (function_analysis, requirements): which functions must a solution to the
-   request deliver, independent of any particular solution, and which requirements must it meet?
+{step1}
 2. Mechanism classes (mechanism_classes_considered): which classes of mechanism can deliver
    those functions?
 3. Analogue search (analogues_considered): where in distant fields (biology, geology,
@@ -231,14 +259,16 @@ RULES
 - main_risk: the single most likely reason the concept fails.
 - novelty_vs_known: the closest known solution and what differs.
 {profile.candidate_instructions()}
+{extra_rules}
 """
 
 
 class CandidateGenerator:
-    def __init__(self, profile: ExplorerProfile, client: Any = None, mock: bool = False):
+    def __init__(self, profile: ExplorerProfile, client: Any = None, mock: bool = False, depth: str = DEPTH_BROAD):
         self.profile = profile
         self.client = client
         self.mock = mock
+        self.depth = depth if depth in DEPTHS else DEPTH_BROAD
 
     def _call_model(self, prompt: str) -> Any:
         from google.genai import types
@@ -265,7 +295,7 @@ class CandidateGenerator:
         return parsed
 
     def generate(self, query: str, orders: Sequence[Mapping[str, Any]], archive: Archive) -> GenerationResult:
-        prompt = build_prompt(self.profile, query, orders, archive)
+        prompt = build_prompt(self.profile, query, orders, archive, depth=self.depth)
         if not orders:
             return GenerationResult(items=[], prompt=prompt, batch_notes={}, unmatched=[])
         batch = self.profile.mock_batch(query, orders) if self.mock else self._call_model(prompt)
