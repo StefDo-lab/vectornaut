@@ -10,10 +10,88 @@ except ImportError:
 if load_dotenv:
     load_dotenv()
 
+def _is_transient_model_error(exc: Exception) -> bool:
+    """Server errors (5xx) and rate limits (429) are worth retrying; other client errors are not."""
+    from google.genai import errors
+
+    if isinstance(exc, errors.ServerError):
+        return True
+    if isinstance(exc, errors.ClientError):
+        return getattr(exc, "code", None) == 429
+    return False
+
+
+# Token usage per model name, summed over all generate_content calls in this process.
+MODEL_USAGE: Dict[str, Dict[str, int]] = {}
+
+
+def _record_usage(model: Optional[str], response: Any) -> None:
+    meta = getattr(response, "usage_metadata", None)
+    if meta is None:
+        return
+    entry = MODEL_USAGE.setdefault(model or "unknown", {"calls": 0, "prompt_tokens": 0, "output_tokens": 0, "thinking_tokens": 0})
+    entry["calls"] += 1
+    entry["prompt_tokens"] += int(getattr(meta, "prompt_token_count", 0) or 0)
+    entry["output_tokens"] += int(getattr(meta, "candidates_token_count", 0) or 0)
+    entry["thinking_tokens"] += int(getattr(meta, "thoughts_token_count", 0) or 0)
+
+
+def _print_usage_summary() -> None:
+    for model, entry in sorted(MODEL_USAGE.items()):
+        print(f"[model usage] {model}: {entry['calls']} calls, {entry['prompt_tokens']} prompt, "
+              f"{entry['output_tokens']} output, {entry['thinking_tokens']} thinking tokens")
+
+
+if os.environ.get("VECTORNAUT_LOG_USAGE", "").strip().lower() in ("1", "true", "yes"):
+    import atexit
+
+    atexit.register(_print_usage_summary)
+
+
+class _RetryingModels:
+    """Wraps client.models so generate_content retries transient failures with exponential backoff."""
+
+    def __init__(self, models: Any, retries: int, base_delay: float, sleep=None):
+        self._models = models
+        self._retries = retries
+        self._base_delay = base_delay
+        self._sleep = sleep
+
+    def generate_content(self, *args, **kwargs):
+        import time
+
+        sleep = self._sleep or time.sleep
+        for attempt in range(self._retries + 1):
+            try:
+                response = self._models.generate_content(*args, **kwargs)
+                _record_usage(kwargs.get("model") or (args[0] if args else None), response)
+                return response
+            except Exception as exc:
+                if attempt >= self._retries or not _is_transient_model_error(exc):
+                    raise
+                delay = self._base_delay * (2 ** attempt)
+                print(f"[model] Transient error ({str(exc)[:120]}); retry {attempt + 1}/{self._retries} in {delay:.0f}s")
+                sleep(delay)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._models, name)
+
+
+class _RetryingClient:
+    def __init__(self, client: Any, retries: int, base_delay: float):
+        self._client = client
+        self.models = _RetryingModels(client.models, retries, base_delay)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._client, name)
+
+
 def get_client():
     """
     Initializes and returns the unified google-genai Client.
     Uses AI Studio (GEMINI_API_KEY) by default, or Vertex AI if configured.
+    generate_content retries transient errors (5xx, 429): VECTORNAUT_MODEL_RETRIES (default 4)
+    attempts with exponential backoff starting at VECTORNAUT_MODEL_RETRY_DELAY_S (default 2 s).
     """
     from google import genai
 
@@ -21,14 +99,24 @@ def get_client():
     if use_vertex:
         project = os.environ.get("GOOGLE_CLOUD_PROJECT")
         location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-        return genai.Client(vertexai=True, project=project, location=location)
+        client = genai.Client(vertexai=True, project=project, location=location)
     else:
         api_key = os.environ.get("GEMINI_API_KEY")
         if api_key:
-            return genai.Client(api_key=api_key)
+            client = genai.Client(api_key=api_key)
         else:
             # The client will check GEMINI_API_KEY env variable automatically
-            return genai.Client()
+            client = genai.Client()
+
+    try:
+        retries = max(0, int(os.environ.get("VECTORNAUT_MODEL_RETRIES", "4")))
+    except ValueError:
+        retries = 4
+    try:
+        base_delay = max(0.0, float(os.environ.get("VECTORNAUT_MODEL_RETRY_DELAY_S", "2")))
+    except ValueError:
+        base_delay = 2.0
+    return _RetryingClient(client, retries, base_delay)
 
 # ==========================================
 # Per-stage model / thinking configuration

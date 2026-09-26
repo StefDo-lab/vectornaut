@@ -124,3 +124,9 @@ For public/scalable operation:
 - Replace local SQLite/file storage with Postgres plus object storage for reports, plots, generated scripts, and model artifacts.
 - Add request authentication before exposing live model or dynamic-script execution.
 - Run generated scripts only in a sandboxed worker with CPU/memory/time limits.
+
+## Gemini access in Claude Code cloud environments
+
+In a Claude Code cloud environment, store the Gemini key under **API credentials** (not as a plain environment variable, which every user of the environment can read): allowed site `generativelanguage.googleapis.com`, custom header `x-goog-api-key` with an empty prefix. The environment injects the header into requests to that host, so the code never sees the key. Vectornaut still needs `GEMINI_API_KEY` to be set to switch to live mode; any placeholder works, e.g. `GEMINI_API_KEY=injected-by-environment`.
+
+Model calls retry transient failures (HTTP 5xx and 429) with exponential backoff: `VECTORNAUT_MODEL_RETRIES` (default 4) and `VECTORNAUT_MODEL_RETRY_DELAY_S` (default 2 s). Set `VECTORNAUT_LOG_USAGE=1` to print summed token usage per model at process exit (for cost estimates: prompt, output and thinking tokens; thinking tokens are billed as output).
