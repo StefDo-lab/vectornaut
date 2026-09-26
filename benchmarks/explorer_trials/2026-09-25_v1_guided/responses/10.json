@@ -1,0 +1,61 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters positive and within bounds. Streamwise permeability of parallel slots K_x = phi s^2/12 = 0.75*9e-10/12 = 5.63e-11 m2 (sqrt 7.5 um); spanwise/wall-normal permeability 2.25e-12 m2 (sqrt 1.5 um). Net slip length b = (sqrt(K_x) - sqrt(K_z))/alpha = 6.0 um; b/H = 0.24; laminar Couette wall-shear reduction b/(H+b) = 19.4 % at fixed sublayer-edge velocity. This is an upper bound: the virtual-origin theory gives Delta U+ ~ l_x+ - l_z+ = 1.25 in wall units (delta_nu = 4.8 um), i.e. ~6 % turbulent skin-friction reduction at Cf = 1.5e-3, and DNS of anisotropic permeable walls show the benefit collapses once sqrt(K_y+) exceeds ~0.4 (here 0.31, margin small: at 10 m/s delta_nu drops to ~3.9 um and sqrt(K_y+) = 0.38). Validity conditions: substrate depth must exceed ~3 sqrt(K_x) ~ 25 um so the Brinkman layer is fully developed; the perforated lid must keep wall-normal permeability as low as the spanwise one. Structural: lamellae ~10 um thick, a few tens of um tall in a hard polymer under 50 Pa shear and ~150 Pa pressure fluctuations: no collapse; hydrostatic pressure acts on both sides of the water-filled lattice, so no crushing. Main non-physics risk: biofouling inside the lattice (5 um lid holes admit bacteria and diatoms), which would clog canals and remove the anisotropy; this does not make the concept infeasible but needs a fouling-release material and is documented as the key risk. Baseline: impermeable smooth wall (slot_width = 0 and spanwise_permeability = 0 give zero slip).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "slot_width", "value": 3.0e-5},
+    {"name": "lattice_porosity", "value": 0.75},
+    {"name": "spanwise_permeability", "value": 2.25e-12},
+    {"name": "beavers_joseph_alpha", "value": 1.0},
+    {"name": "water_viscosity", "value": 1.08e-3},
+    {"name": "wall_shear_stress", "value": 50.0},
+    {"name": "sublayer_thickness", "value": 2.5e-5}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_L1m_8mps", "value": 7.4e6},
+    {"name": "sqrt_Kx_plus", "value": 1.56},
+    {"name": "sqrt_Ky_plus", "value": 0.31},
+    {"name": "Anisotropy_Kx_over_Ky", "value": 25.0},
+    {"name": "NetSlip_b_over_H", "value": 0.24}
+  ],
+  "simulation_coefficient": 6.0e-6,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics",
+    "independent_var": {"label": "Normalized wall distance y/H in the viscous sublayer", "unit": "-"},
+    "dependent_var": {"label": "Streamwise water velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress on the anisotropic permeable skin"},
+    "reference_metric": {"label": "Wall shear stress on the impermeable smooth wall"},
+    "performance_gain": {"label": "Wall shear stress reduction"}
+  },
+  "objective_metric": {
+    "objective_name": "Wall shear stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress on the anisotropic permeable skin",
+    "reference_metric": "Wall shear stress on the impermeable smooth wall",
+    "lower_is_better": true,
+    "acceptance_threshold": 3.0,
+    "hard_constraints": [
+      "relative error between solver and analytical reference below 1 %",
+      "finite outputs",
+      "parameters within audited bounds",
+      "sqrt(K_y) * u_tau / nu below 0.4 (no Kelvin-Helmholtz rollers)",
+      "streamwise permeability larger than spanwise permeability"
+    ],
+    "design_variables": ["slot_width", "lattice_porosity", "spanwise_permeability"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_viscosity/sublayer_thickness",
+    "unit": "Pa",
+    "label": "Wall shear stress"
+  },
+  "baseline_parameters": [
+    {"name": "slot_width", "value": 0.0},
+    {"name": "spanwise_permeability", "value": 0.0}
+  ],
+  "baseline_description": "smooth impermeable hull wall (no slip) in the same sublayer Couette model"
+}

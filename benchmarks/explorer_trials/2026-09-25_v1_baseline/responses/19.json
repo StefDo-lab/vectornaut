@@ -1,0 +1,22 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = -roughness_offset_coefficient * (coating_hull_roughness - smooth_threshold_roughness) / equivalent_laminar_gap * du_dy(0)",
+    "u(1) = ship_speed"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "flake_thickness", "value": 3e-06, "min_bound": 1e-06, "max_bound": 1e-05, "justification": "Glass flake"},
+    {"name": "flake_diameter", "value": 5e-05, "min_bound": 1e-05, "max_bound": 0.0002, "justification": "Nacre-like aspect ratio"},
+    {"name": "coating_hull_roughness", "value": 4e-05, "min_bound": 1.5e-05, "max_bound": 0.00025, "justification": "AHR of the hard coat; upper bound widened so the conventional 125 um baseline lies inside"},
+    {"name": "baseline_hull_roughness", "value": 0.000125, "min_bound": 8e-05, "max_bound": 0.00025, "justification": "Conventional paint"},
+    {"name": "ship_length", "value": 200.0, "min_bound": 50.0, "max_bound": 400.0, "justification": "Ship"},
+    {"name": "ship_speed", "value": 7.7, "min_bound": 3.0, "max_bound": 12.0, "justification": "15 kn"},
+    {"name": "kinematic_viscosity", "value": 1.19e-06, "min_bound": 1e-06, "max_bound": 1.4e-06, "justification": "Seawater 15 C"},
+    {"name": "seawater_density", "value": 1025.0, "min_bound": 1000.0, "max_bound": 1030.0, "justification": "Seawater"},
+    {"name": "equivalent_laminar_gap", "value": 2.08e-4, "min_bound": 5e-5, "max_bound": 5e-4, "justification": "H = nu*U/u_tau^2 at 7.7 m/s with u_tau = 0.21 m/s (tau_w about 45 Pa, CF = 1.48e-3)"},
+    {"name": "smooth_threshold_roughness", "value": 3.5e-5, "min_bound": 1e-5, "max_bound": 6e-5, "justification": "AHR below which Townsin's correlation gives no added resistance at this Re"},
+    {"name": "roughness_offset_coefficient", "value": 0.141, "min_bound": 0.02, "max_bound": 0.5, "justification": "Calibrated so that AHR 125 um gives the Townsin added friction dCF/CF = +6.5 % at Re = 1.3e9 (negative slip = downward shift of the log law)"}
+  ]
+}

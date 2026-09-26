@@ -1,0 +1,64 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters positive and within bounds. Pitch L = 37.5 um; shear-free slip of longitudinal grooves b_gas = (L/pi) ln(sec(pi(1-phi_s)/2)) = 14.0 um. Closed-cell correction: with zero net flux in a lubricant layer of depth d under interface shear tau, the interface velocity is tau d/(4 mu_o) instead of tau d/mu_o (Couette plus return Poiseuille flow), so the viscous-infill penalty is 1 + 4 N w/d = 2.235 (N = 0.463, w/d = 0.667): b = 6.27 um; end-wall loss factor (1 - w/L_cell) = 0.985 gives b = 6.18 um, b/H = 0.247, laminar Couette wall-shear reduction b/(H+b) = 19.8 %. As for the parent, this laminar number is an upper bound; in wall units b+ = 1.29 (delta_nu = 4.8 um), which corresponds to ~6-7 % turbulent skin-friction reduction. The refinement genuinely addresses the parent's main risk: closed cells remove the streamwise shear-driven drainage path, leaving only emulsification/dissolution losses, which the floor pores replace locally. Capillary check: Laplace pressure 2*gamma/w = 1.7 kPa vs turbulent wall-pressure fluctuations ~150 Pa (factor ~11): pinning holds, but pressure pulses from slamming or cleaning jets exceed it. Structural check: ridges 7.5 um wide, 45 um tall (aspect 6) in an epoxy/polyurethane (E ~ 2 GPa) under 50 Pa shear deflect negligibly (tip deflection ~ tau h^4 / (E w^3)... order 1e-10 m); the risk is abrasion and impact, not hydrodynamic load. Environmental: the lubricant consumed by emulsification is discharged; must be non-toxic and biodegradable. Baseline: smooth ungrooved wall (groove_width = 0 gives zero slip).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "groove_width", "value": 3.0e-5},
+    {"name": "groove_depth", "value": 4.5e-5},
+    {"name": "solid_fraction", "value": 0.2},
+    {"name": "lubricant_viscosity", "value": 5.0e-4},
+    {"name": "water_viscosity", "value": 1.08e-3},
+    {"name": "wall_shear_stress", "value": 50.0},
+    {"name": "sublayer_thickness", "value": 2.5e-5},
+    {"name": "cell_length", "value": 2.0e-3}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_L1m_8mps", "value": 7.4e6},
+    {"name": "ViscosityRatio_lubricant_to_water", "value": 0.463},
+    {"name": "SlipLength_wall_units_b_plus", "value": 1.29},
+    {"name": "GroovePitch_wall_units_L_plus", "value": 7.8},
+    {"name": "SlipLength_to_Gap_b_over_H", "value": 0.247},
+    {"name": "LaplacePressure_to_pressure_fluctuation_ratio", "value": 11.0},
+    {"name": "RidgeAspectRatio", "value": 6.0}
+  ],
+  "simulation_coefficient": 6.18e-6,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics",
+    "independent_var": {"label": "Normalized wall distance y/H in the viscous sublayer", "unit": "-"},
+    "dependent_var": {"label": "Streamwise water velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress on the closed-cell lubricant grooves"},
+    "reference_metric": {"label": "Wall shear stress on the smooth wall"},
+    "performance_gain": {"label": "Wall shear stress reduction"}
+  },
+  "objective_metric": {
+    "objective_name": "Wall shear stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress on the closed-cell lubricant grooves",
+    "reference_metric": "Wall shear stress on the smooth wall",
+    "lower_is_better": true,
+    "acceptance_threshold": 3.0,
+    "hard_constraints": [
+      "relative error between solver and analytical reference below 1 %",
+      "finite outputs",
+      "parameters within audited bounds",
+      "lubricant viscosity below water viscosity",
+      "Laplace pressure at least 10x the turbulent wall-pressure fluctuation",
+      "ridge aspect ratio below 8"
+    ],
+    "design_variables": ["groove_width", "groove_depth", "solid_fraction", "lubricant_viscosity", "cell_length"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_viscosity/sublayer_thickness",
+    "unit": "Pa",
+    "label": "Wall shear stress"
+  },
+  "baseline_parameters": [
+    {"name": "groove_width", "value": 0.0}
+  ],
+  "baseline_description": "smooth, clean, ungrooved hull wall (no slip) in the same sublayer Couette model"
+}

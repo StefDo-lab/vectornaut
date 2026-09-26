@@ -1,0 +1,65 @@
+{
+  "_prompt_hash": "ac7547a03f621932",
+  "audit_passed": true,
+  "audit_notes": "Parameters are physically plausible. Checks: (1) slip length of a post-type shear-free surface b = L*(0.325/sqrt(phi_s) - 0.44) = 3e-4*0.588 = 1.76e-4 m, i.e. b+ = 46 in viscous units; this ideal value is not reachable in seawater because surfactants immobilise the interface, so the formulator's interface_mobility_factor 0.075 (effective slip 1.3e-5 m, b+ about 3.5) is kept as a conservative, literature-informed correction. (2) The gas layer itself: the air-layer shear resistance (b limited to h_a*mu_w/mu_a = 5e-4*67 = 3.3e-2 m) is not limiting. (3) Stability: Laplace pressure 2*0.072/3e-4 = 480 Pa exceeds rms wall-pressure fluctuations (about 2.5*tau_w = 250 Pa) but not peak fluctuations in waves or slamming; hydrostatic compression at 10 m draft (100 kPa) is only survivable with the air feed. Gas demand of 1e-6 m3/(m2 s) is 10 L/s for 1e4 m2 at 2 bar, a compressor of a few kW, small compared with a 10 MW propulsion plant. (4) Structural: silicone hairs of 0.5 mm height and about 50 um diameter under 100 Pa shear deflect negligibly (tip deflection << 1 um); cleaning brushes would destroy them. (5) Model: the turbulent boundary layer is represented by an equivalent laminar Couette gap H = nu*U/u_tau^2 = 1.2e-4 m that reproduces the smooth-wall shear mu*U/H = 100 Pa; with a Navier slip condition tau/tau0 = 1/(1 + b_eff/H). This first-order model gives about 10 %; a log-law shift argument gives about 19 %, so the simulated value is conservative. Not captured: fouling of the hairs and the air-water interface, which is the dominant long-term risk; air loss in waves; the air-feed energy. Baseline: the same wall without a gas layer (interface_mobility_factor = 0, no slip), i.e. a clean smooth hull.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "hair_pitch", "value": 0.0003},
+    {"name": "solid_area_fraction", "value": 0.1},
+    {"name": "air_layer_thickness", "value": 0.0005},
+    {"name": "water_dynamic_viscosity", "value": 0.0012},
+    {"name": "air_dynamic_viscosity", "value": 1.8e-05},
+    {"name": "smooth_wall_shear_stress", "value": 100.0},
+    {"name": "viscous_length_scale", "value": 3.8e-06},
+    {"name": "air_supply_rate", "value": 1e-06},
+    {"name": "equivalent_laminar_gap", "value": 0.00012},
+    {"name": "freestream_velocity", "value": 10.0},
+    {"name": "interface_mobility_factor", "value": 0.075}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_L1m", "value": 8.3e6},
+    {"name": "SlipLengthPlus_ideal", "value": 46.4},
+    {"name": "SlipLengthPlus_effective", "value": 3.5},
+    {"name": "NormalizedEffectiveSlip_b_over_H", "value": 0.110},
+    {"name": "LaplaceToPressureFluctuationRatio", "value": 1.9}
+  ],
+  "simulation_coefficient": 1.32e-05,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics",
+    "independent_var": {"label": "Normalized wall distance y/H", "unit": "-"},
+    "dependent_var": {"label": "Streamwise velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress on the plastron wall"},
+    "reference_metric": {"label": "Analytical wall shear stress on the plastron wall"},
+    "performance_gain": {"label": "Skin-friction reduction vs smooth no-slip hull"}
+  },
+  "objective_metric": {
+    "objective_name": "Skin-friction reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress on the plastron wall",
+    "reference_metric": "Analytical wall shear stress on the plastron wall",
+    "lower_is_better": true,
+    "acceptance_threshold": 3.0,
+    "hard_constraints": [
+      "relative error between solver and analytical solution below 1 %",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "Laplace pressure 2*gamma/hair_pitch above rms wall-pressure fluctuation",
+      "0 <= interface_mobility_factor <= 1"
+    ],
+    "design_variables": ["hair_pitch", "solid_area_fraction", "air_layer_thickness"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_dynamic_viscosity/equivalent_laminar_gap",
+    "unit": "Pa",
+    "label": "Wall shear stress on the plastron wall"
+  },
+  "baseline_parameters": [
+    {"name": "interface_mobility_factor", "value": 0.0}
+  ],
+  "baseline_description": "clean smooth no-slip hull (no gas layer)"
+}

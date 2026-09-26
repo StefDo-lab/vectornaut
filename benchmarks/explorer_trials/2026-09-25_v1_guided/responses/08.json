@@ -1,0 +1,111 @@
+{
+  "function_analysis": "Same functions as before: (F1) lower turbulent skin friction on the hull (viscous length ~5 um at 8 m/s, so textures must act at b+ ~ 1, i.e. a few micrometres of effective slip); (F2) stay free of biofilm and macrofouling for years without biocides; (F3) survive abrasion, hydrostatic pressure, UV and turbulent pressure fluctuations; (F4) be buildable and repairable on ~1e4 m2. For the gap cell (architected lattice) the question is whether a designed porous lattice below the wall can give net slip in turbulent flow: only if it is strongly anisotropic (permeable streamwise, nearly impermeable spanwise and wall-normal), otherwise permeable walls increase drag.",
+  "mechanism_classes_considered": [
+    "architected_lattice: streamwise-preferential permeable substrate (virtual-origin difference l_x - l_z gives net slip)",
+    "trapped_gas_or_liquid: closed-cell lubricant grooves with pore feed (refinement of the elite)",
+    "other: micro-actuated elastomer lids that strain the surface and pump lubricant (combination of the two elites)",
+    "interfacial_slip via Beavers-Joseph slip over porous media"
+  ],
+  "analogues_considered": [
+    "Fish lateral-line canal system: streamwise subdermal canals connected to the surface through pores",
+    "Swordfish oil gland with capillaries and skin pores (parent elite)",
+    "Dolphin epidermal sloughing (parent elite)",
+    "Mammalian sweat glands and sebaceous glands: small reservoirs emptied by contraction of surrounding tissue",
+    "Anisotropic permeable substrates studied in DNS (streamwise-preferential porous walls)"
+  ],
+  "candidates": [
+    {
+      "order_id": "r002-01",
+      "title": "Lateral-line canal lattice: streamwise-preferential permeable skin",
+      "summary": "A 3D-printed or laminated lattice of streamwise lamellae (30 um slots, porosity 0.75) under a perforated lid with ~5 um holes makes the wall strongly permeable in the flow direction but nearly impermeable spanwise and wall-normal, like the lateral-line canals of fish that run streamwise under a perforated skin. The difference between the streamwise and spanwise virtual origins (l_x - l_z ~ 6 um, about 1.2 wall units) acts as a net slip length that shifts the turbulent log-law up and lowers skin friction, while the water-filled lattice needs no lubricant or gas supply.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "architected_lattice"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "turbulent skin-friction reduction vs a smooth impermeable hull at 8 m/s",
+        "formula": "K_x = phi s^2/12 = 0.75*(30e-6)^2/12 = 5.6e-11 m2 -> l_x ~ sqrt(K_x) = 7.5 um; K_z = K_y = 2.25e-12 m2 -> l_z ~ 1.5 um; net slip l_x - l_z = 6.0 um; delta_nu = 4.8 um -> Delta U+ ~ 1.25; U_b+ = 36.5; Cf ratio = (36.5/37.75)^2 = 0.935; the Kelvin-Helmholtz-like rollers appear for sqrt(K_y+) > ~0.4, here sqrt(K_y+) = 0.31, so the gain is not yet cancelled",
+        "value": 6.0,
+        "unit": "%"
+      },
+      "main_risk": "The water-filled lattice is an ideal habitat for biofilm and larval settlement; within months fouling clogs the canals, destroys the anisotropy and turns the lattice into roughness that increases drag.",
+      "novelty_vs_known": "Closest known: riblets (surface grooves, textbook) and the DNS studies of anisotropic permeable substrates (Gomez-de-Segura and Garcia-Mayoral 2019), which have not been turned into a hull coating. Different from riblets: the texture is below a nearly flat perforated lid, so the surface is smooth to the eye and to fouling larvae larger than the 5 um holes, and it works on the virtual-origin difference of a porous medium, not on protruding ridges.",
+      "inspiration_source": "Fish lateral-line canal system: streamwise canals beneath scales, open to the water through a row of pores",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "Brinkman flow in a strongly anisotropic permeable substrate below the wall. The streamwise velocity penetrates to a depth l_x ~ sqrt(K_x) while spanwise and wall-normal fluctuations only penetrate l_z ~ sqrt(K_z); following the virtual-origin theory, the log-law shift is Delta U+ ~ l_x+ - l_z+. In the steady model: viscous-sublayer Couette flow with a Navier (Beavers-Joseph) slip length b = (sqrt(K_x) - sqrt(K_z))/alpha_BJ at the lid.",
+      "parameters": [
+        {"name": "slot_width", "value": 3.0e-5, "min_bound": 1.0e-5, "max_bound": 8.0e-5, "justification": "Streamwise canal width comparable to lateral-line canals scaled to ship viscous length; sets K_x = phi s^2/12."},
+        {"name": "lattice_porosity", "value": 0.75, "min_bound": 0.4, "max_bound": 0.9, "justification": "Thin lamellae (about 10 um) between 30 um slots; higher porosity weakens the lattice."},
+        {"name": "spanwise_permeability", "value": 2.25e-12, "min_bound": 2.5e-13, "max_bound": 1.0e-11, "justification": "Set by the perforated lid (5 um holes, low open fraction); must satisfy sqrt(K_y+) < 0.4 to avoid roller formation."},
+        {"name": "beavers_joseph_alpha", "value": 1.0, "min_bound": 0.1, "max_bound": 4.0, "justification": "Beavers-Joseph interface coefficient, order one for engineered porous media."},
+        {"name": "water_viscosity", "value": 1.08e-3, "min_bound": 9.0e-4, "max_bound": 1.9e-3, "justification": "Seawater at 15 degC."},
+        {"name": "wall_shear_stress", "value": 50.0, "min_bound": 5.0, "max_bound": 150.0, "justification": "Smooth-hull wall shear at 8 m/s."},
+        {"name": "sublayer_thickness", "value": 2.5e-5, "min_bound": 1.0e-5, "max_bound": 1.0e-4, "justification": "About 5 viscous lengths, gap of the equivalent Couette model."}
+      ]
+    },
+    {
+      "order_id": "r002-02",
+      "title": "Sweat-gland micro-lids: pressure-pulsed elastomer caps that strain the surface and pump lubricant",
+      "summary": "The hull skin is a field of 50 um wide lubricant-filled microcells capped by 5 um elastomer lids with a central pore, all sitting on a shared pressure line. A pressure pulse of a few kPa bulges every lid by ~5 um: the 15 % edge strain sheds biofilm (dolphin-sloughing principle) and the displaced volume (about 2 um of film per pulse) squeezes fresh low-viscosity lubricant onto the surface (swordfish/sweat-gland principle), so shedding and lubricant renewal happen in the same stroke.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "other"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "deflection"}
+      ],
+      "back_of_envelope": {
+        "quantity": "lid edge strain and lubricant volume expelled per pulse (enabling a clean, lubricated surface)",
+        "formula": "clamped strip lid: eps_edge = p a^2 (1-nu^2)/(2 E t^2) = 4e3*(50e-6)^2*0.76/(2*1e6*(5e-6)^2) = 0.15; D = E t^3/(12(1-nu^2)) = 1.37e-11 N m; w_max = p a^4/(384 D) = 4.75 um; expelled volume per cell length = 0.533 a w_max = 1.27e-10 m2, per area with 60 um pitch: 2.1 um film per pulse; drag benefit estimated as avoided slime penalty (~10-15 %) plus lubricant slip (~3-5 %) vs a static untreated surface that slimes",
+        "value": 12.0,
+        "unit": "%"
+      },
+      "main_risk": "The 5 um lids are too fragile for hull service (abrasion, cleaning, cavitation near the propeller), and the pore valves clog with biofilm or salt when the pulsing stops, so both the shedding and the pumping function fail together.",
+      "novelty_vs_known": "Closest known: macroscale pneumatic antifouling skins (dynamic surface deformation) and lubricant-infused surfaces. New: one microstructure delivers both functions; the micro-lid scales the dolphin-type strain down by keeping p a^2/(E t^2) constant, so the same few-kPa pulse strains a 10-um-scale surface, and the lid stroke itself is the lubricant pump, removing a separate replenishment system.",
+      "inspiration_source": "Dolphin epidermal sloughing combined with sweat/sebaceous glands and the swordfish oil gland (reservoir emptied through skin pores)",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "Each lid is a thin elastic strip clamped at the cell walls; a uniform pressure pulse from the reservoir below bends it (steady plate bending with the clamped-clamped moment distribution). The curvature gives surface strain above the biofilm detachment strain, and the swept volume under the deflected lid is expelled through the pore as a lubricant film. Steady 1D model: lid deflection w(x) across the cell width; the metrics are peak strain (16 t w_max/a^2) and the swept volume (integral of w).",
+      "parameters": [
+        {"name": "lid_thickness", "value": 5.0e-6, "min_bound": 2.0e-6, "max_bound": 2.0e-5, "justification": "Keeps a/t = 10 like the mm-scale parent so the same pressure gives the same strain."},
+        {"name": "lid_youngs_modulus", "value": 1.0e6, "min_bound": 2.0e5, "max_bound": 5.0e6, "justification": "Soft PDMS/polyurethane elastomer."},
+        {"name": "cell_width", "value": 5.0e-5, "min_bound": 1.0e-5, "max_bound": 1.0e-4, "justification": "10-100 um cells; small enough that the lid is below the viscous sublayer thickness when flat."},
+        {"name": "pulse_pressure", "value": 4.0e3, "min_bound": 5.0e2, "max_bound": 2.0e4, "justification": "Gives ~15 % edge strain for a/t = 10 and E = 1 MPa."},
+        {"name": "poisson_ratio", "value": 0.49, "min_bound": 0.4, "max_bound": 0.5, "justification": "Nearly incompressible elastomer."},
+        {"name": "cell_pitch", "value": 6.0e-5, "min_bound": 1.5e-5, "max_bound": 1.5e-4, "justification": "Cell width plus 10 um walls; converts swept volume to film thickness per pulse."}
+      ]
+    },
+    {
+      "order_id": "r002-03",
+      "title": "Closed-cell deep lubricant grooves with floor-pore feed and low solid fraction",
+      "summary": "Refinement of the swordfish groove coating against its main risk (drainage) and its weak gain: the streamwise grooves are cut into closed cells about 2 mm long by thin transverse walls so that shear can only recirculate the lubricant inside each cell instead of draining it downstream, each cell is fed through pores in its floor from a capillary layer, and the grooves are made wider (30 um), deeper (45 um) and the solid fraction lower (0.2) to raise the slip despite the recirculation penalty.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "turbulent skin-friction reduction vs a smooth clean hull at 8 m/s",
+        "formula": "pitch L = 30/0.8 = 37.5 um; b_gas = (L/pi) ln(sec(pi*0.8/2)) = 11.94*1.174 = 14.0 um; closed cell with zero net flux: interface velocity is 1/4 of the open-Couette value, so the viscous-infill penalty becomes 1 + 4 N w/d = 1 + 4*0.463*0.667 = 2.24; b = 6.3 um; b+ = 1.3; Delta U+ ~ 1.3; Cf ratio = (36.5/37.8)^2 = 0.932",
+        "value": 6.5,
+        "unit": "%"
+      },
+      "main_risk": "Ridges 7.5 um wide and 45 um tall (aspect ratio 6) break or bend under abrasion and cleaning, and emulsification at the interface still consumes lubricant that must be discharged to the sea.",
+      "novelty_vs_known": "Closest known: the parent elite and lubricant-infused grooved surfaces. New: closed cells stop streamwise shear drainage (the dominant loss for open grooves), floor pores feed each cell locally, and the groove geometry is chosen for the closed-cell recirculation penalty (1 + 4 N w/d) instead of the open-groove one.",
+      "inspiration_source": "Swordfish oil gland: capillaries that end in many individual skin pores, each feeding its own small patch of the lubricating film",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "Viscous-sublayer Couette flow over a wall with pinned low-viscosity liquid in closed streamwise cells. Inside a closed cell the shear-driven flow recirculates (Couette plus a return pressure-driven flow, zero net flux), which reduces the interface velocity to one quarter of the open-groove value; the effective Navier slip length follows from the shear-free-groove result corrected by 1 + 4 N w/d. The steady model uses this slip length at the wall.",
+      "parameters": [
+        {"name": "groove_width", "value": 3.0e-5, "min_bound": 1.0e-5, "max_bound": 6.0e-5, "justification": "Wider grooves raise slip; Laplace pressure 2*0.025/3e-5 = 1.7 kPa still exceeds turbulent pressure fluctuations (~150 Pa) by ~10x."},
+        {"name": "groove_depth", "value": 4.5e-5, "min_bound": 1.5e-5, "max_bound": 8.0e-5, "justification": "Deep grooves reduce the recirculation penalty; limited by ridge aspect ratio."},
+        {"name": "solid_fraction", "value": 0.2, "min_bound": 0.1, "max_bound": 0.5, "justification": "7.5 um ridges; lower fraction raises slip but weakens ridges."},
+        {"name": "lubricant_viscosity", "value": 5.0e-4, "min_bound": 3.0e-4, "max_bound": 2.0e-3, "justification": "Low-viscosity immiscible liquid, below seawater viscosity."},
+        {"name": "water_viscosity", "value": 1.08e-3, "min_bound": 9.0e-4, "max_bound": 1.9e-3, "justification": "Seawater at 15 degC."},
+        {"name": "wall_shear_stress", "value": 50.0, "min_bound": 5.0, "max_bound": 150.0, "justification": "Smooth-hull wall shear at 8 m/s."},
+        {"name": "sublayer_thickness", "value": 2.5e-5, "min_bound": 1.0e-5, "max_bound": 1.0e-4, "justification": "About 5 viscous lengths; gap of the equivalent Couette model."},
+        {"name": "cell_length", "value": 2.0e-3, "min_bound": 2.0e-4, "max_bound": 2.0e-2, "justification": "Long compared with groove width so end walls cost little slip (~w/L = 1.5 %), short enough to stop drainage."}
+      ]
+    }
+  ]
+}

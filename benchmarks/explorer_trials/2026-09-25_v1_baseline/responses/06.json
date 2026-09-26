@@ -1,0 +1,63 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters are plausible. Checks: (1) sqrt(Kx) = 8.9 um (sqrt(Kx)+ = 2.35), sqrt(Kz) = 1.4 um (0.37), sqrt(Ky) = 1.2 um (0.32): below the Kelvin-Helmholtz onset sqrt(Ky)+ about 0.4 reported in DNS, so the drag-reducing regime is plausible. (2) An anisotropy Kx/Kz = 40 cannot be reached with aligned fibre mats (about 2); it needs the proposed geometry of streamwise channels under a perforated sheet with no spanwise connection, which is manufacturable by lamination. (3) Channel Reynolds number inside the skin: u_Darcy about tau_w*sqrt(Kx)/mu scale 100*8.9e-6/1.2e-3 = 0.74 m/s at the interface decaying within sqrt(Kx); Re_pore = 1025*0.74*9e-6/1.2e-3 about 6, still in the Darcy/Brinkman regime. (4) Structural: a 100 um silicone or PU skin under 100 Pa shear and 100 kPa hydrostatic pressure is fine if the perforated sheet is supported every 50-100 um; channel collapse under fender loads is a local damage risk. (5) Model: the virtual-origin offset (sqrt(Kx) - sqrt(Kz)) times the anisotropy_efficiency 0.7 is used as an effective Navier slip length (5.3e-6 m, b+ = 1.4) on an equivalent laminar Couette gap H = 1.2e-4 m that reproduces the 100 Pa smooth-wall shear. This first-order model gives about 4 %; the log-law shift estimate is about 8 %. (6) Not captured and dominant in practice: biofilm clogging of the channels within weeks, which turns the skin into a rough wall. Baseline: the impermeable smooth hull (anisotropy_efficiency = 0).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "streamwise_permeability", "value": 8e-11},
+    {"name": "spanwise_permeability", "value": 2e-12},
+    {"name": "wall_normal_permeability", "value": 1.5e-12},
+    {"name": "layer_thickness", "value": 0.0001},
+    {"name": "water_dynamic_viscosity", "value": 0.0012},
+    {"name": "viscous_length_scale", "value": 3.8e-06},
+    {"name": "equivalent_laminar_gap", "value": 0.00012},
+    {"name": "freestream_velocity", "value": 10.0},
+    {"name": "anisotropy_efficiency", "value": 0.7}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_L1m", "value": 8.3e6},
+    {"name": "sqrtKx_plus", "value": 2.35},
+    {"name": "sqrtKz_plus", "value": 0.37},
+    {"name": "sqrtKy_plus", "value": 0.32},
+    {"name": "EffectiveSlipPlus", "value": 1.39},
+    {"name": "PoreReynoldsNumber", "value": 6.0}
+  ],
+  "simulation_coefficient": 5.27e-06,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics",
+    "independent_var": {"label": "Normalized wall distance y/H", "unit": "-"},
+    "dependent_var": {"label": "Streamwise velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress over the permeable skin"},
+    "reference_metric": {"label": "Analytical wall shear stress over the permeable skin"},
+    "performance_gain": {"label": "Skin-friction reduction vs impermeable smooth hull"}
+  },
+  "objective_metric": {
+    "objective_name": "Skin-friction reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress over the permeable skin",
+    "reference_metric": "Analytical wall shear stress over the permeable skin",
+    "lower_is_better": true,
+    "acceptance_threshold": 2.0,
+    "hard_constraints": [
+      "relative error between solver and analytical solution below 1 %",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "sqrt(wall_normal_permeability)/viscous_length_scale below 0.4 (Kelvin-Helmholtz onset)",
+      "streamwise_permeability greater than spanwise_permeability"
+    ],
+    "design_variables": ["streamwise_permeability", "spanwise_permeability", "wall_normal_permeability", "layer_thickness"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_dynamic_viscosity/equivalent_laminar_gap",
+    "unit": "Pa",
+    "label": "Wall shear stress over the permeable skin"
+  },
+  "baseline_parameters": [
+    {"name": "anisotropy_efficiency", "value": 0.0}
+  ],
+  "baseline_description": "impermeable clean smooth hull"
+}

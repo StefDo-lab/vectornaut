@@ -1,0 +1,89 @@
+{
+  "function_analysis": "F1: lower the time-averaged wall shear stress of a turbulent boundary layer on a ship hull (Re_x ~ 1e9, viscous length ~ 3-6 um at 6-10 m/s). F2: keep the hull hydraulically smooth over years, i.e. prevent or shed micro- and macrofouling (biofilm, algae, barnacles) without releasing biocides. F3: survive multi-year seawater immersion, hydrostatic pressure up to ~1-2 bar at the keel, UV at the waterline, abrasion (fenders, cleaning), and turbulent pressure fluctuations. F4: be manufacturable and repairable on ~1e4 m2 of hull at acceptable cost and energy.",
+  "mechanism_classes_considered": [
+    "interfacial_slip (shear-free or low-viscosity zones at the wall -> slip length b+ ~ O(1) needed)",
+    "trapped_gas_or_liquid (plastron or pinned lubricant in wall texture; needs replenishment for multi-year life)",
+    "porous_transport (feeding a surface layer from a reservoir behind a porous skin)",
+    "graded_stiffness / compliant walls (fouling release through low modulus; compliant-wall turbulence effects are small and unreliable)",
+    "other: active surface deformation (periodic strain to shed biofilm)",
+    "flow_redirection (riblets; textbook, fouls quickly)"
+  ],
+  "analogues_considered": [
+    "Swordfish (Xiphias gladius) head: oil-producing gland connected to capillaries that open through skin pores and replenish a lubricating film",
+    "Dolphin and pilot whale epidermis: rapid sloughing of the outer skin layer and a soft, hydrated surface that sheds settlers",
+    "Pilot whale skin nano-ridges with enzyme-rich gel",
+    "Sea-surface microlayer and sea foam (air/water interfaces stabilised by surfactants) for the random sub-um gas cell",
+    "Industrial air lubrication systems (micro-bubble injection) as the technological analogue of a replenished gas layer",
+    "Cathodic protection / impressed current systems as an existing hull-wide energy supply"
+  ],
+  "candidates": [
+    {
+      "order_id": "r001-01",
+      "target_feasible": false,
+      "infeasibility_reason": "At sea the hull surface temperature is pinned to the water temperature by the turbulent heat-transfer coefficient (h ~ 1e4 W/m2K), and a sub-um gas layer adds only R = 5e-7 m / 0.026 W/mK ~ 2e-5 m2K/W (a fifth of 1/h), so no passive sub-um trapped-gas coating can shift wall temperature meaningfully and an active one would need ~1e4 W/m2 per kelvin (about 100 MW per kelvin for a 1e4 m2 hull), which exceeds the ship's total propulsion power; temperature therefore cannot be the governing benefit of a drag-reducing hull coating in this cell.",
+      "descriptors": [],
+      "parameters": []
+    },
+    {
+      "order_id": "r001-02",
+      "title": "Swordfish-gland fed low-viscosity lubricant in streamwise microgrooves",
+      "summary": "Streamwise microgrooves (20 um wide, 15 um deep, solid fraction 0.3) in a hard fouling-release topcoat are filled with a low-viscosity, low-toxicity lubricant (viscosity below that of seawater) that is replenished through a porous capillary network from reservoirs inside the hull, like the oil gland and skin pores of the swordfish. The pinned low-viscosity liquid in the grooves gives a streamwise slip length of a few micrometres, i.e. b+ ~ 1, while the continuously renewed liquid interface resists settlement of fouling organisms.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "turbulent skin-friction reduction vs a smooth, clean, untreated hull at 8 m/s (200 m ship)",
+        "formula": "pitch L = w/(1-phi_s) = 20/0.7 = 28.6 um; gas-filled grooves b_gas = (L/pi) ln(1/cos(pi(1-phi_s)/2)) = 9.1 um * 0.79 = 7.2 um; liquid infill with N = mu_o/mu_w = 0.5/1.08 = 0.46 and w/d = 1.33: b ~ b_gas/(1+N w/d) = 7.2/1.62 = 4.5 um; delta_nu = nu/u_tau = 1.05e-6/0.22 = 4.8 um -> b+ ~ 0.9; Delta U+ ~ b+ (streamwise only); U_b+ = sqrt(2/Cf) = 36.5 with Cf = 1.5e-3; Cf_ratio = (36.5/37.4)^2 = 0.952",
+        "value": 5.0,
+        "unit": "%"
+      },
+      "main_risk": "Lubricant depletion: turbulent pressure fluctuations and shear drain or emulsify the pinned liquid, so the required replenishment flow (and the discharge of lubricant into the sea) becomes too large, and the groove texture fouls where the liquid is lost.",
+      "novelty_vs_known": "Closest known: Nepenthes-type SLIPS and lubricant-infused grooved surfaces (Fu et al. 2019). Differences: (1) the lubricant is less viscous than water (viscosity ratio < 1) which is the condition for net slip, whereas typical SLIPS oils are 5-100x more viscous and give little or negative drag reduction; (2) the film is renewed from the hull interior through a porous capillary network (swordfish gland) instead of relying on a finite infused inventory, which is what limits SLIPS lifetime at sea.",
+      "inspiration_source": "Swordfish oil gland and capillary network that opens through skin pores and renews a lubricating film on the head",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "Two-fluid Couette/channel shear flow over a wall with alternating solid ridges (no slip) and grooves filled with a pinned, less viscous liquid. Shear-stress continuity at the liquid-liquid interface lets the water move over the grooves, giving an effective Navier slip length b that lowers wall shear for a given flow rate (or raises flow rate for a given shear). In the steady model this is a viscous sublayer / thin-film Couette flow with an effective slip boundary condition b derived from groove geometry and viscosity ratio; the porous feed only has to supply the loss rate and does not enter the flow model.",
+      "parameters": [
+        {"name": "groove_width", "value": 2.0e-5, "min_bound": 5.0e-6, "max_bound": 1.0e-4, "justification": "Comparable to 4 viscous lengths at ship speed; small enough for strong capillary pinning (Laplace pressure 2*gamma*cos/w ~ 2 kPa with gamma ~ 25 mN/m)."},
+        {"name": "groove_depth", "value": 1.5e-5, "min_bound": 5.0e-6, "max_bound": 5.0e-5, "justification": "Depth ~ width keeps the liquid layer thick enough to decouple from the groove floor while remaining mechanically robust."},
+        {"name": "solid_fraction", "value": 0.3, "min_bound": 0.1, "max_bound": 0.7, "justification": "Ridge fraction trades slip (low fraction) against abrasion resistance and meniscus stability (high fraction)."},
+        {"name": "lubricant_viscosity", "value": 5.0e-4, "min_bound": 3.0e-4, "max_bound": 5.0e-3, "justification": "Low-viscosity, poorly water-soluble liquids (light alkanes, low-molecular silicone oils) are 0.3-1 mPa s; above ~1.1 mPa s the slip vanishes."},
+        {"name": "water_viscosity", "value": 1.08e-3, "min_bound": 9.0e-4, "max_bound": 1.9e-3, "justification": "Seawater at 15 degC; 1.9 mPa s at 0 degC."},
+        {"name": "wall_shear_stress", "value": 50.0, "min_bound": 5.0, "max_bound": 150.0, "justification": "tau_w = 0.5 rho U^2 Cf = 0.5*1025*64*1.5e-3 ~ 50 Pa at 8 m/s."},
+        {"name": "sublayer_thickness", "value": 2.5e-5, "min_bound": 1.0e-5, "max_bound": 1.0e-4, "justification": "About 5 viscous lengths (viscous sublayer) at ship speed, used as the gap of the equivalent Couette model."}
+      ]
+    },
+    {
+      "order_id": "r001-03",
+      "title": "Dolphin-sloughing pneumatic skin: periodically strained soft fouling-release membrane",
+      "summary": "A 200 um soft silicone skin (E ~ 0.5 MPa) is bonded over a grid of 2 mm wide air channels in a stiffer base layer; a few times per day the channels are pressurised to ~2 kPa, bulging the skin and producing 5-15 % surface strain that delaminates biofilm and early settlers, mimicking the continuous sloughing of dolphin epidermis. Keeping the hull free of slime avoids the 10-20 % friction penalty of biofilm without any biocide.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "other"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "deflection"}
+      ],
+      "back_of_envelope": {
+        "quantity": "surface strain of the skin over a pressurised channel, and the resulting friction advantage vs the same soft coating left static (fouled with slime)",
+        "formula": "clamped strip plate: D = E t^3/(12(1-nu^2)) = 0.5e6*(2e-4)^3/9 = 4.4e-7 N m; w_max = p a^4/(384 D) = 2e3*(2e-3)^4/(384*4.4e-7) = 0.19 mm; edge moment M = p a^2/12 = 6.7e-4 N m/m; sigma = 6M/t^2 = 1.0e5 Pa; strain = sigma(1-nu^2)/E ~ 0.15 (> ~0.1 reported to detach biofilms); slime film adds 10-20 % to skin friction (Schultz 2007), so keeping it off saves ~15 %",
+        "value": 15.0,
+        "unit": "%"
+      },
+      "main_risk": "Hard calcareous fouling (barnacles, tubeworms) and mechanical damage (fenders, anchor chain) are not handled by small strains, and a soft pneumatic skin over a whole hull is costly to install and repair.",
+      "novelty_vs_known": "Closest known: commercial silicone fouling-release coatings (static, rely on shear at speed to shed foulants) and lab demonstrations of dynamic surface deformation for biofilm removal (Shivapooja et al. 2013). New: a hull-scale layout with channel width and skin thickness sized so that strain exceeds the detachment threshold at low pressure, enabling release during port stays when static coatings fail.",
+      "inspiration_source": "Dolphin epidermis, which sloughs its outer layer about every two hours, and soft pilot-whale skin",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "A thin elastic plate/membrane strip clamped at the channel walls deflects under uniform channel pressure; the curvature produces surface strain which exceeds the interfacial fracture strain of biofilm/early fouling, so it delaminates and is washed away. Steady 1D model: plate strip deflection D w'''' = p (or tensioned membrane T w'' = -p) across the channel width, from which peak surface strain follows.",
+      "parameters": [
+        {"name": "skin_thickness", "value": 2.0e-4, "min_bound": 5.0e-5, "max_bound": 1.0e-3, "justification": "Thin enough to bend at low pressure, thick enough to be abrasion tolerant and to host fouling-release silicone."},
+        {"name": "skin_youngs_modulus", "value": 5.0e5, "min_bound": 1.0e5, "max_bound": 5.0e6, "justification": "Typical of fouling-release PDMS elastomers (0.1-5 MPa)."},
+        {"name": "channel_width", "value": 2.0e-3, "min_bound": 5.0e-4, "max_bound": 1.0e-2, "justification": "Millimetre channels give strains of 5-15 % at a few kPa and keep the skin supported against hydrostatic load."},
+        {"name": "actuation_pressure", "value": 2.0e3, "min_bound": 2.0e2, "max_bound": 2.0e4, "justification": "Low pressure keeps deflection in the small-deflection regime (w ~ t) and requires little pneumatic power."},
+        {"name": "poisson_ratio", "value": 0.49, "min_bound": 0.4, "max_bound": 0.5, "justification": "Nearly incompressible elastomer."},
+        {"name": "critical_detachment_strain", "value": 0.1, "min_bound": 0.03, "max_bound": 0.3, "justification": "Biofilm detachment reported at 10-30 % substrate strain in dynamic-surface experiments."}
+      ]
+    }
+  ]
+}

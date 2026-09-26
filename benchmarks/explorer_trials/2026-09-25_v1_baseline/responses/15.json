@@ -1,0 +1,60 @@
+{
+  "audit_passed": true,
+  "audit_notes": "The shear-lag model is physically consistent: the silicone coating acts as a membrane (E_c*t_c) bonded to a rigid epoxy substrate through a shear compliance per unit area c_s = 1.5*t_c/E_c (half the coating thickness in shear, G = E/3 for incompressible silicone) + t_i/G_i (tie zone). Decay length sqrt(E_c*t_c*c_s) = 0.37 mm, domain 3 mm, so the far end is load-free. Peak interfacial shear at the cut edge tau = u(0)/c_s = sigma_0*t_c/sqrt(E_c*t_c*c_s) (for a long domain) = about 41 kPa for 50 kPa edge membrane stress. Key finding: the coating's own shear compliance (4.5e-10 m/Pa) is about 400 times the graded zone's (1.2e-12) and 22,000 times an abrupt epoxy tie-coat's (2e-14), so in this model the graded zone changes the peak interfacial stress by only about 0.1 %. The benefit claimed in the concept (removal of the bimaterial free-edge stress singularity, Dundurs mismatch of about 4 orders of modulus) exists only in a 2D elasticity model near the corner and is not represented here; the result must therefore be read as 'no benefit in the shear-lag sense', not as a disproof. Structural limits: 41 kPa interfacial shear is far below the cohesive strength of silicone (about 1-5 MPa) and typical silicone-tie-coat adhesion (0.3-1 MPa), so fender rubbing at this level does not delaminate either design. Baseline: conventional abrupt tie-coat of 20 um with shear modulus 1 GPa. abrupt_tie_layer_thickness and substrate_youngs_modulus do not enter the equation.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "coating_youngs_modulus", "value": 1000000.0},
+    {"name": "coating_thickness", "value": 0.0003},
+    {"name": "substrate_youngs_modulus", "value": 3000000000.0},
+    {"name": "graded_zone_thickness", "value": 6e-05},
+    {"name": "abrupt_tie_layer_thickness", "value": 2e-05},
+    {"name": "edge_shear_load", "value": 50000.0},
+    {"name": "tie_zone_shear_modulus", "value": 50000000.0},
+    {"name": "domain_length", "value": 0.003}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ShearLagParameter_a", "value": 8.15},
+    {"name": "CoatingToTieCompliance_graded", "value": 375},
+    {"name": "CoatingToTieCompliance_abrupt", "value": 22500},
+    {"name": "ModulusMismatch_log10", "value": 3.48}
+  ],
+  "simulation_coefficient": 8.15,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics",
+    "independent_var": {"label": "Normalized distance from cut edge x/L", "unit": "-"},
+    "dependent_var": {"label": "In-plane coating displacement", "unit": "m"},
+    "primary_metric": {"label": "Peak interfacial shear stress at the cut edge"},
+    "reference_metric": {"label": "Analytical peak interfacial shear stress at the cut edge"},
+    "performance_gain": {"label": "Reduction of peak interfacial shear stress vs abrupt tie-coat"}
+  },
+  "objective_metric": {
+    "objective_name": "Peak interfacial shear stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak interfacial shear stress at the cut edge",
+    "reference_metric": "Analytical peak interfacial shear stress at the cut edge",
+    "lower_is_better": true,
+    "acceptance_threshold": 10.0,
+    "hard_constraints": [
+      "relative error between solver and analytical solution below 1 %",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "peak interfacial shear below silicone cohesive strength (1 MPa)"
+    ],
+    "design_variables": ["coating_youngs_modulus", "coating_thickness", "graded_zone_thickness", "tie_zone_shear_modulus"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "0",
+    "scale": "1/(1.5*coating_thickness/coating_youngs_modulus + graded_zone_thickness/tie_zone_shear_modulus)",
+    "unit": "Pa",
+    "label": "Peak interfacial shear stress at the cut edge"
+  },
+  "baseline_parameters": [
+    {"name": "graded_zone_thickness", "value": 2e-05},
+    {"name": "tie_zone_shear_modulus", "value": 1e9}
+  ],
+  "baseline_description": "abrupt 20 um epoxy-type tie-coat"
+}

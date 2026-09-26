@@ -1,0 +1,61 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters are plausible. Checks: (1) s+ = 6e-5/3.8e-6 = 15.8, close to the riblet optimum (s+ about 15-17); along the hull and over the speed range s+ varies roughly 8-25, so the hull-averaged benefit is lower. (2) h/s = 0.5 is within the usual range; riblet_spacing >= riblet_height holds. (3) Slip coefficient from the pipeline correlation lambda = 0.2*s*(1-exp(-2h/s)) = 0.2*6e-5*0.632 = 7.6e-6 m (lambda+ = 2.0, i.e. protrusion-height difference about 0.13 s, matching blade riblets); the formulator's riblet_effectiveness 0.5 reduces it to 3.8e-6 m (dU+ about 1.0) for trapezoidal profile, tip rounding and s+ averaging. (4) Structural: 1 MPa silicone ridges of 30 um under 100 Pa shear have strain about 1e-4, so the geometry does not change in flow; cleaning brushes and fenders abrade tips, and the soft material limits cut resistance. (5) Model: equivalent laminar Couette gap H = 1.2e-4 m reproducing the 100 Pa smooth-wall shear, Navier slip with the effective protrusion difference; gives about 3 % (log-law estimate about 6 %). (6) Not captured: slime filling the grooves at low speed, which removes the effect. Baseline: the same silicone surface without riblets (riblet_effectiveness = 0).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "riblet_spacing", "value": 6e-05},
+    {"name": "riblet_height", "value": 3e-05},
+    {"name": "silicone_youngs_modulus", "value": 1000000.0},
+    {"name": "water_dynamic_viscosity", "value": 0.0012},
+    {"name": "viscous_length_scale", "value": 3.8e-06},
+    {"name": "equivalent_laminar_gap", "value": 0.00012},
+    {"name": "freestream_velocity", "value": 10.0},
+    {"name": "riblet_effectiveness", "value": 0.5}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_L1m", "value": 8.3e6},
+    {"name": "RibletSpacingPlus", "value": 15.8},
+    {"name": "RibletHeightToSpacing", "value": 0.5},
+    {"name": "SlipLengthPlus_correlation", "value": 2.0},
+    {"name": "SlipLengthPlus_effective", "value": 1.0}
+  ],
+  "simulation_coefficient": 7.585e-06,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics",
+    "independent_var": {"label": "Normalized wall distance y/H", "unit": "-"},
+    "dependent_var": {"label": "Streamwise velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress over the riblet surface"},
+    "reference_metric": {"label": "Analytical wall shear stress over the riblet surface"},
+    "performance_gain": {"label": "Skin-friction reduction vs smooth silicone hull"}
+  },
+  "objective_metric": {
+    "objective_name": "Skin-friction reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress over the riblet surface",
+    "reference_metric": "Analytical wall shear stress over the riblet surface",
+    "lower_is_better": true,
+    "acceptance_threshold": 2.0,
+    "hard_constraints": [
+      "relative error between solver and analytical solution below 1 %",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "riblet_spacing/viscous_length_scale between 10 and 25",
+      "riblet_height <= riblet_spacing"
+    ],
+    "design_variables": ["riblet_spacing", "riblet_height", "silicone_youngs_modulus"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_dynamic_viscosity/equivalent_laminar_gap",
+    "unit": "Pa",
+    "label": "Wall shear stress over the riblet surface"
+  },
+  "baseline_parameters": [
+    {"name": "riblet_effectiveness", "value": 0.0}
+  ],
+  "baseline_description": "smooth silicone foul-release hull without riblets"
+}

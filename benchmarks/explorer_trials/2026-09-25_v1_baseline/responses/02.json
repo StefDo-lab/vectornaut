@@ -1,0 +1,23 @@
+{
+  "_prompt_hash": "f735b6c88775182d",
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = interface_mobility_factor * hair_pitch * (0.325/sqrt(solid_area_fraction) - 0.44) / equivalent_laminar_gap * du_dy(0)",
+    "u(1) = freestream_velocity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "hair_pitch", "value": 0.0003, "min_bound": 0.0001, "max_bound": 0.001, "justification": "Salvinia hair spacing"},
+    {"name": "solid_area_fraction", "value": 0.1, "min_bound": 0.02, "max_bound": 0.4, "justification": "Wetted tip fraction"},
+    {"name": "air_layer_thickness", "value": 0.0005, "min_bound": 0.0001, "max_bound": 0.002, "justification": "Hair height"},
+    {"name": "water_dynamic_viscosity", "value": 0.0012, "min_bound": 0.0009, "max_bound": 0.0018, "justification": "Seawater"},
+    {"name": "air_dynamic_viscosity", "value": 1.8e-05, "min_bound": 1.7e-05, "max_bound": 1.9e-05, "justification": "Air"},
+    {"name": "smooth_wall_shear_stress", "value": 100.0, "min_bound": 20.0, "max_bound": 300.0, "justification": "Reference smooth-wall shear"},
+    {"name": "viscous_length_scale", "value": 3.8e-06, "min_bound": 1e-06, "max_bound": 1e-05, "justification": "nu/u_tau"},
+    {"name": "air_supply_rate", "value": 1e-06, "min_bound": 1e-07, "max_bound": 1e-05, "justification": "Gas replenishment"},
+    {"name": "equivalent_laminar_gap", "value": 1.2e-4, "min_bound": 3e-5, "max_bound": 5e-4, "justification": "Gap H for which laminar Couette shear mu*U/H equals the turbulent smooth-wall shear rho*u_tau^2: H = nu*U/u_tau^2 = U+ * viscous length = 32*3.8e-6"},
+    {"name": "freestream_velocity", "value": 10.0, "min_bound": 3.0, "max_bound": 15.0, "justification": "Cruise speed"},
+    {"name": "interface_mobility_factor", "value": 0.075, "min_bound": 0.01, "max_bound": 1.0, "justification": "Fraction of the ideal shear-free slip that survives surfactant contamination and meniscus deformation in seawater (Peaudecerf et al. 2017 show strong immobilisation)"}
+  ]
+}

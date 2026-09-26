@@ -1,0 +1,9 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = (log_law_shift*viscous_length/calibrated_gap) * du_dy(0)",
+    "u(1) = wall_shear_stress*calibrated_gap/water_viscosity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"]
+}

@@ -1,0 +1,59 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters positive and within bounds. The model represents a polymer-induced log-law shift Delta U+ = 4.3 as an effective slip length b = Delta U+ * delta_nu = 20.6 um in a Couette gap calibrated to H+ = U_b+/2 = 18.3 (H = 88 um); this reproduces the linearised turbulent result DR ~ 2 Delta U+/U_b+ and gives b/(H+b) = 19.0 % wall-shear reduction. The calibration is sound for small shifts; for Delta U+ = 4.3 the linearisation is still within a few percent of the exact Cf ratio (36.5/40.8)^2 = 0.80. Physical plausibility: flat-plate and ship-model polymer injection (PEO, 1000-4000 wppm injectate) has demonstrated local DR of 60-80 % decaying to 10-30 % over ~10 m, so a hull average of ~20 % with injection rows every ~10 m is plausible but not conservative; polymer chain scission at high wall shear (tau_w = 50 Pa) and in the injection pores reduces effectiveness over the first metres. The concept passes the physical audit, but its two practical weaknesses are severe and are recorded here: (1) consumption of order 4 t/day of polymer for a 200 m ship at 8 m/s, which at 3-5 EUR/kg (12-20 kEUR/day) exceeds the fuel saving of a 20 % skin-friction reduction (~14 % fuel, ~3-6 kEUR/day for a 40-60 t/day ship) by a factor of 3-5, and discharges this polymer into the sea (non-toxic but not negligible); (2) it has no antifouling function, so it does not answer the non-toxic antifouling part of the request and would have to be combined with a fouling-release coating. Structural: 10 um pores in the coating are mechanically unproblematic but clog with biofilm unless kept flowing. Baseline: the same smooth hull without polymer release (log_law_shift = 0).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "log_law_shift", "value": 4.3},
+    {"name": "viscous_length", "value": 4.8e-6},
+    {"name": "calibrated_gap", "value": 8.8e-5},
+    {"name": "water_viscosity", "value": 1.08e-3},
+    {"name": "wall_shear_stress", "value": 50.0},
+    {"name": "pore_diameter", "value": 1.0e-5}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_L1m_8mps", "value": 7.4e6},
+    {"name": "LogLawShift_DeltaU_plus", "value": 4.3},
+    {"name": "EffectiveSlip_b_plus", "value": 4.3},
+    {"name": "CalibratedGap_H_plus", "value": 18.3},
+    {"name": "PoreDiameter_plus", "value": 2.1}
+  ],
+  "simulation_coefficient": 2.06e-5,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics",
+    "independent_var": {"label": "Normalized wall distance y/H (calibrated gap)", "unit": "-"},
+    "dependent_var": {"label": "Streamwise water velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress with near-wall polymer release"},
+    "reference_metric": {"label": "Wall shear stress without polymer"},
+    "performance_gain": {"label": "Wall shear stress reduction"}
+  },
+  "objective_metric": {
+    "objective_name": "Wall shear stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress with near-wall polymer release",
+    "reference_metric": "Wall shear stress without polymer",
+    "lower_is_better": true,
+    "acceptance_threshold": 5.0,
+    "hard_constraints": [
+      "relative error between solver and analytical reference below 1 %",
+      "finite outputs",
+      "parameters within audited bounds",
+      "log_law_shift below the maximum-drag-reduction asymptote for the given concentration",
+      "polymer cost per day below the fuel saving per day (economic constraint, checked outside the solver)"
+    ],
+    "design_variables": ["log_law_shift", "pore_diameter"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_viscosity/calibrated_gap",
+    "unit": "Pa",
+    "label": "Wall shear stress"
+  },
+  "baseline_parameters": [
+    {"name": "log_law_shift", "value": 0.0}
+  ],
+  "baseline_description": "same smooth hull without polymer release"
+}

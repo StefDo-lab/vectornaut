@@ -1,0 +1,57 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters positive and within bounds. Lid flexural rigidity D = E t^3/(12(1-nu^2)) = 1.37e-11 N m; clamped strip under the pulse pressure: w_max = p a^4/(384 D) = 4.75 um (0.95 t, edge of linear plate theory; membrane stiffening lowers real strain by ~15-30 %). Peak edge strain eps = 16 t w_max/a^2 = 0.152, the same as the mm-scale parent because p a^2/(E t^2) is kept constant; this exceeds the 0.10 biofilm detachment strain. Swept volume per pulse = a * (8/15) w_max per unit length = 1.27e-10 m2, i.e. a film of 2.1 um per pulse at 60 um pitch; the lubricant pumping part is physically sound. Caveats that limit the claimed drag benefit: (1) an expelled open film of 2 um is sheared downstream within seconds at 50 Pa wall shear (film speed tau h/mu_o ~ 0.2 m/s), so the lubricant slip is transient and only the fouling-shedding part gives a lasting benefit unless the film is retained in texture; (2) a 5 um elastomer lid is far thinner than any hull coating that survives abrasion, fenders, cleaning brushes or cavitation - durability over several years is the decisive open point, not the mechanics of one pulse; (3) the pressure line must be referenced to ambient hydrostatic pressure; (4) the pore must act as a valve (closes when the lid is flat) or seawater and bacteria enter the reservoir. The solved field is lid deflection; the drag effect (avoided slime penalty ~10-15 % plus transient slip) cannot be computed from it, and a static, non-pulsed lid has zero strain, so no meaningful relative baseline exists: baseline left empty, gain reported as n/a.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "lid_thickness", "value": 5.0e-6},
+    {"name": "lid_youngs_modulus", "value": 1.0e6},
+    {"name": "cell_width", "value": 5.0e-5},
+    {"name": "pulse_pressure", "value": 4.0e3},
+    {"name": "poisson_ratio", "value": 0.49},
+    {"name": "cell_pitch", "value": 6.0e-5}
+  ],
+  "dimensionless_numbers": [
+    {"name": "DeflectionToThickness_wmax_over_t", "value": 0.95},
+    {"name": "PeakSurfaceStrain_edge", "value": 0.152},
+    {"name": "CellToLid_a_over_t", "value": 10.0},
+    {"name": "ExpelledFilm_over_viscous_length", "value": 0.44}
+  ],
+  "simulation_coefficient": 1.37e-11,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics",
+    "independent_var": {"label": "Normalized position across the microcell x/a", "unit": "-"},
+    "dependent_var": {"label": "Lid deflection", "unit": "m"},
+    "primary_metric": {"label": "Peak surface strain of the pulsed micro-lid"},
+    "reference_metric": {"label": "Peak surface strain (analytical plate solution)"},
+    "performance_gain": {"label": "Gain vs static surface (not computable in this field)"}
+  },
+  "objective_metric": {
+    "objective_name": "Peak surface strain for biofilm release",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak surface strain of the pulsed micro-lid",
+    "reference_metric": "Peak surface strain (analytical plate solution)",
+    "lower_is_better": false,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error between solver and analytical reference below 1 %",
+      "finite outputs",
+      "parameters within audited bounds",
+      "peak surface strain above 0.10 (biofilm detachment)",
+      "peak surface strain below 0.5 (elastomer fatigue)",
+      "w_max below 1.5 lid thicknesses (linear plate theory)"
+    ],
+    "design_variables": ["lid_thickness", "lid_youngs_modulus", "cell_width", "cell_pitch"]
+  },
+  "metric": {
+    "kind": "max_abs",
+    "location": null,
+    "scale": "16*lid_thickness/cell_width**2",
+    "unit": "-",
+    "label": "Peak surface strain"
+  },
+  "baseline_parameters": [],
+  "baseline_description": "static, non-pulsed surface has zero strain; no meaningful relative gain in this field"
+}

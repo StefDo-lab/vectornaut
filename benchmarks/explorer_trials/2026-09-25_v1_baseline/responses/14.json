@@ -1,0 +1,18 @@
+{
+  "governing_equation": "d2u_dx2 = domain_length**2 / (coating_youngs_modulus * coating_thickness * (1.5*coating_thickness/coating_youngs_modulus + graded_zone_thickness/tie_zone_shear_modulus)) * u",
+  "boundary_conditions": [
+    "du_dx(0) = -edge_shear_load * domain_length / coating_youngs_modulus",
+    "u(1) = 0"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "coating_youngs_modulus", "value": 1000000.0, "min_bound": 100000.0, "max_bound": 10000000.0, "justification": "Foul-release silicone"},
+    {"name": "coating_thickness", "value": 0.0003, "min_bound": 0.0001, "max_bound": 0.001, "justification": "Film build"},
+    {"name": "substrate_youngs_modulus", "value": 3000000000.0, "min_bound": 1000000000.0, "max_bound": 5000000000.0, "justification": "Epoxy primer (treated as rigid in the shear-lag model)"},
+    {"name": "graded_zone_thickness", "value": 6e-05, "min_bound": 2e-05, "max_bound": 0.0002, "justification": "Byssus-like gradient zone"},
+    {"name": "tie_zone_shear_modulus", "value": 5e7, "min_bound": 1e6, "max_bound": 1.5e9, "justification": "Effective (harmonic-mean) shear modulus of the graded zone; about 1e9 for a thin epoxy-like tie-coat"},
+    {"name": "edge_shear_load", "value": 50000.0, "min_bound": 10000.0, "max_bound": 300000.0, "justification": "In-plane membrane stress introduced at a cut edge by fender rubbing or cleaning"},
+    {"name": "domain_length", "value": 0.003, "min_bound": 0.001, "max_bound": 0.01, "justification": "About 8 shear-lag decay lengths (sqrt(E_c*t_c*c_s) = 0.37 mm), so the far end is stress-free"}
+  ]
+}

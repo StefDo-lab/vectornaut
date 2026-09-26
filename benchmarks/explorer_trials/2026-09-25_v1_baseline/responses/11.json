@@ -1,0 +1,17 @@
+{
+  "governing_equation": "d2u_dy2 = -log(top_layer_youngs_modulus/base_youngs_modulus) * du_dy",
+  "boundary_conditions": [
+    "u(0) = 0",
+    "du_dy(1) = applied_removal_stress * total_coating_thickness / top_layer_youngs_modulus"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "top_layer_youngs_modulus", "value": 500000.0, "min_bound": 100000.0, "max_bound": 5000000.0, "justification": "Soft PDMS surface"},
+    {"name": "mid_layer_youngs_modulus", "value": 5000000.0, "min_bound": 1000000.0, "max_bound": 50000000.0, "justification": "Kept for reference; the continuous exponential gradient replaces the discrete mid layer in the model"},
+    {"name": "base_youngs_modulus", "value": 3000000000.0, "min_bound": 1000000000.0, "max_bound": 5000000000.0, "justification": "Epoxy primer at the hull side"},
+    {"name": "total_coating_thickness", "value": 0.0004, "min_bound": 0.0002, "max_bound": 0.001, "justification": "Film build"},
+    {"name": "work_of_adhesion", "value": 0.05, "min_bound": 0.02, "max_bound": 0.2, "justification": "Silicone vs barnacle cement"},
+    {"name": "applied_removal_stress", "value": 100000.0, "min_bound": 10000.0, "max_bound": 1000000.0, "justification": "Normal stress applied to a foulant base during removal (ASTM D5618 order of magnitude)"}
+  ]
+}

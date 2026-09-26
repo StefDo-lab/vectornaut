@@ -1,0 +1,109 @@
+{
+  "function_analysis": "Unchanged: (F1) reduce turbulent skin friction (needs effective slip of order one viscous length, ~5 um at 8 m/s); (F2) keep the hull free of biofilm and hard fouling for years without biocides; (F3) survive abrasion, impact, hydrostatic load and UV for several years; (F4) be installable and repairable on ~1e4 m2. Note on evaluation: the steady sublayer Couette model maps a slip length b to a wall-shear reduction b/(H+b); with H = 5 viscous lengths this overstates the turbulent effect about threefold. The linearised turbulent result (DR ~ 2 Delta U+/U_b+) is reproduced by the same Couette model if the gap is H+ = U_b+/2 ~ 18 viscous lengths (~88 um at 8 m/s); the new wall-shear candidate below uses this calibrated gap so that its simulated number is an honest turbulent estimate.",
+  "mechanism_classes_considered": [
+    "other: actively strained soft skin at cm scale (extrapolation of the dolphin elite)",
+    "other: polymer drag reduction (Toms effect) from wall-released mucus-like polymer",
+    "trapped_gas_or_liquid: closed-cell lubricant grooves refilled by a mm-scale bladder (combination)",
+    "graded_stiffness: compliant walls (rejected: small, unreliable turbulent benefit)"
+  ],
+  "analogues_considered": [
+    "Humpback and grey whale skin: large-scale skin sloughing, and barnacles that are shed with the skin",
+    "Fish mucus (e.g. barracuda, Pacific bonito) with drag-reducing high-molecular glycoproteins",
+    "Swordfish oil gland (parent)",
+    "Aircraft pneumatic de-icing boots: cm-scale inflatable tubes that crack off ice by strain",
+    "Insect tracheal bladders and peristaltic pumping (bladder-driven refill)"
+  ],
+  "candidates": [
+    {
+      "order_id": "r003-01",
+      "title": "Whale-skin cm-bladder panels that peel off juvenile barnacles",
+      "summary": "The dolphin skin scaled up tenfold: a 2 mm thick, abrasion-tolerant fouling-release silicone (E ~ 1.5 MPa) spans 20 mm wide pressure-compensated bladders, like the pneumatic de-icing boots of aircraft. A 6 kPa pulse gives the same 15 % edge strain as the mm version (strain depends only on p a^2/(E t^2)), but the thicker skin survives fenders and cleaning, and the cm-scale bulge (about 2 mm) bends the skin under the rigid base plates of juvenile barnacles, producing interfacial shear of order 50-80 kPa, comparable to their critical removal stress on silicone.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "other"},
+        {"axis": "length_scale", "value": "cm_plus"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "deflection"}
+      ],
+      "back_of_envelope": {
+        "quantity": "skin edge strain and interfacial shear under a rigid barnacle base; friction benefit vs the same static coating after a season of fouling",
+        "formula": "eps_edge = p a^2 (1-nu^2)/(2 E t^2) = 6e3*(0.02)^2*0.76/(2*1.5e6*(2e-3)^2) = 0.152; D = E t^3/(12(1-nu^2)) = 1.32 N m; w_max = p a^4/(384 D) = 6e3*1.6e-7/(384*1.32) = 1.9 mm; shear-lag interfacial stress under a rigid base ~ G eps = 0.5e6*0.15 = 75 kPa vs 20-100 kPa critical removal stress of juvenile barnacles on PDMS; slime plus light calcareous fouling costs ~15-25 % friction (Schultz 2007), so keeping it off saves ~15 %",
+        "value": 15.0,
+        "unit": "%"
+      },
+      "main_risk": "Adult barnacles and tubeworms that settle during long idle periods without pulsing cement too strongly to be peeled, and a pressure-compensated bladder system over the whole hull is expensive and a leak point.",
+      "novelty_vs_known": "Closest known: aircraft pneumatic de-icing boots and static silicone fouling-release coatings; lab studies of dynamic surface deformation at mm scale. New: sizing the bladder so that the skin can be 2 mm thick (hull-durable) while the strain stays above the biofilm threshold, and using the cm bulge to load barnacle base plates in peel, which strain-only microscale approaches cannot do.",
+      "inspiration_source": "Whale epidermis sloughing that sheds attached barnacles and cyamids with the skin",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "A soft thick plate strip clamped at the bladder walls bends under a uniform pulse pressure; the curvature gives edge strain above the biofilm detachment strain and, under a rigid barnacle base, an interfacial shear/peel stress of order G*eps that exceeds the removal stress of young barnacles on silicone. Steady 1D model: clamped-clamped strip deflection w(x) from the known moment distribution; metrics peak strain 16 t w_max/a^2 and w_max.",
+      "parameters": [
+        {"name": "skin_thickness", "value": 2.0e-3, "min_bound": 5.0e-4, "max_bound": 5.0e-3, "justification": "Thick enough to survive fenders and soft cleaning for years."},
+        {"name": "skin_youngs_modulus", "value": 1.5e6, "min_bound": 3.0e5, "max_bound": 5.0e6, "justification": "Filled fouling-release silicone; higher modulus raises interfacial shear under barnacles."},
+        {"name": "bladder_width", "value": 2.0e-2, "min_bound": 5.0e-3, "max_bound": 5.0e-2, "justification": "Larger than barnacle base diameters (5-10 mm) so a whole base sits on the bending zone; a/t = 10."},
+        {"name": "pulse_pressure", "value": 6.0e3, "min_bound": 1.0e3, "max_bound": 3.0e4, "justification": "Above ambient (pressure compensated); gives 15 % edge strain for a/t = 10 and E = 1.5 MPa."},
+        {"name": "poisson_ratio", "value": 0.49, "min_bound": 0.4, "max_bound": 0.5, "justification": "Nearly incompressible elastomer."},
+        {"name": "barnacle_removal_stress", "value": 5.0e4, "min_bound": 1.0e4, "max_bound": 2.0e5, "justification": "Reported critical removal stress of juvenile barnacles on PDMS fouling-release coatings is ~0.02-0.1 MPa."}
+      ]
+    },
+    {
+      "order_id": "r003-02",
+      "title": "Mucus-gland polymer release rows: Toms-effect drag reduction from wall pores",
+      "summary": "Rows of 10 um pores every ~10 m along the hull release a concentrated, non-toxic, drag-reducing polymer solution (high-molecular PEO or a fish-mucus-like glycoprotein) into the viscous sublayer, like the mucus glands of fast fish. Near-wall polymer concentrations of a few wppm damp the near-wall vortices (Toms effect) and shift the log law upward by several wall units; the effect decays downstream by diffusion, so injection is repeated.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "other"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "hull-averaged skin-friction reduction with injection rows every 10 m, and the polymer consumption",
+        "formula": "flat-plate polymer-injection data show 60-80 % DR near the slot decaying to ~20 % after ~10 m; hull average ~20 %; equivalent log-law shift Delta U+ = U_b+ (1/sqrt(0.8) - 1) = 36.5*0.118 = 4.3 -> effective slip b = 4.3*4.8 um = 21 um in a calibrated Couette gap H+ = U_b+/2 (88 um): b/(H+b) = 0.19; consumption: 4000 wppm at Q/(nu*span) ~ 10 -> 4e-5 kg/(s m) per row, 60 m girth, 20 rows -> ~0.05 kg/s ~ 4 t/day",
+        "value": 20.0,
+        "unit": "%"
+      },
+      "main_risk": "Polymer consumption of order tonnes per day for a large ship costs more than the fuel it saves and discharges large amounts of polymer into the sea; the concept also does nothing against fouling.",
+      "novelty_vs_known": "Closest known: polymer injection trials for ships and submarines (1960s-2000s) and fish-mucus drag studies. Hardly new; the only adaptation is micro-pore release into the sublayer from glands distributed in the coating instead of discrete slots, which improves near-wall retention somewhat but does not change the consumption economics.",
+      "inspiration_source": "Mucus glands of fast fish (e.g. barracuda, bonito) that release drag-reducing high-molecular glycoproteins",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "Stretched long-chain polymers in the buffer layer damp streamwise vortices and shift the mean velocity profile upward by Delta U+ (maximum-drag-reduction asymptote not reached). In the steady model this log-law shift is represented as an effective Navier slip length b = Delta U+ * nu/u_tau in a viscous-sublayer Couette flow whose gap is calibrated to H+ = U_b+/2, so that b/(H+b) reproduces the linearised turbulent drag reduction 2 Delta U+/U_b+.",
+      "parameters": [
+        {"name": "log_law_shift", "value": 4.3, "min_bound": 0.5, "max_bound": 15.0, "justification": "Hull-averaged log-law shift corresponding to ~20 % DR with repeated injection; local values near the slot reach 10-15."},
+        {"name": "viscous_length", "value": 4.8e-6, "min_bound": 2.0e-6, "max_bound": 2.0e-5, "justification": "nu/u_tau at 8 m/s on a 200 m hull (u_tau = 0.22 m/s)."},
+        {"name": "calibrated_gap", "value": 8.8e-5, "min_bound": 2.5e-5, "max_bound": 2.0e-4, "justification": "H+ = U_b+/2 = 18.3 viscous lengths, which makes the Couette model reproduce the linearised turbulent result."},
+        {"name": "water_viscosity", "value": 1.08e-3, "min_bound": 9.0e-4, "max_bound": 1.9e-3, "justification": "Seawater at 15 degC."},
+        {"name": "wall_shear_stress", "value": 50.0, "min_bound": 5.0, "max_bound": 150.0, "justification": "Smooth-hull wall shear at 8 m/s."},
+        {"name": "pore_diameter", "value": 1.0e-5, "min_bound": 2.0e-6, "max_bound": 1.0e-4, "justification": "Pores below ~2 viscous lengths release into the sublayer without acting as roughness."}
+      ]
+    },
+    {
+      "order_id": "r003-03",
+      "title": "Bladder-refilled closed-cell lubricant skin: pneumatic strokes that shed slime and refill grooves",
+      "summary": "Combines the two parents: the closed-cell lubricant grooves (30 um wide, 45 um deep) are moulded into a soft silicone skin (250 um) that spans 2 mm wide lubricant bladders. A pulse of ~3 kPa bulges the skin by ~0.15 mm: the 15 % strain at the ridge crests sheds biofilm, and the bladder stroke pushes lubricant through floor pores into the cells, so every cell is refilled locally from its own mm-scale reservoir instead of a hull-wide distribution network; the grooves between pulses give ~6 % turbulent friction reduction.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "deflection"}
+      ],
+      "back_of_envelope": {
+        "quantity": "stroke volume vs groove inventory, and combined friction benefit vs an untreated hull",
+        "formula": "D = 5e5*(2.5e-4)^3/(12*0.76) = 8.6e-7 N m; w_max = p a^4/(384 D) = 3e3*1.6e-11/(384*8.6e-7) = 0.146 mm; stroke film per area = (8/15) w_max * a/pitch = 0.533*146 um*0.8 = 62 um vs groove inventory 45 um*0.8 = 36 um (one stroke refills all cells); edge strain p a^2 (1-nu^2)/(2 E t^2) = 0.146; friction: ~6 % from closed-cell slip (b+ ~ 1.3) plus avoided slime (~5-10 % averaged over a season) -> ~10 %",
+        "value": 10.0,
+        "unit": "%"
+      },
+      "main_risk": "Soft silicone ridges and a soft skin under 15 % strain crack at the groove roots or lose their sharp pinning edges, so the lubricant is no longer held and the grooved soft surface fouls and abrades faster than a smooth coating.",
+      "novelty_vs_known": "Closest known: lubricant-infused grooves and pneumatic antifouling skins, each on their own. New: the actuation stroke is the refill pump, sized so that one stroke exceeds the groove inventory; this removes the separate feed network of the swordfish parents and keeps the lubricant retained in closed cells, unlike the micro-lid combination whose expelled film was sheared away.",
+      "inspiration_source": "Swordfish oil gland (local reservoirs emptied through skin pores) combined with dolphin epidermal sloughing",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "Clamped soft plate strip over a lubricant bladder deflects under a pulse pressure; the swept volume (integral of w over the bladder width) is pushed through floor pores into the closed-cell grooves on the skin surface, and the curvature strains the surface above the biofilm detachment strain. Between strokes the lubricant-filled closed cells provide Navier slip as in the parent. Steady 1D model: skin deflection w(x) across the bladder; metric: swept lubricant volume per unit area (film thickness) and peak strain.",
+      "parameters": [
+        {"name": "skin_thickness", "value": 2.5e-4, "min_bound": 1.0e-4, "max_bound": 1.0e-3, "justification": "Carries 45 um deep grooves on top and still bends at a few kPa."},
+        {"name": "skin_youngs_modulus", "value": 5.0e5, "min_bound": 1.0e5, "max_bound": 3.0e6, "justification": "Fouling-release silicone."},
+        {"name": "bladder_width", "value": 2.0e-3, "min_bound": 5.0e-4, "max_bound": 1.0e-2, "justification": "mm-scale reservoirs as in the dolphin parent."},
+        {"name": "bladder_pitch", "value": 2.5e-3, "min_bound": 6.0e-4, "max_bound": 1.2e-2, "justification": "Bladder width plus 0.5 mm support rib."},
+        {"name": "pulse_pressure", "value": 3.0e3, "min_bound": 5.0e2, "max_bound": 2.0e4, "justification": "Pressure-compensated pulse; gives ~15 % strain and a stroke larger than the groove inventory."},
+        {"name": "poisson_ratio", "value": 0.49, "min_bound": 0.4, "max_bound": 0.5, "justification": "Nearly incompressible elastomer."},
+        {"name": "groove_inventory_film", "value": 3.6e-5, "min_bound": 1.0e-5, "max_bound": 1.0e-4, "justification": "Groove depth 45 um times open fraction 0.8: lubricant volume per unit area to refill."}
+      ]
+    }
+  ]
+}

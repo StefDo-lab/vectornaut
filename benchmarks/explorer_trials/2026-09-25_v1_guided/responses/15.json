@@ -1,0 +1,9 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = ((groove_width/(1 - solid_fraction))/pi * log(1/cos(pi*(1 - solid_fraction)/2)) / (1 + 4*(lubricant_viscosity/water_viscosity)*groove_width/groove_depth) * (1 - groove_width/cell_length)) / sublayer_thickness * du_dy(0)",
+    "u(1) = wall_shear_stress*sublayer_thickness/water_viscosity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"]
+}

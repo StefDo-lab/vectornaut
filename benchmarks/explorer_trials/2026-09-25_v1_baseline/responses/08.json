@@ -1,0 +1,19 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = riblet_effectiveness * 0.2 * riblet_spacing * (1 - exp(-2 * riblet_height / riblet_spacing)) / equivalent_laminar_gap * du_dy(0)",
+    "u(1) = freestream_velocity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "riblet_spacing", "value": 6e-05, "min_bound": 1.5e-05, "max_bound": 0.00015, "justification": "s+ about 16"},
+    {"name": "riblet_height", "value": 3e-05, "min_bound": 5e-06, "max_bound": 7.5e-05, "justification": "h/s = 0.5"},
+    {"name": "silicone_youngs_modulus", "value": 1000000.0, "min_bound": 100000.0, "max_bound": 10000000.0, "justification": "Foul-release silicone"},
+    {"name": "water_dynamic_viscosity", "value": 0.0012, "min_bound": 0.0009, "max_bound": 0.0018, "justification": "Seawater"},
+    {"name": "viscous_length_scale", "value": 3.8e-06, "min_bound": 1e-06, "max_bound": 1e-05, "justification": "nu/u_tau"},
+    {"name": "equivalent_laminar_gap", "value": 1.2e-4, "min_bound": 3e-5, "max_bound": 5e-4, "justification": "H = nu*U/u_tau^2 reproducing the 100 Pa smooth-wall shear"},
+    {"name": "freestream_velocity", "value": 10.0, "min_bound": 3.0, "max_bound": 15.0, "justification": "Cruise speed"},
+    {"name": "riblet_effectiveness", "value": 0.5, "min_bound": 0.0, "max_bound": 1.0, "justification": "Protrusion-height difference retained after averaging s+ over hull speed and position, trapezoidal (not blade) profile and tip rounding; gives effective dU+ about 1.0"}
+  ]
+}

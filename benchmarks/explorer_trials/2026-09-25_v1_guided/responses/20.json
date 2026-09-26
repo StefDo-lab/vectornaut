@@ -1,0 +1,57 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters positive and within bounds. Flexural rigidity D = E t^3/(12(1-nu^2)) = 1.5e6*8e-9/(12*0.7599) = 1.32e-3 N m (the candidate's back-of-envelope wrote 1.32 N m, a units slip; its w_max of 1.9 mm is nevertheless correct). Clamped strip: w_max = p a^4/(384 D) = 1.90 mm (0.95 t), peak edge strain 16 t w_max/a^2 = 0.152, identical to the mm-scale parent because p a^2/(E t^2) is unchanged - the extrapolation to cm scale does not raise the strain, it raises the skin thickness (2 mm instead of 0.2 mm), which is what makes the concept more durable. Corrections: at a/t = 10 transverse shear deformation (Mindlin) adds roughly 5-10 % to w, and membrane stretching at w ~ t lowers the edge strain by 15-30 %; the real edge strain is ~0.11-0.13, still above ~0.10. Barnacle release: interfacial shear under a rigid base ~ G*eps ~ 0.5 MPa*0.12 ~ 60 kPa, within the 20-100 kPa range of juvenile barnacle removal stresses on PDMS; adult barnacles on hard spots (>0.1-0.3 MPa) will stay. Load and safety: bladders must be pressure-compensated against ~100 kPa hydrostatic pressure at 10 m draft; while inflated the 2 mm bulges act as large roughness (k+ ~ 400), so pulsing must be restricted to port stays or slow speed. Fatigue: ~1e4 cycles over 5 years at 12-15 % strain is acceptable for filled silicone; the bladder rib bond is the critical detail. The drag benefit (avoided slime and early hard fouling, estimated 15 %) lies outside the solved field; a static coating has zero strain, so there is no meaningful relative baseline in this field: baseline left empty, gain n/a.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "skin_thickness", "value": 2.0e-3},
+    {"name": "skin_youngs_modulus", "value": 1.5e6},
+    {"name": "bladder_width", "value": 2.0e-2},
+    {"name": "pulse_pressure", "value": 6.0e3},
+    {"name": "poisson_ratio", "value": 0.49},
+    {"name": "barnacle_removal_stress", "value": 5.0e4}
+  ],
+  "dimensionless_numbers": [
+    {"name": "DeflectionToThickness_wmax_over_t", "value": 0.95},
+    {"name": "PeakSurfaceStrain_edge", "value": 0.152},
+    {"name": "SpanToThickness_a_over_t", "value": 10.0},
+    {"name": "InterfacialShear_to_BarnacleRemovalStress", "value": 1.2}
+  ],
+  "simulation_coefficient": 1.32e-3,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics",
+    "independent_var": {"label": "Normalized position across the bladder x/a", "unit": "-"},
+    "dependent_var": {"label": "Skin deflection", "unit": "m"},
+    "primary_metric": {"label": "Peak surface strain of the cm-bladder skin"},
+    "reference_metric": {"label": "Peak surface strain (analytical plate solution)"},
+    "performance_gain": {"label": "Gain vs static coating (not computable in this field)"}
+  },
+  "objective_metric": {
+    "objective_name": "Peak surface strain for fouling release",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak surface strain of the cm-bladder skin",
+    "reference_metric": "Peak surface strain (analytical plate solution)",
+    "lower_is_better": false,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error between solver and analytical reference below 1 %",
+      "finite outputs",
+      "parameters within audited bounds",
+      "peak surface strain above 0.10",
+      "peak surface strain below 0.4 (silicone fatigue for 1e4 cycles)",
+      "bladders pressure-compensated to ambient hydrostatic pressure"
+    ],
+    "design_variables": ["skin_thickness", "skin_youngs_modulus", "bladder_width"]
+  },
+  "metric": {
+    "kind": "max_abs",
+    "location": null,
+    "scale": "16*skin_thickness/bladder_width**2",
+    "unit": "-",
+    "label": "Peak surface strain"
+  },
+  "baseline_parameters": [],
+  "baseline_description": "static fouling-release coating without actuation has zero strain; no meaningful relative gain in this field"
+}

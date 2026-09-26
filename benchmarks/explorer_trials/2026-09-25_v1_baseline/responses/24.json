@@ -1,0 +1,19 @@
+{
+  "governing_equation": "d2P_dy2 = (pi*domain_height/electrode_pitch)**2 * P",
+  "boundary_conditions": [
+    "P(0) = applied_voltage_amplitude",
+    "P(1) = 0"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["P"],
+  "parameters": [
+    {"name": "electrode_pitch", "value": 0.0005, "min_bound": 0.0001, "max_bound": 0.002, "justification": "Centre distance between opposite electrodes; the alternating pattern has period 2*pitch, so the dominant Fourier mode decays as exp(-pi*y/pitch)"},
+    {"name": "drive_frequency", "value": 10000.0, "min_bound": 1000.0, "max_bound": 100000.0, "justification": "Capacitive double layer"},
+    {"name": "seawater_conductivity", "value": 5.0, "min_bound": 3.0, "max_bound": 6.0, "justification": "S/m"},
+    {"name": "target_field_strength", "value": 10.0, "min_bound": 1.0, "max_bound": 100.0, "justification": "Deterrence threshold (assumed)"},
+    {"name": "double_layer_capacitance", "value": 0.2, "min_bound": 0.05, "max_bound": 1.0, "justification": "F/m2"},
+    {"name": "applied_voltage_amplitude", "value": 0.01, "min_bound": 0.002, "max_bound": 0.1, "justification": "Amplitude of the fundamental potential mode at the electrode plane (after the double-layer drop)"},
+    {"name": "domain_height", "value": 0.001, "min_bound": 0.0005, "max_bound": 0.005, "justification": "Two pitches: the mode has decayed to exp(-2*pi) = 0.2 % at the top"},
+    {"name": "settlement_height_normalized", "value": 0.1, "min_bound": 0.02, "max_bound": 0.5, "justification": "100 um above the surface, the height at which cyprid antennules and diatoms probe the surface"}
+  ]
+}

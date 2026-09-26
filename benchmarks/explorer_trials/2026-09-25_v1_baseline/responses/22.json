@@ -1,0 +1,17 @@
+{
+  "governing_equation": "d2c_dz2 = -(erosion_rate*total_thickness/water_diffusivity_in_polymer)*dc_dz + (hydrolysis_rate_constant*total_thickness**2/water_diffusivity_in_polymer)*c",
+  "boundary_conditions": [
+    "c(0) = surface_water_fraction",
+    "c(1) = 0"
+  ],
+  "independent_variables": ["z"],
+  "dependent_variables": ["c"],
+  "parameters": [
+    {"name": "layer_thickness", "value": 5e-06, "min_bound": 1e-06, "max_bound": 2e-05, "justification": "One sloughing sheet"},
+    {"name": "total_thickness", "value": 0.0003, "min_bound": 0.0001, "max_bound": 0.0006, "justification": "Domain depth = whole film"},
+    {"name": "erosion_rate", "value": 1e-12, "min_bound": 1e-13, "max_bound": 1e-11, "justification": "Surface recession speed (frame moves with the surface)"},
+    {"name": "water_diffusivity_in_polymer", "value": 1e-13, "min_bound": 1e-14, "max_bound": 1e-12, "justification": "Hydrophobic polyester"},
+    {"name": "hydrolysis_rate_constant", "value": 0.0001, "min_bound": 1e-06, "max_bound": 0.01, "justification": "First-order hydrolysis"},
+    {"name": "surface_water_fraction", "value": 1.0, "min_bound": 0.5, "max_bound": 1.0, "justification": "Normalized water concentration at the wetted surface (saturation = 1)"}
+  ]
+}

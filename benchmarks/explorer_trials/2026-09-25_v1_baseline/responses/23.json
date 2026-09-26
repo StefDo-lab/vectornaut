@@ -1,0 +1,57 @@
+{
+  "audit_passed": false,
+  "audit_notes": "The parameter set is internally inconsistent and cannot be fixed within realistic material properties. With first-order hydrolysis and diffusion, the reaction front depth is delta = sqrt(D/k) = sqrt(1e-13/1e-4) = 32 um, and the resulting surface recession is of order v = sqrt(D*k) = sqrt(1e-13*1e-4) = 3.2e-9 m/s = 100 mm per year, about 3000 times faster than the stated erosion rate of 1e-12 m/s (30 um per year); the 0.3 mm film would be gone in about a day. Conversely, reaching 30 um per year with D = 1e-13 m2/s requires k = v^2/D = 1e-11 1/s, and then delta = sqrt(D/k) = 0.1 m, far larger than the film: the whole film would hydrolyse in bulk and lose integrity instead of sloughing 5 um sheets. Surface erosion (delta about one 5 um sheet) at 30 um per year needs D = v*delta = 5e-18 m2/s and k = v/delta = 2e-7 1/s; a water diffusivity of 5e-18 m2/s is about 4 orders below polyesters and polyanhydrides (1e-14 to 1e-12). The Peclet number v*T/D = 3e-3 confirms that surface recession does not shape the profile. The concept therefore fails as parameterised; a working variant would need a different trigger (hydrolysable interlayers that are reached only at the surface, or a leached-layer mechanism as in self-polishing copolymers, whose polishing rates are 5-15 um per month and would consume 0.3 mm in 2-5 years). Separately, the drag benefit is indirect and the model cannot compute it, and biocide-free surface renewal is too slow to stop barnacle cyprids that cement within hours. The request itself remains feasible.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "layer_thickness", "value": 5e-06},
+    {"name": "total_thickness", "value": 0.0003},
+    {"name": "erosion_rate", "value": 1e-12},
+    {"name": "water_diffusivity_in_polymer", "value": 1e-13},
+    {"name": "hydrolysis_rate_constant", "value": 0.0001},
+    {"name": "surface_water_fraction", "value": 1.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "PecletNumber_vT_over_D", "value": 0.003},
+    {"name": "DamkohlerNumber_kT2_over_D", "value": 90000},
+    {"name": "FrontDepthToSheetThickness", "value": 6.3},
+    {"name": "ImpliedToStatedErosionRatio", "value": 3200}
+  ],
+  "simulation_coefficient": 3.16e-05,
+  "solver_method": "scipy",
+  "ui_metadata": {
+    "domain_name": "Mass Transport",
+    "independent_var": {"label": "Normalized depth below the eroding surface z/T", "unit": "-"},
+    "dependent_var": {"label": "Normalized water concentration", "unit": "-"},
+    "primary_metric": {"label": "Integrated hydrolysis zone (water-swollen depth)"},
+    "reference_metric": {"label": "Analytical integrated hydrolysis zone"},
+    "performance_gain": {"label": "Reduction of the degraded film fraction vs bulk-eroding binder"}
+  },
+  "objective_metric": {
+    "objective_name": "Surface-confined erosion",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Integrated hydrolysis zone (water-swollen depth)",
+    "reference_metric": "Analytical integrated hydrolysis zone",
+    "lower_is_better": true,
+    "acceptance_threshold": 50.0,
+    "hard_constraints": [
+      "relative error below 1 %",
+      "all outputs finite",
+      "sqrt(D*k) within a factor 3 of erosion_rate",
+      "sqrt(D/k) below 2*layer_thickness"
+    ],
+    "design_variables": ["layer_thickness", "total_thickness", "hydrolysis_rate_constant", "water_diffusivity_in_polymer"]
+  },
+  "metric": {
+    "kind": "integral",
+    "location": null,
+    "scale": "total_thickness",
+    "unit": "m",
+    "label": "Integrated hydrolysis zone (water-swollen depth)"
+  },
+  "baseline_parameters": [
+    {"name": "hydrolysis_rate_constant", "value": 1e-06}
+  ],
+  "baseline_description": "bulk-eroding biocide-free binder"
+}

@@ -1,0 +1,60 @@
+{
+  "audit_passed": false,
+  "audit_notes": "The material parameters are plausible (shear wave speed c_t = sqrt(G/rho) = 5 m/s = 0.5 U; static surface displacement under 100 Pa wall shear tau*T/G = 12 um, about 3 viscous units, acceptable), but the MODEL IS UNSUITABLE: compliant-wall drag reduction is an unsteady fluid-structure interaction (wall motion interacting with near-wall streaks and pressure fluctuations). The formulation replaces it by an empirical effective slip coefficient (0.45 viscous units) that is not derived from the layer thickness, modulus or loss factor; none of the concept's design parameters enters the equations, so the simulated gain (about 1.4 %) would only reproduce the assumed input and carries no evidence. Additional physical concerns: at U/c_t = 2 the layer is near the static-divergence threshold (reported onset around U = 2-3 c_t for viscoelastic layers), where drag increases; off-design speeds lose the tuning; a 25 kPa gel tears in service. The concept is not physically impossible, and the request remains feasible; a validation would need a transient FSI simulation or a towing-tank test, which this simulator cannot provide.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "compliant_layer_thickness", "value": 0.003},
+    {"name": "shear_modulus", "value": 25000.0},
+    {"name": "loss_factor", "value": 0.3},
+    {"name": "layer_density", "value": 1000.0},
+    {"name": "freestream_velocity", "value": 10.0},
+    {"name": "water_dynamic_viscosity", "value": 0.0012},
+    {"name": "viscous_length_scale", "value": 3.8e-06},
+    {"name": "equivalent_laminar_gap", "value": 0.00012},
+    {"name": "compliance_slip_coefficient", "value": 0.45}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ReynoldsNumber_L1m", "value": 8.3e6},
+    {"name": "VelocityToShearWaveSpeed", "value": 2.0},
+    {"name": "StaticDisplacementPlus", "value": 3.2},
+    {"name": "ThicknessPlus", "value": 790}
+  ],
+  "simulation_coefficient": 1.71e-06,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid-Structure Interaction",
+    "independent_var": {"label": "Normalized wall distance y/H", "unit": "-"},
+    "dependent_var": {"label": "Streamwise velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress over the compliant skin"},
+    "reference_metric": {"label": "Analytical wall shear stress over the compliant skin"},
+    "performance_gain": {"label": "Skin-friction reduction vs rigid smooth hull"}
+  },
+  "objective_metric": {
+    "objective_name": "Skin-friction reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress over the compliant skin",
+    "reference_metric": "Analytical wall shear stress over the compliant skin",
+    "lower_is_better": true,
+    "acceptance_threshold": 2.0,
+    "hard_constraints": [
+      "relative error below 1 %",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "freestream_velocity below divergence onset (about 2*sqrt(shear_modulus/layer_density))"
+    ],
+    "design_variables": ["compliant_layer_thickness", "shear_modulus", "loss_factor"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_dynamic_viscosity/equivalent_laminar_gap",
+    "unit": "Pa",
+    "label": "Wall shear stress over the compliant skin"
+  },
+  "baseline_parameters": [
+    {"name": "compliance_slip_coefficient", "value": 0.0}
+  ],
+  "baseline_description": "rigid smooth hull"
+}

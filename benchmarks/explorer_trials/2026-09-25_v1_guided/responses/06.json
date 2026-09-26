@@ -1,0 +1,57 @@
+{
+  "audit_passed": true,
+  "audit_notes": "All parameters positive and inside bounds. Flexural rigidity D = E t^3/(12(1-nu^2)) = 5e5*8e-12/(12*0.7599) = 4.39e-7 N m. The formulation integrates the known bending-moment distribution of a clamped-clamped strip under uniform pressure, M(xi) = (p a^2/12)(6 xi - 6 xi^2 - 1), so d2w/dxi2 = (p a^4/D)(1 - 6 xi + 6 xi^2)/12 with w(0) = w(1) = 0 reproduces the clamped solution exactly (zero end slopes follow from symmetry and zero mean moment). Result: w_max = p a^4/(384 D) = 1.90e-4 m (0.95 t). Peak surface strain at the clamped edges: eps = (t/2)*kappa_edge = (t/2)*p a^2/(12 D) = 16 t w_max / a^2 = 0.152, above the assumed critical detachment strain of 0.10 for biofilm; at mid-span eps = 0.076. Caveats: (1) w_max ~ t, so membrane stretching (von Karman) stiffens the skin and lowers the real strain by an estimated 15-30 %; the margin above 0.10 remains small, and 3 kPa would restore it. (2) Hydrostatic load: at 10 m draft the ambient pressure is ~100 kPa; the channels must be pressure-compensated (ambient + actuation pressure), otherwise the 200 um skin over a 2 mm span collapses onto the channel floor or bursts. (3) Fatigue: a few cycles per day over 5 years is ~1e4 cycles at 15 % strain, well inside PDMS fatigue life, but the skin-to-rib bond line is the stress concentration and must be designed (fillet, primer). (4) Only biofilm and early settlers are removed; adult barnacles with calcareous bases (critical removal stress ~0.1-1 MPa) are not. (5) The drag benefit is indirect: slime films add ~10-20 % skin friction; the solved field (deflection/strain) cannot compute this, and there is no conventional design with non-zero strain to compare with (a static fouling-release coating has zero actuation strain, which would make a relative gain undefined). Therefore no baseline_parameters are given; the gain is reported as not available and the drag benefit is documented here.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "skin_thickness", "value": 2.0e-4},
+    {"name": "skin_youngs_modulus", "value": 5.0e5},
+    {"name": "channel_width", "value": 2.0e-3},
+    {"name": "actuation_pressure", "value": 2.0e3},
+    {"name": "poisson_ratio", "value": 0.49},
+    {"name": "critical_detachment_strain", "value": 0.1}
+  ],
+  "dimensionless_numbers": [
+    {"name": "DeflectionToThickness_wmax_over_t", "value": 0.95},
+    {"name": "PeakSurfaceStrain_edge", "value": 0.152},
+    {"name": "StrainMargin_eps_over_eps_crit", "value": 1.52},
+    {"name": "SpanToThickness_a_over_t", "value": 10.0}
+  ],
+  "simulation_coefficient": 4.39e-7,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics",
+    "independent_var": {"label": "Normalized position across the air channel x/a", "unit": "-"},
+    "dependent_var": {"label": "Skin deflection", "unit": "m"},
+    "primary_metric": {"label": "Peak surface strain of the actuated skin"},
+    "reference_metric": {"label": "Peak surface strain (analytical plate solution)"},
+    "performance_gain": {"label": "Gain vs static coating (not computable in this field)"}
+  },
+  "objective_metric": {
+    "objective_name": "Peak surface strain for biofilm release",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak surface strain of the actuated skin",
+    "reference_metric": "Peak surface strain (analytical plate solution)",
+    "lower_is_better": false,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error between solver and analytical reference below 1 %",
+      "finite outputs",
+      "parameters within audited bounds",
+      "peak surface strain above critical_detachment_strain",
+      "peak surface strain below 0.5 (elastomer fatigue limit for 1e4 cycles)",
+      "w_max below 1.5 skin thicknesses (validity of linear plate theory)"
+    ],
+    "design_variables": ["skin_thickness", "skin_youngs_modulus", "channel_width"]
+  },
+  "metric": {
+    "kind": "max_abs",
+    "location": null,
+    "scale": "16*skin_thickness/channel_width**2",
+    "unit": "-",
+    "label": "Peak surface strain"
+  },
+  "baseline_parameters": [],
+  "baseline_description": "static fouling-release coating without actuation has zero strain; no meaningful relative gain in this field"
+}

@@ -1,0 +1,309 @@
+{
+  "_prompt_hash": "4b713cd745e3452d",
+  "function_analysis": "A hull coating must (F1) lower turbulent skin friction on a clean hull (at 10 m/s the viscous length nu/u_tau is about 3.8 um, so any texture or slip must act at the 1-100 um scale and be judged in viscous units); (F2) keep the hull hydraulically smooth over time, because fouling dominates in service (slime adds roughly +10-20 %, calcareous fouling +30-80 % frictional resistance), i.e. prevent settlement or make settled organisms detach under flow or light cleaning, without releasing biocides; (F3) survive several years of seawater immersion, UV at the waterline, abrasion (fenders, ice, cleaning), cathodic-protection potentials and hydrostatic pressure at 5-15 m draft; (F4) be applicable over 1e3-1e4 m2 at shipyard cost. F2 is usually worth more than F1; F1 concepts that are killed by fouling within weeks are worthless in practice.",
+  "mechanism_classes_considered": [
+    "trapped_gas_or_liquid: pinned plastron (shear-free gas-water interface) with active gas replenishment",
+    "interfacial_slip: hydration layers and liquid-infused films (small slip lengths, mostly antifouling value)",
+    "flow_redirection: riblets tuned to s+ about 15",
+    "porous_transport: preferentially streamwise-permeable skins (virtual-origin offset like riblets)",
+    "graded_stiffness: low-modulus foul-release skins, compliant walls, graded interlayers for durability",
+    "other (roughness control): hydraulically smooth hard coats with grooming, surface renewal by controlled erosion",
+    "electrostatic_field: high-frequency AC fields in seawater to deter larval settlement without electrolysis",
+    "rejected: polymer release (Toms effect) - reservoir depletes in hours to days; wall heating - heat flux needed is about 100x the friction power saved; uniform blowing through a porous hull - intake momentum drag exceeds the friction saving"
+  ],
+  "analogues_considered": [
+    "Salvinia molesta floating fern: eggbeater hairs with hydrophilic tips pinning an air layer",
+    "Aphelocheirus water bug: permanent sub-um plastron (stable but slip length too small to matter)",
+    "Seagrass canopies and streamwise fibre bundles: anisotropic permeability",
+    "Fast-shark and fish-scale ridges: riblets",
+    "Dolphin and pilot whale skin: compliance, low modulus, epidermal sloughing every few hours",
+    "Mussel byssus thread: stiffness gradient from soft proximal to stiff distal end, removing interface stress singularities",
+    "Nacre brick-and-mortar platelets: tough, abrasion-resistant, smooth hard composite",
+    "Fish mucus: hydrated glycoprotein layer resisting settlement",
+    "Weakly electric fish (Gymnotiformes): continuous low-amplitude AC fields in water",
+    "Technology: self-polishing copolymers (without biocide), glass-flake vinyl-ester hard coats with in-water grooming, impressed-current cathodic protection, electrolytic plastron restoration"
+  ],
+  "candidates": [
+    {
+      "order_id": "r001-01",
+      "title": "Air-fed Salvinia plastron with hydrophilic-tip pinning",
+      "summary": "A silicone mat of 300 um pitch eggbeater-type hairs whose hydrophilic tips pin a 0.5 mm air layer; a microporous base membrane connected to a low-pressure air manifold replaces gas lost by diffusion into the undersaturated water at draft depth. The shear-free interface gives a large slip length; the air feed removes the main reason passive plastrons fail on ships.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "100_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "turbulent skin-friction reduction vs clean smooth hull at 10 m/s",
+        "formula": "posts: b = L*(0.325/sqrt(phi_s) - 0.44) = 3e-4*(0.325/0.316-0.44) = 1.8e-4 m, b+ = b/(nu/u_tau) = 1.8e-4/3.8e-6 = 47; surfactants and meniscus deformation in seawater cut the effective log-law shift to dU+ about 3.5; Cf/Cf0 = (U0+/(U0+ + dU+))^2 = (31.6/35.1)^2 = 0.81",
+        "value": 19,
+        "unit": "%"
+      },
+      "main_risk": "Surfactants and biofilm immobilise the air-water interface and colonise the hairs within weeks, so the interface stops being shear-free and the layer is lost in waves and slamming.",
+      "novelty_vs_known": "Closest: Salvinia-effect air-retaining coatings (Barthlott, AirCoat) and ship air lubrication. New: the air layer is fed through a microporous base membrane at about 1 mL/(m2 s) to balance diffusive loss at draft depth, so the concept does not rely on a passive plastron surviving months.",
+      "target_feasible": true,
+      "inspiration_source": "Salvinia molesta eggbeater hairs with hydrophilic terminal cells",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "The pinned gas layer replaces the no-slip wall by a mostly shear-free interface (solid fraction 0.1). In a channel or Couette model this is a Navier slip condition with slip length b from the post geometry and the gas layer viscosity; turbulent drag falls because the near-wall velocity profile is shifted upward. Laplace pressure 2*gamma/L = 480 Pa exceeds turbulent wall-pressure fluctuations (about 2.5*tau_w = 250 Pa); hydrostatic compression is handled by the air feed.",
+      "parameters": [
+        {"name": "hair_pitch", "value": 3e-4, "min_bound": 1e-4, "max_bound": 1e-3, "justification": "Salvinia hair spacing is 0.3-0.6 mm; smaller pitch raises Laplace stability, larger pitch raises slip"},
+        {"name": "solid_area_fraction", "value": 0.1, "min_bound": 0.02, "max_bound": 0.4, "justification": "Wetted tip area fraction of the pinned hydrophilic tips"},
+        {"name": "air_layer_thickness", "value": 5e-4, "min_bound": 1e-4, "max_bound": 2e-3, "justification": "Hair height of engineered Salvinia replicas"},
+        {"name": "water_dynamic_viscosity", "value": 1.2e-3, "min_bound": 9e-4, "max_bound": 1.8e-3, "justification": "Seawater at 5-25 C"},
+        {"name": "air_dynamic_viscosity", "value": 1.8e-5, "min_bound": 1.7e-5, "max_bound": 1.9e-5, "justification": "Air at 5-25 C"},
+        {"name": "smooth_wall_shear_stress", "value": 100, "min_bound": 20, "max_bound": 300, "justification": "0.5*rho*U^2*Cf with U = 10 m/s, Cf about 0.002"},
+        {"name": "viscous_length_scale", "value": 3.8e-6, "min_bound": 1e-6, "max_bound": 1e-5, "justification": "nu/u_tau with u_tau = sqrt(tau_w/rho) = 0.31 m/s"},
+        {"name": "air_supply_rate", "value": 1e-6, "min_bound": 1e-7, "max_bound": 1e-5, "justification": "Diffusive gas loss at 10 m depth: k_m about 1.6e-4 m/s times N2 undersaturation about 0.5 mol/m3, as volume at 2 bar"}
+      ]
+    },
+    {
+      "order_id": "r001-02",
+      "title": "Streamwise-permeable micro-channel skin (seagrass canopy analogue)",
+      "summary": "A 100 um thick skin of streamwise micro-channels under a perforated top sheet: high streamwise permeability, very low spanwise and wall-normal permeability. Like riblets, it moves the virtual origin of the streamwise flow below that of the cross flow and so damps near-wall streamwise vortices, without protruding ridges that wear or trap slime at the tips.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "porous_transport"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "turbulent skin-friction reduction vs clean smooth hull at 10 m/s",
+        "formula": "dU+ about sqrt(Kx)+ - sqrt(Kz)+ (Gomez-de-Segura and Garcia-Mayoral 2019): sqrt(8e-11)/3.8e-6 = 2.35, sqrt(2e-12)/3.8e-6 = 0.37, dU+ about 2.0 ideal, about 1.4 after Kelvin-Helmholtz onset and manufacturing limits; Cf/Cf0 = (31.6/33.0)^2 = 0.92",
+        "value": 8,
+        "unit": "%"
+      },
+      "main_risk": "Biofilm and sediment clog the sub-surface channels within weeks, turning the skin into an ordinary rough wall.",
+      "novelty_vs_known": "Closest: riblets and DNS studies of anisotropic permeable substrates. New: a manufacturable channel-under-perforated-sheet design that reaches high Kx/Kz anisotropy (aligned fibre mats only reach about 2), for ship hulls, with a low-modulus silicone matrix to help fouling release.",
+      "target_feasible": true,
+      "inspiration_source": "Streamwise-aligned seagrass (Posidonia) canopies and fibre bundles, plus DNS of preferentially permeable walls",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "Brinkman/Darcy flow in the skin coupled to the outer flow through a Beavers-Joseph type slip; the streamwise slip length is about sqrt(Kx) and the spanwise about sqrt(Kz). In a steady 1D model: channel flow over a Brinkman layer, giving the wall-shear change for given Kx and layer thickness.",
+      "parameters": [
+        {"name": "streamwise_permeability", "value": 8e-11, "min_bound": 1e-12, "max_bound": 1e-9, "justification": "sqrt(Kx)+ about 2-3 at viscous length 3.8 um"},
+        {"name": "spanwise_permeability", "value": 2e-12, "min_bound": 1e-14, "max_bound": 1e-11, "justification": "Channels are separated spanwise; only the perforated sheet connects them"},
+        {"name": "wall_normal_permeability", "value": 1.5e-12, "min_bound": 1e-14, "max_bound": 1e-11, "justification": "sqrt(Ky)+ below about 0.4 to avoid spanwise Kelvin-Helmholtz rollers"},
+        {"name": "layer_thickness", "value": 1e-4, "min_bound": 2e-5, "max_bound": 5e-4, "justification": "Several channel diameters deep so the Darcy regime is reached"},
+        {"name": "water_dynamic_viscosity", "value": 1.2e-3, "min_bound": 9e-4, "max_bound": 1.8e-3, "justification": "Seawater"},
+        {"name": "viscous_length_scale", "value": 3.8e-6, "min_bound": 1e-6, "max_bound": 1e-5, "justification": "nu/u_tau at 10 m/s"}
+      ]
+    },
+    {
+      "order_id": "r001-03",
+      "title": "Low-modulus silicone riblets with foul-release skin",
+      "summary": "Trapezoidal riblets of 60 um spacing moulded in a 1 MPa fluorosilicone, so the same layer reduces clean-hull friction and lets settled organisms detach under flow. The riblets are sized for s+ about 16 at cruise speed.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "flow_redirection"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "turbulent skin-friction reduction vs clean smooth hull",
+        "formula": "s+ = 6e-5/3.8e-6 = 16 (near optimum); lab dU+ about 1.4, hull-averaged over speed and position about 1.0; Cf/Cf0 = (31.6/32.6)^2 = 0.94; minus tip rounding",
+        "value": 5,
+        "unit": "%"
+      },
+      "main_risk": "A 10-30 um slime layer fills the grooves within weeks at low speed, removing the riblet effect.",
+      "novelty_vs_known": "Closest: shark-skin riblet films and riblet paints; heavily adapted in that the riblets are made of foul-release silicone (low E, low surface energy) rather than rigid polymer, combining F1 and F2 in one layer. Still textbook-adjacent.",
+      "target_feasible": true,
+      "inspiration_source": "Denticle ridges of fast sharks",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "Riblets create a longitudinal protrusion height larger than the transverse one, shifting quasi-streamwise vortices away from the wall. Modelled as longitudinal Stokes flow in a riblet cross-section (2D Poisson problem) giving the protrusion heights.",
+      "parameters": [
+        {"name": "riblet_spacing", "value": 6e-5, "min_bound": 1.5e-5, "max_bound": 1.5e-4, "justification": "s+ about 16 at viscous length 3.8 um"},
+        {"name": "riblet_height", "value": 3e-5, "min_bound": 5e-6, "max_bound": 7.5e-5, "justification": "h/s about 0.5 for trapezoidal riblets"},
+        {"name": "silicone_youngs_modulus", "value": 1e6, "min_bound": 1e5, "max_bound": 1e7, "justification": "Foul-release silicones are 0.3-3 MPa; deformation under 100 Pa shear is negligible"},
+        {"name": "water_dynamic_viscosity", "value": 1.2e-3, "min_bound": 9e-4, "max_bound": 1.8e-3, "justification": "Seawater"},
+        {"name": "viscous_length_scale", "value": 3.8e-6, "min_bound": 1e-6, "max_bound": 1e-5, "justification": "nu/u_tau at 10 m/s"}
+      ]
+    },
+    {
+      "order_id": "r001-04",
+      "title": "Graded-modulus foul-release laminate (whale-skin analogue)",
+      "summary": "A three-layer coating: epoxy anticorrosive base, a 5 MPa silicone mid layer, and a 150 um skin of 0.5 MPa silicone with low surface energy. Hard fouling detaches at a small fraction of the stress needed on a rigid paint because the soft layer lets cracks initiate at low load, and the mid layer protects the skin against cuts.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "100_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "stress"}
+      ],
+      "back_of_envelope": {
+        "quantity": "critical detachment stress of a barnacle base vs rigid epoxy paint",
+        "formula": "thin-film fracture scaling sigma_c ~ sqrt(w*E/t): epoxy sqrt(0.1*3e9/3e-4) = 1.0 MPa (matches measured about 1 MPa); soft skin sqrt(0.05*1e6/4e-4) = 0.011 MPa; measured foul-release coatings reach 0.05-0.15 MPa because cement interlocks, so take 85 %",
+        "value": 85,
+        "unit": "%"
+      },
+      "main_risk": "Hard fouling only self-cleans above about 15 kn; slow or idle ships still foul and need cleaning, which cuts the soft skin.",
+      "novelty_vs_known": "Closest: commercial silicone foul-release coatings (Intersleek, Hempasil). New: a deliberate modulus gradient rather than a tie-coat, so release performance and cut resistance are traded explicitly. Moderate novelty.",
+      "target_feasible": true,
+      "inspiration_source": "Low-modulus, graded dermis of dolphins and pilot whales",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "Detachment of a rigid disc bonded to a thin elastic layer: the energy release rate grows with load^2*t/E, so crack initiation stress falls as sqrt(w*E/t). A 1D layered elasticity model gives the interfacial stress under a pulled base.",
+      "parameters": [
+        {"name": "top_layer_youngs_modulus", "value": 5e5, "min_bound": 1e5, "max_bound": 5e6, "justification": "Soft PDMS"},
+        {"name": "mid_layer_youngs_modulus", "value": 5e6, "min_bound": 1e6, "max_bound": 5e7, "justification": "Filled silicone for cut resistance"},
+        {"name": "base_youngs_modulus", "value": 3e9, "min_bound": 1e9, "max_bound": 5e9, "justification": "Epoxy primer"},
+        {"name": "top_layer_thickness", "value": 1.5e-4, "min_bound": 5e-5, "max_bound": 5e-4, "justification": "Thick enough for the fracture scaling, thin enough for cost"},
+        {"name": "total_coating_thickness", "value": 4e-4, "min_bound": 2e-4, "max_bound": 1e-3, "justification": "Typical foul-release system film build"},
+        {"name": "work_of_adhesion", "value": 0.05, "min_bound": 0.02, "max_bound": 0.2, "justification": "Low-energy silicone against barnacle cement"},
+        {"name": "foulant_base_radius", "value": 5e-3, "min_bound": 1e-3, "max_bound": 1e-2, "justification": "Adult barnacle base"}
+      ]
+    },
+    {
+      "order_id": "r001-05",
+      "title": "Byssus-graded tie zone between epoxy and silicone",
+      "summary": "Instead of a thin tie-coat, a 60 um zone whose modulus falls continuously from 3 GPa to 1 MPa (graded filler content), copying the stiffness gradient of the mussel byssal thread. It removes the bimaterial stress singularity at cut edges and damaged spots, which is where silicone foul-release coatings start to peel.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "stress"}
+      ],
+      "back_of_envelope": {
+        "quantity": "peak interfacial stress at a coating edge under fender shear vs abrupt tie-coat",
+        "formula": "a simple shear-lag model shows almost no change because the silicone's own shear compliance t/G = 3e-4/3.3e5 = 9e-10 m/Pa dominates the tie layer (2e-14); the gain comes from removing the edge singularity (Dundurs mismatch alpha about 1 for an abrupt joint -> 0 for a graded one); finite-element results for graded joints show about 2x lower peak stress",
+        "value": 50,
+        "unit": "%"
+      },
+      "main_risk": "Peeling of real coatings is set by chemical bond strength and damage from cleaning, not by the elastic edge stress, so the gradient may not extend coating life.",
+      "novelty_vs_known": "Closest: silicone tie-coats and functionally graded coatings in general. New: a byssus-like modulus gradient used specifically to make foul-release silicones last longer. Low to moderate novelty.",
+      "target_feasible": true,
+      "inspiration_source": "Mussel byssal thread (stiff distal, soft proximal, graded collagen-histidine domains)",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "Stress transfer across a graded interlayer: a 1D elastic model through the thickness with position-dependent modulus E(y), loaded by shear at the free edge, gives the peak interfacial stress for abrupt and graded profiles.",
+      "parameters": [
+        {"name": "coating_youngs_modulus", "value": 1e6, "min_bound": 1e5, "max_bound": 1e7, "justification": "Foul-release silicone"},
+        {"name": "coating_thickness", "value": 3e-4, "min_bound": 1e-4, "max_bound": 1e-3, "justification": "Typical film build"},
+        {"name": "substrate_youngs_modulus", "value": 3e9, "min_bound": 1e9, "max_bound": 5e9, "justification": "Epoxy primer"},
+        {"name": "graded_zone_thickness", "value": 6e-5, "min_bound": 2e-5, "max_bound": 2e-4, "justification": "Byssus gradient spans a few percent of thread length; scaled to film build"},
+        {"name": "abrupt_tie_layer_thickness", "value": 2e-5, "min_bound": 5e-6, "max_bound": 5e-5, "justification": "Conventional tie-coat reference"},
+        {"name": "edge_shear_load", "value": 5e4, "min_bound": 1e4, "max_bound": 3e5, "justification": "Fender rubbing and cleaning brush contact stresses"}
+      ]
+    },
+    {
+      "order_id": "r001-06",
+      "title": "Dolphin-type compliant skin tuned to cruise speed",
+      "summary": "A 3 mm viscoelastic gel layer whose shear wave speed is about half the cruise speed, the regime in which compliant walls have shown small turbulent drag reductions in water. The same very soft layer acts as a foul-release surface.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "turbulent skin-friction reduction vs rigid smooth hull",
+        "formula": "c_t = sqrt(G/rho) = sqrt(2.5e4/1000) = 5 m/s = 0.5*U; experiments at matched c_t/U (Choi et al. 1997, Kramer) report 0-7 %; take the lower half",
+        "value": 3,
+        "unit": "%"
+      },
+      "main_risk": "Off design speed, or above the divergence threshold, the wall forms static waves that increase drag, and a 25 kPa gel tears in service.",
+      "novelty_vs_known": "Closest: Kramer's compliant coatings and dolphin-skin studies. Little new beyond combining with foul-release; the drag effect is disputed.",
+      "target_feasible": true,
+      "inspiration_source": "Dolphin skin and blubber",
+      "domain": "Fluid-Structure Interaction",
+      "physical_mechanism": "Wall compliance damps near-wall velocity fluctuations. A steady model can only express it as an effective slip or modified near-wall viscosity, which is a weak representation.",
+      "parameters": [
+        {"name": "compliant_layer_thickness", "value": 3e-3, "min_bound": 1e-3, "max_bound": 1e-2, "justification": "Dolphin blubber-like layer, scaled"},
+        {"name": "shear_modulus", "value": 2.5e4, "min_bound": 5e3, "max_bound": 2e5, "justification": "Gives shear wave speed about 0.5*U at 10 m/s"},
+        {"name": "loss_factor", "value": 0.3, "min_bound": 0.05, "max_bound": 0.8, "justification": "Damping needed to suppress flutter"},
+        {"name": "layer_density", "value": 1000, "min_bound": 900, "max_bound": 1200, "justification": "Gel"},
+        {"name": "freestream_velocity", "value": 10, "min_bound": 3, "max_bound": 15, "justification": "Cruise speed"},
+        {"name": "water_dynamic_viscosity", "value": 1.2e-3, "min_bound": 9e-4, "max_bound": 1.8e-3, "justification": "Seawater"}
+      ]
+    },
+    {
+      "order_id": "r001-07",
+      "title": "Nacre-architected glass-flake hard coat with in-water grooming",
+      "summary": "A biocide-free, brick-and-mortar coating of aligned glass flakes in vinyl-ester that stays hydraulically smooth (average hull roughness about 40 um) for 10+ years and survives frequent soft robotic grooming. It saves friction by staying smoother than conventional paint systems, and fouling is handled by grooming, not chemistry.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "other"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "frictional resistance reduction vs a conventional new paint system (AHR 125 um), 200 m ship at 15 kn",
+        "formula": "Townsin: 1000*dCF = 44*((AHR/L)^(1/3) - 10*Re^(-1/3)) + 0.125; Re = 7.7*200/1.19e-6 = 1.3e9; AHR 125 um -> dCF = 9.6e-5; AHR 40 um -> about 0; CF0 = 0.075/(log10 Re - 2)^2 = 1.48e-3; 9.6e-5/1.58e-3",
+        "value": 6,
+        "unit": "%"
+      },
+      "main_risk": "Without frequent grooming (every 2-6 weeks) the hard surface fouls like any inert surface, and operators do not keep the schedule.",
+      "novelty_vs_known": "Closest: glass-flake hard coatings with hull grooming (e.g. Ecospeed-type systems). New: platelet alignment designed nacre-like for toughness and smoothness retention under grooming. Low novelty but high durability and zero biocide.",
+      "target_feasible": true,
+      "inspiration_source": "Nacre (brick-and-mortar aragonite platelets)",
+      "domain": "Fluid Dynamics",
+      "physical_mechanism": "Friction of a turbulent boundary layer over a rough wall: equivalent sand roughness k_s maps to a roughness function dU+(k_s+); keeping k_s+ below about 5 keeps the wall hydraulically smooth. Can be modelled as a wall-law offset or effective negative slip.",
+      "parameters": [
+        {"name": "flake_thickness", "value": 3e-6, "min_bound": 1e-6, "max_bound": 1e-5, "justification": "Commercial glass flake"},
+        {"name": "flake_diameter", "value": 5e-5, "min_bound": 1e-5, "max_bound": 2e-4, "justification": "Aspect ratio about 15, nacre-like"},
+        {"name": "coating_hull_roughness", "value": 4e-5, "min_bound": 1.5e-5, "max_bound": 1e-4, "justification": "Achievable AHR of a sprayed hard coat"},
+        {"name": "baseline_hull_roughness", "value": 1.25e-4, "min_bound": 8e-5, "max_bound": 2.5e-4, "justification": "Typical new conventional paint system"},
+        {"name": "ship_length", "value": 200, "min_bound": 50, "max_bound": 400, "justification": "Container or bulk carrier"},
+        {"name": "ship_speed", "value": 7.7, "min_bound": 3, "max_bound": 12, "justification": "15 kn"},
+        {"name": "kinematic_viscosity", "value": 1.19e-6, "min_bound": 1e-6, "max_bound": 1.4e-6, "justification": "Seawater 15 C"}
+      ]
+    },
+    {
+      "order_id": "r001-08",
+      "title": "Self-sloughing multilayer hydrogel epidermis",
+      "summary": "A stack of 5 um layers of hydrolysable polyester, each with weak interlayer bonds, erodes about 30 um per year by surface hydrolysis without biocides. Like the pilot whale epidermis, the surface is renewed continuously, so soft fouling loses its anchor and the hull stays at a light-slime level instead of heavy fouling.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "other"},
+        {"axis": "length_scale", "value": "um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "frictional resistance reduction vs an uncoated, fouled hull after 12 months",
+        "formula": "Schultz 2007 powering penalties at 15 kn: heavy slime about +18 %, light slime about +9 %; renewal keeps light slime vs heavy slime on inert paint: 1 - 1.09/1.18 = 7.6 %; some small calcareous avoided -> about 10 %",
+        "value": 10,
+        "unit": "%"
+      },
+      "main_risk": "An erosion rate of 30 um per year is far slower than the hours it takes barnacle cyprids to cement, so without biocides the surface renewal does not stop hard fouling.",
+      "novelty_vs_known": "Closest: biocide-free self-polishing copolymers. New: discrete weakly bonded 5 um sheets (sloughing rather than smooth polishing). Moderate novelty, weak evidence.",
+      "target_feasible": true,
+      "inspiration_source": "Pilot whale and dolphin epidermal sloughing",
+      "domain": "Mass Transport",
+      "physical_mechanism": "Water diffuses into the top layer and hydrolyses it; in the frame moving with the eroding surface this is a steady 1D reaction-diffusion problem D*c'' + v*c' - k*c = 0 whose penetration depth sqrt(D/k) sets surface erosion and the renewal rate. The drag effect is indirect (roughness growth avoided).",
+      "parameters": [
+        {"name": "layer_thickness", "value": 5e-6, "min_bound": 1e-6, "max_bound": 2e-5, "justification": "One sloughing sheet"},
+        {"name": "total_thickness", "value": 3e-4, "min_bound": 1e-4, "max_bound": 6e-4, "justification": "About 9 years at the design erosion rate"},
+        {"name": "erosion_rate", "value": 1e-12, "min_bound": 1e-13, "max_bound": 1e-11, "justification": "About 30 um per year"},
+        {"name": "water_diffusivity_in_polymer", "value": 1e-13, "min_bound": 1e-14, "max_bound": 1e-12, "justification": "Hydrophobic polyester"},
+        {"name": "hydrolysis_rate_constant", "value": 1e-4, "min_bound": 1e-6, "max_bound": 1e-2, "justification": "Gives a penetration depth sqrt(D/k) of about 30 um"}
+      ]
+    },
+    {
+      "order_id": "r001-09",
+      "title": "Electric-fish-type high-frequency AC settlement deterrent",
+      "summary": "Interdigitated carbon or titanium electrodes at 0.5 mm pitch under a thin porous topcoat drive a 10 kHz field of about 10 V/m in the first 0.2 mm of seawater. At this frequency the double layer carries the current capacitively, so there is no electrolysis and no chlorine, while the field may deter settling larvae and diatoms.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "electrostatic_field"},
+        {"axis": "length_scale", "value": "100_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "field_strength"}
+      ],
+      "back_of_envelope": {
+        "quantity": "frictional resistance reduction vs uncoated fouled hull after 12 months (speculative, depends on biological threshold)",
+        "formula": "power: sigma*E^2*(pitch/pi) = 5*100*1.6e-4 = 0.08 W/m2; double-layer drop at J = 50 A/m2: J/(2*pi*f*C) = 50/(2*pi*1e4*0.2) = 4 mV, far below 1.2 V; if settlement falls to a light-slime level: 1 - 1.09/1.18 = 7.6 %",
+        "value": 8,
+        "unit": "%"
+      },
+      "main_risk": "There is little evidence that a non-Faradaic field of about 10 V/m deters barnacle cyprids or diatoms; the biological threshold may be 10-100x higher, making power and electrode erosion prohibitive.",
+      "novelty_vs_known": "Closest: electrochemical and pulsed-DC antifouling, which works mostly by electrochlorination. New: purely capacitive high-frequency AC to avoid chlorine. Physically sound; biologically unproven.",
+      "target_feasible": true,
+      "inspiration_source": "Continuous electric organ discharge of weakly electric fish",
+      "domain": "Electrostatics",
+      "physical_mechanism": "Quasi-static potential in a conductor above interdigitated electrodes: Laplace equation on a rectangle (one electrode period by several pitches height) with alternating potentials at the bottom; the field decays as exp(-pi*y/pitch). The evaluator computes the field strength at the surface and the fraction of area above the threshold.",
+      "parameters": [
+        {"name": "electrode_pitch", "value": 5e-4, "min_bound": 1e-4, "max_bound": 2e-3, "justification": "Sets field penetration depth pitch/pi = 0.16 mm"},
+        {"name": "drive_frequency", "value": 1e4, "min_bound": 1e3, "max_bound": 1e5, "justification": "High enough to stay capacitive at the double layer"},
+        {"name": "seawater_conductivity", "value": 5, "min_bound": 3, "max_bound": 6, "justification": "S/m at 5-25 C"},
+        {"name": "target_field_strength", "value": 10, "min_bound": 1, "max_bound": 100, "justification": "Order of magnitude of fields near weakly electric fish"},
+        {"name": "double_layer_capacitance", "value": 0.2, "min_bound": 0.05, "max_bound": 1, "justification": "F/m2 for porous carbon electrodes"},
+        {"name": "applied_voltage_amplitude", "value": 0.01, "min_bound": 0.002, "max_bound": 0.1, "justification": "V; about E*pitch/2 plus double-layer drop"}
+      ]
+    }
+  ]
+}

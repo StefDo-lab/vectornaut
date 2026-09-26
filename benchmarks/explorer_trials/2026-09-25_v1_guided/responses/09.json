@@ -1,0 +1,9 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = ((sqrt(lattice_porosity*slot_width**2/12) - sqrt(spanwise_permeability))/beavers_joseph_alpha) / sublayer_thickness * du_dy(0)",
+    "u(1) = wall_shear_stress*sublayer_thickness/water_viscosity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"]
+}

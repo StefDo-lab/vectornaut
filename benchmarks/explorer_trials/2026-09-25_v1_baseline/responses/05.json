@@ -1,0 +1,21 @@
+{
+  "_prompt_hash": "77aeead792a519f8",
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = anisotropy_efficiency * (sqrt(streamwise_permeability) - sqrt(spanwise_permeability)) / equivalent_laminar_gap * du_dy(0)",
+    "u(1) = freestream_velocity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "streamwise_permeability", "value": 8e-11, "min_bound": 1e-12, "max_bound": 1e-09, "justification": "sqrt(Kx)+ about 2.35"},
+    {"name": "spanwise_permeability", "value": 2e-12, "min_bound": 1e-14, "max_bound": 1e-11, "justification": "sqrt(Kz)+ about 0.37"},
+    {"name": "wall_normal_permeability", "value": 1.5e-12, "min_bound": 1e-14, "max_bound": 1e-11, "justification": "Below Kelvin-Helmholtz onset"},
+    {"name": "layer_thickness", "value": 0.0001, "min_bound": 2e-05, "max_bound": 0.0005, "justification": "Several channel diameters"},
+    {"name": "water_dynamic_viscosity", "value": 0.0012, "min_bound": 0.0009, "max_bound": 0.0018, "justification": "Seawater"},
+    {"name": "viscous_length_scale", "value": 3.8e-06, "min_bound": 1e-06, "max_bound": 1e-05, "justification": "nu/u_tau"},
+    {"name": "equivalent_laminar_gap", "value": 1.2e-4, "min_bound": 3e-5, "max_bound": 5e-4, "justification": "H = nu*U/u_tau^2 so that mu*U/H equals the turbulent smooth-wall shear of 100 Pa"},
+    {"name": "freestream_velocity", "value": 10.0, "min_bound": 3.0, "max_bound": 15.0, "justification": "Cruise speed"},
+    {"name": "anisotropy_efficiency", "value": 0.7, "min_bound": 0.0, "max_bound": 1.0, "justification": "Fraction of the ideal virtual-origin offset sqrt(Kx)-sqrt(Kz) retained after Kelvin-Helmholtz onset and manufacturing limits (DNS: dU+ about 1.4 of 2.0)"}
+  ]
+}

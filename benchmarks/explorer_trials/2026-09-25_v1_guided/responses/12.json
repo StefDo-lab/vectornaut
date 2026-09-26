@@ -1,0 +1,9 @@
+{
+  "governing_equation": "d2w_dx2 = pulse_pressure*cell_width**4/(lid_youngs_modulus*lid_thickness**3/(12*(1 - poisson_ratio**2))) * (1 - 6*x + 6*x**2)/12",
+  "boundary_conditions": [
+    "w(0) = 0",
+    "w(1) = 0"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["w"]
+}

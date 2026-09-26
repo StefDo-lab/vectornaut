@@ -1,0 +1,58 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Physics is consistent. Model: the alternating electrode pattern (period 2*pitch = 1 mm) is represented by its fundamental Fourier mode P(y)*cos(pi*x/pitch); Laplace's equation reduces to P'' = (pi*H/pitch)^2 P on the normalized height, with P(0) = electrode-plane amplitude and P(1) = 0 at H = 1 mm (decay exp(-2*pi)). For a single decaying mode the field magnitude is uniform along x and equals (pi/pitch)*P(y). Expected: surface field 63 V/m, at 100 um height 33 V/m, above the assumed 10 V/m threshold. Electrical checks: current density at the surface sigma*E = 5*63 = 314 A/m2; dissipated power sigma*k*V^2/2 = 5*6283*1e-4/2 = 1.6 W/m2 (16 kW for 1e4 m2, acceptable); the double-layer voltage J/(2*pi*f*C) = 314/(2*pi*1e4*0.2) = 25 mV, so the drive voltage is about 35 mV, far below the 1.2 V water-splitting threshold: no chlorine or hydrogen production, as claimed. Current per 1 m electrode finger 0.16 A, fine for carbon or titanium traces. Structural: electrodes under a thin porous topcoat are exposed to abrasion and to interference with the impressed-current cathodic protection, which must be checked. Biological efficacy (does 10-60 V/m at 10 kHz deter cyprids and diatoms?) is unproven and cannot be simulated; it is the main risk. Baseline: there is no conventional non-toxic reference that produces a field (an untreated hull has zero field), so no baseline is given and the gain is not available from the simulation; the metric is reported as an absolute field strength.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "electrode_pitch", "value": 0.0005},
+    {"name": "drive_frequency", "value": 10000.0},
+    {"name": "seawater_conductivity", "value": 5.0},
+    {"name": "target_field_strength", "value": 10.0},
+    {"name": "double_layer_capacitance", "value": 0.2},
+    {"name": "applied_voltage_amplitude", "value": 0.01},
+    {"name": "domain_height", "value": 0.001},
+    {"name": "settlement_height_normalized", "value": 0.1}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ModeDecayParameter_piH_over_pitch", "value": 6.283},
+    {"name": "FieldRatio_100um_to_surface", "value": 0.533},
+    {"name": "DoubleLayerToOhmicVoltageRatio", "value": 2.5},
+    {"name": "FaradaicMargin_1p2V_over_drive", "value": 34}
+  ],
+  "simulation_coefficient": 6283.2,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Electrostatics",
+    "independent_var": {"label": "Normalized height above electrodes y/H", "unit": "-"},
+    "dependent_var": {"label": "Potential amplitude of the fundamental mode", "unit": "V"},
+    "primary_metric": {"label": "Field strength 100 um above the surface"},
+    "reference_metric": {"label": "Analytical field strength 100 um above the surface"},
+    "performance_gain": {"label": "Not available (no field-producing conventional baseline)"}
+  },
+  "objective_metric": {
+    "objective_name": "Field strength at settlement height",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Field strength 100 um above the surface",
+    "reference_metric": "Analytical field strength 100 um above the surface",
+    "lower_is_better": false,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error below 1 %",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "field at settlement height >= target_field_strength",
+      "drive voltage including double-layer drop below 1.0 V (no Faradaic reactions)"
+    ],
+    "design_variables": ["electrode_pitch", "applied_voltage_amplitude", "drive_frequency"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "settlement_height_normalized",
+    "scale": "pi/electrode_pitch",
+    "unit": "V/m",
+    "label": "Field strength 100 um above the surface"
+  },
+  "baseline_parameters": [],
+  "baseline_description": "none (untreated hull has no field)"
+}

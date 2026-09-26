@@ -1,0 +1,60 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Parameters are plausible for a silicone foul-release system on epoxy. Model check: the formulator replaced the three discrete layers by a continuous exponential modulus profile E(y) = E_base*exp(k*y), k = ln(E_top/E_base) = ln(5e5/3e9) = -8.70, from the epoxy at the hull (y=0) to the soft surface (y=1). Equilibrium d/dy(E du/dy) = 0 gives u'' = -k u'. With the removal stress applied at the surface, the solution gives the surface displacement u(1) = sigma*T/E_base*(1-exp(k))/(-k) = 9.2e-6 m, versus 1.33e-8 m for a uniform epoxy paint: the stack compliance is about 690 times higher. IMPORTANT for interpretation: the figure of merit is the critical detachment stress sigma_c = sqrt(2*w/C) with C = u(1)/sigma the compliance; the solver can only report the compliance, so performance_gain_pct (about +69,000 %) must NOT be read as the benefit. The corresponding reduction of sigma_c is 1 - 690^-0.5 = 96 % in thin-film theory, and measured barnacle adhesion on commercial foul-release coatings is 85-95 % below epoxy. The exponential profile is also less compliant than the proposed discrete stack (150 um of 0.5 MPa on top: C/C0 about 2600), so it is conservative. Structural checks: 0.5 MPa silicone survives 100 Pa hydrodynamic shear trivially; cut and abrasion resistance is the weak point, which the stiffer layers below mitigate. Self-cleaning needs hull speeds above about 15 kn; idle ships foul. work_of_adhesion and foulant_base_radius are not used in the solved field. Baseline: a uniform epoxy/conventional hard paint (top_layer_youngs_modulus = base_youngs_modulus).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "top_layer_youngs_modulus", "value": 500000.0},
+    {"name": "mid_layer_youngs_modulus", "value": 5000000.0},
+    {"name": "base_youngs_modulus", "value": 3000000000.0},
+    {"name": "top_layer_thickness", "value": 0.00015},
+    {"name": "total_coating_thickness", "value": 0.0004},
+    {"name": "work_of_adhesion", "value": 0.05},
+    {"name": "foulant_base_radius", "value": 0.005},
+    {"name": "applied_removal_stress", "value": 100000.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ModulusRatio_top_over_base", "value": 1.667e-4},
+    {"name": "GradientExponent_k", "value": -8.70},
+    {"name": "ComplianceRatio_design_over_baseline", "value": 690},
+    {"name": "CriticalStressRatio_design_over_baseline", "value": 0.038},
+    {"name": "ThicknessToBaseRadius", "value": 0.08}
+  ],
+  "simulation_coefficient": -8.70,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics",
+    "independent_var": {"label": "Normalized depth from hull y/T", "unit": "-"},
+    "dependent_var": {"label": "Normal displacement in the coating", "unit": "m"},
+    "primary_metric": {"label": "Surface displacement under removal stress (stack compliance)"},
+    "reference_metric": {"label": "Analytical surface displacement under removal stress"},
+    "performance_gain": {"label": "Increase of stack compliance vs uniform hard paint (not the detachment-stress reduction)"}
+  },
+  "objective_metric": {
+    "objective_name": "Stack compliance (proxy for foul-release: sigma_c = sqrt(2w/C))",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Surface displacement under removal stress (stack compliance)",
+    "reference_metric": "Analytical surface displacement under removal stress",
+    "lower_is_better": false,
+    "acceptance_threshold": 300.0,
+    "hard_constraints": [
+      "relative error between solver and analytical solution below 1 %",
+      "all outputs finite",
+      "parameters within audited bounds",
+      "top_layer_youngs_modulus >= 1e5 Pa (tear and cut resistance)"
+    ],
+    "design_variables": ["top_layer_youngs_modulus", "total_coating_thickness"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "",
+    "unit": "m",
+    "label": "Surface displacement under removal stress (stack compliance)"
+  },
+  "baseline_parameters": [
+    {"name": "top_layer_youngs_modulus", "value": 3000000000.0}
+  ],
+  "baseline_description": "uniform hard epoxy/conventional paint"
+}
