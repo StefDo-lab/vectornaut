@@ -98,6 +98,28 @@ def _join_notes(*notes: Optional[str]) -> Optional[str]:
     return joined or None
 
 
+def _short_error(err: BaseException, limit: int = 300) -> str:
+    """One-line error text for solver notes."""
+    text = " ".join(str(err).split()) or type(err).__name__
+    return text if len(text) <= limit else text[:limit - 3] + "..."
+
+
+def _boundary_derivatives(callables: Any, domain_min: float, domain_max: float) -> Optional[List[Dict[str, float]]]:
+    """du/dx of the primary 1D solution at both domain ends, from the solver's own derivative."""
+    if not callables or len(callables) < 2 or callables[1] is None:
+        return None
+    out = []
+    for location in (domain_min, domain_max):
+        try:
+            value = float(np.asarray(callables[1](np.asarray([float(location)])), dtype=float).reshape(-1)[0])
+        except Exception:
+            return None
+        if not math.isfinite(value):
+            return None
+        out.append({"location": float(location), "value": value})
+    return out
+
+
 def _resolve_metric_spec(auditor_output: Any) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """The auditor's metric spec (None = default metric) and a note if it had to be ignored."""
     try:
@@ -591,31 +613,40 @@ def _solve_1d(
 
     # 3. Solver execution routing
     method_requested = auditor_output.solver_method.lower()
+    # Solver fallbacks and their reasons, reported as solver_note.
+    solver_notes: List[str] = []
     if method_requested not in ["pinn", "scipy", "analytical"]:
         print(f"[*] Solver method '{method_requested}' is not available for 1D problems. Using analytical.")
+        solver_notes.append(f"solver method '{method_requested}' is not available for 1D problems; analytical requested instead")
         method_requested = "analytical"
     # The solver that actually produced solution_primary (differs from the requested
     # one when a fallback is used); this is what solver_method reports.
     method_used = method_requested
 
-    # We will try to solve the system analytically as the absolute reference
+    # We will try to solve the system analytically as the absolute reference.
+    # solve_analytical checks its result and raises if it is not usable (degenerate
+    # coefficients, complex or non-finite closed form, BCs not met).
     analytical_sol_expr = None
     analytical_deriv = 0.0
+    analytical_error = None
     try:
         analytical_sol_expr, analytical_deriv = solve_analytical(
             pde_rhs, bcs, x_sym, y_func, sym_dict, params, domain_min, domain_max
         )
     except Exception as e:
+        analytical_error = _short_error(e)
         print(f"[*] SymPy Analytical solver failed: {e}. Falling back to SciPy BVP for reference.")
 
     # We also prepare a SciPy BVP numerical solver as secondary reference/primary
     scipy_sol_func = None
     scipy_deriv = 0.0
+    scipy_error = None
     try:
         scipy_sol_func, scipy_deriv = solve_scipy_bvp(
             pde_rhs, bcs, x_sym, y_func, sym_dict, params, domain_min, domain_max
         )
     except Exception as e:
+        scipy_error = _short_error(e)
         print(f"[*] SciPy BVP solver failed: {e}")
 
     # Metric spec (None = historical default: du/dx at domain_min) and baseline design.
@@ -644,15 +675,23 @@ def _solve_1d(
                 pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, b_min, b_max
             )
             baseline_callables = callables_from_expr(baseline_expr, x_sym)
-        except Exception:
+        except Exception as baseline_analytical_err:
+            print(f"[*] Baseline analytical solve failed: {baseline_analytical_err}. Using SciPy BVP for the baseline.")
             try:
                 baseline_interp, baseline_deriv = solve_scipy_bvp(
                     pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, b_min, b_max
                 )
                 baseline_callables = callables_from_bvp(baseline_interp)
+                solver_notes.append(
+                    f"baseline: analytical solution failed ({_short_error(baseline_analytical_err)}); SciPy BVP used"
+                )
             except Exception as baseline_err:
                 print(f"[*] Baseline solve failed: {baseline_err}. performance_gain_pct is reported as n/a (0).")
                 gain_note = _join_notes(gain_note, f"baseline solve failed: {baseline_err}")
+                solver_notes.append(
+                    f"baseline: analytical solution failed ({_short_error(baseline_analytical_err)}) and "
+                    f"SciPy BVP failed ({_short_error(baseline_err)})"
+                )
                 baseline_deriv = None
         if baseline_deriv is not None and not math.isfinite(baseline_deriv):
             print(f"[*] Baseline wall derivative is not finite ({baseline_deriv}). performance_gain_pct is reported as n/a (0).")
@@ -737,6 +776,7 @@ def _solve_1d(
 
         except Exception as e:
             print(f"[*] PINN solver failed: {e}. Falling back to SciPy BVP.")
+            solver_notes.append(f"PINN failed ({_short_error(e)}); falling back to SciPy BVP")
             method_requested = "scipy" # fall back
             method_used = "scipy"
 
@@ -749,13 +789,16 @@ def _solve_1d(
         elif analytical_sol_expr is not None:
             # Fallback to analytical
             print("[*] SciPy BVP unavailable. Using the analytical solution as primary.")
+            solver_notes.append(f"SciPy BVP failed ({scipy_error}); analytical solution used as primary")
             f_lambdified = sp.lambdify(x_sym, analytical_sol_expr, "numpy")
             solution_primary = [float(f_lambdified(pt)) for pt in sample_grid]
             primary_metric = analytical_deriv
             primary_callables = callables_from_expr(analytical_sol_expr, x_sym)
             method_used = "analytical"
         else:
-            raise RuntimeError("All primary numerical solvers failed.")
+            raise RuntimeError(
+                f"All primary numerical solvers failed (SciPy BVP: {scipy_error}; analytical: {analytical_error})."
+            )
 
     elif method_requested == "analytical":
         # Primary is Analytical
@@ -767,12 +810,15 @@ def _solve_1d(
         elif scipy_sol_func is not None:
             # Fallback to SciPy
             print("[*] Analytical solution unavailable. Using SciPy BVP as primary.")
+            solver_notes.append(f"analytical solution failed ({analytical_error}); SciPy BVP used as primary and reference")
             solution_primary = [float(scipy_sol_func(pt)) for pt in sample_grid]
             primary_metric = scipy_deriv
             primary_callables = callables_from_bvp(scipy_sol_func)
             method_used = "scipy"
         else:
-            raise RuntimeError("All primary analytical solvers failed.")
+            raise RuntimeError(
+                f"All primary analytical solvers failed (analytical: {analytical_error}; SciPy BVP: {scipy_error})."
+            )
 
     # Reference Solution compilation (prefers Analytical, else SciPy)
     if analytical_sol_expr is not None:
@@ -784,11 +830,14 @@ def _solve_1d(
         solution_reference = [float(scipy_sol_func(pt)) for pt in sample_grid]
         reference_metric = scipy_deriv
         reference_callables = callables_from_bvp(scipy_sol_func)
+        if method_requested != "analytical":
+            solver_notes.append(f"reference: analytical solution failed ({analytical_error}); SciPy BVP used")
     else:
         # Fallback reference = same as primary
         solution_reference = solution_primary
         reference_metric = primary_metric
         reference_callables = primary_callables
+        solver_notes.append("no independent reference solution (analytical and SciPy BVP failed); reference = primary")
 
     # Metric spec: evaluate the requested quantity on the primary, reference and baseline
     # solutions. If it cannot be evaluated, the default wall-derivative metric is kept.
@@ -842,5 +891,7 @@ def _solve_1d(
         solution_reference=solution_reference,
         primary_metric_value=primary_metric,
         reference_metric_value=reference_metric,
+        solver_note=_join_notes(*solver_notes),
+        boundary_derivatives=_boundary_derivatives(primary_callables, domain_min, domain_max),
         **_metric_fields(metric_spec, baseline_metric, gain_basis, gain_note),
     )

@@ -136,6 +136,72 @@ def _estimate_derivative(sample_points: List[Any], solution: List[float], target
     return derivative if math.isfinite(derivative) else None
 
 
+def _lagrange_derivative(points: List[tuple[float, float]], target: float) -> Optional[float]:
+    """Derivative at target of the polynomial interpolating points (any number, distinct x)."""
+    xs = [p[0] for p in points]
+    total = 0.0
+    for j, (xj, yj) in enumerate(points):
+        # d/dx of the Lagrange basis polynomial l_j at target.
+        denom = 1.0
+        for m, xm in enumerate(xs):
+            if m != j:
+                denom *= xj - xm
+        if denom == 0.0:
+            return None
+        numer = 0.0
+        for k, xk in enumerate(xs):
+            if k == j:
+                continue
+            prod = 1.0
+            for m, xm in enumerate(xs):
+                if m != j and m != k:
+                    prod *= target - xm
+            numer += prod
+        total += yj * numer / denom
+    return total if math.isfinite(total) else None
+
+
+def _derivative_resolution_allowance(sample_points: List[Any], solution: List[float], target: float) -> float:
+    """
+    Truncation-error allowance of the 3-point derivative estimate at target: twice the
+    difference to the 4-point (third-order) estimate on the samples nearest to target,
+    i.e. ~ h**2 |u'''| / 3 with the grid spacing h and the local curvature change. It is ~0
+    for well-resolved (e.g. quadratic) profiles, so a wrong derivative BC is still flagged,
+    and grows where the samples resolve the boundary layer poorly.
+    """
+    pairs = _numeric_pairs(sample_points, solution)
+    if len(pairs) < 4:
+        return 0.0
+    nearest = min(range(len(pairs)), key=lambda idx: abs(pairs[idx][0] - target))
+    start3 = min(max(nearest - 1, 0), len(pairs) - 3)
+    start4 = min(max(nearest - 1, 0), len(pairs) - 4)
+    d3 = _lagrange_derivative(pairs[start3:start3 + 3], target)
+    d4 = _lagrange_derivative(pairs[start4:start4 + 4], target)
+    if d3 is None or d4 is None:
+        return 0.0
+    return 2.0 * abs(d4 - d3)
+
+
+def _solver_boundary_derivative(simulator: Dict[str, Any], sample_points: List[Any], target: float) -> Optional[float]:
+    """
+    du/dx at target from the simulator's own boundary derivatives (exact for the analytical
+    solution, the BVP's C1 spline, PINN autograd), if the output carries one for that location.
+    """
+    entries = simulator.get("boundary_derivatives")
+    if not isinstance(entries, list):
+        return None
+    coords = [c for c in (_coordinate_value(p) for p in sample_points or []) if c is not None]
+    length = (max(coords) - min(coords)) if len(coords) >= 2 else 1.0
+    tolerance = 1e-9 * max(abs(length), abs(target), 1e-300)
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        location, value = entry.get("location"), entry.get("value")
+        if _is_finite_number(location) and _is_finite_number(value) and abs(float(location) - target) <= tolerance:
+            return float(value)
+    return None
+
+
 def _derivative_scale(sample_points: List[Any], solution: List[float]) -> tuple[float, float]:
     """
     Returns (slope_scale, value_scale) of a sampled 1D solution: the mean slope
@@ -546,17 +612,29 @@ def validate_run_output(
             # An explicit derivative_boundary_tolerance is an absolute tolerance. Otherwise
             # the tolerance scales with the slope of the solution (range(u) / domain length)
             # and the prescribed derivative, so it does not depend on units or grid size.
+            # The observed derivative is the solver's own boundary derivative when the output
+            # carries one (a sharp boundary layer or load is not resolved by the 20 samples);
+            # otherwise a 3-point difference on the samples, whose default tolerance also
+            # gets the truncation-error allowance of that stencil.
             explicit_tolerance = criteria.get("derivative_boundary_tolerance")
             relative_tolerance = float(criteria.get("derivative_boundary_rel_tolerance", 0.05))
             slope_scale, value_scale = _derivative_scale(sample_points, primary)
             derivative_residuals = []
             derivative_tolerances = []
+            derivative_sources = set()
             for location, expected in simple_derivative_bcs:
+                observed = _solver_boundary_derivative(simulator, sample_points, location)
+                allowance = 0.0
+                if observed is not None:
+                    derivative_sources.add("solver derivative")
+                else:
+                    observed = _estimate_derivative(sample_points, primary, location)
+                    allowance = _derivative_resolution_allowance(sample_points, primary, location)
+                    derivative_sources.add("3-point second-order difference")
                 if explicit_tolerance is not None:
                     tolerance = float(explicit_tolerance)
                 else:
-                    tolerance = relative_tolerance * max(slope_scale, abs(expected)) + 1e-6 * value_scale + 1e-12
-                observed = _estimate_derivative(sample_points, primary, location)
+                    tolerance = relative_tolerance * max(slope_scale, abs(expected)) + 1e-6 * value_scale + 1e-12 + allowance
                 if observed is None:
                     derivative_residuals.append(float("inf"))
                 else:
@@ -575,7 +653,7 @@ def validate_run_output(
                     for residual, tolerance in zip(derivative_residuals, derivative_tolerances)
                 ),
                 f"max simple derivative residual={max_derivative_residual:.4g}, tolerance<={derivative_tolerance:.4g} "
-                f"(3-point second-order difference).",
+                f"({', '.join(sorted(derivative_sources))}).",
                 severity="warning",
                 score=0.45,
             )
