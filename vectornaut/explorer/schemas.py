@@ -36,6 +36,7 @@ class CandidateBase(BaseModel):
     novelty_vs_known: str = Field(default="", description="The closest known solution and what is new compared to it")
     target_feasible: bool = Field(default=True, description="False if no concept can exist in the target cell (physically or commercially impossible); then explain in infeasibility_reason and leave the concept fields empty")
     infeasibility_reason: Optional[str] = Field(default=None, description="If target_feasible is false: why the target cell cannot contain a working concept")
+    infeasibility_scope: List[str] = Field(default_factory=list, description="If target_feasible is false (optional): the axis names the impossibility depends on, e.g. ['mechanism_class', 'length_scale'] when no value of the other axes (no origin, no quantity) could make it work. At least two axes of the target; the whole pattern is then closed. Empty = only this exact target cell")
 
 
 class MaterialsCandidate(CandidateBase):
@@ -68,6 +69,7 @@ class BusinessCandidate(CandidateBase):
 class Requirement(BaseModel):
     name: str = Field(description="Short snake_case name of the requirement, e.g. 'low_friction_drag'")
     criterion: str = Field(default="", description="One line: when a concept meets this requirement")
+    priority: str = Field(default="must", description="'must' for a requirement the request states explicitly (e.g. 'without', 'at least', 'bionic', 'ohne', 'mindestens', 'bionisch'): a concept that fails it is not an answer to the request; 'nice' for an implied or desirable property (cost, practicality)")
 
 
 class ExplorerCandidateBatch(BaseModel):
@@ -81,6 +83,8 @@ class MaterialsCandidateBatch(ExplorerCandidateBatch):
     objective_statement: str = Field(default="", description="Step 1: the request's main benefit stated as it applies over the stated service life and conditions, e.g. 'time-averaged hull friction drag over a 5-year docking interval, including the effect of fouling' (not the drag of a freshly applied clean surface if the request asks for years of service)")
     baseline_statement: str = Field(default="", description="Step 1: the conventional state-of-the-art solution a concept must beat on that objective, in the same condition, e.g. 'conventional biocide-free silicone foul-release coating after 12-24 months in service'")
     relevant_governing_quantities: List[str] = Field(default_factory=list, description="Step 1: the governing_quantity tokens (from the vocabulary) that measure a benefit the request actually asks for")
+    relevant_mechanism_classes: List[str] = Field(default_factory=list, description="Step 2 (optional): the mechanism_class tokens (from the vocabulary) that can plausibly deliver the request's main benefit; targeted search orders stay within them (explore reaches the others at a low weight)")
+    target_gain_pct: Optional[float] = Field(default=None, description="Step 1 (optional): the numeric improvement of the objective against the baseline, in percent, that the request (or your objective statement / requirements) asks for, e.g. 20 for '>20 %'; null if no number is stated")
     candidates: List[MaterialsCandidate] = Field(default_factory=list, description="Step 4: exactly one candidate per search order")
 
 
@@ -110,7 +114,8 @@ class MaterialsCriticReview(BaseModel):
     order_id: str = Field(description="order_id of the reviewed candidate")
     plausible_simulated_benefit_pct: Optional[float] = Field(default=None, description="Your best estimate of the real-world improvement of the candidate's OWN simulated quantity (its governing_quantity, e.g. fouling release stress), in percent, against the conventional baseline (positive = better); null if it cannot be estimated. Do not copy the simulated number")
     plausible_objective_gain_pct: Optional[float] = Field(default=None, description="Your best estimate of the candidate's contribution to the stated OBJECTIVE against the stated BASELINE (e.g. time-averaged drag including fouling over the service life), in percent (positive = better); null if it cannot be estimated")
-    plausible_gain_reasoning: str = Field(default="", description="One or two sentences: how you arrived at both numbers")
+    conventional_equivalent_gain_pct: Optional[float] = Field(default=None, description="The objective gain in percent that a CONVENTIONAL measure achieving the same physical effect would give against the same baseline (e.g. an equal-R conventional insulation layer for a concept whose benefit is added thermal resistance; a thicker conventional coating for a benefit that comes from thickness); 0 if the effect has no conventional equivalent; null if you cannot estimate it. Only the gain beyond it counts as the concept's own")
+    plausible_gain_reasoning: str = Field(default="", description="One or two sentences: how you arrived at the numbers")
     simulated_quantity_relevant: Optional[bool] = Field(default=None, description="True if the simulated quantity drives the objective or a requirement (e.g. fouling release for time-averaged drag), false if it is beside the point; null if unsure")
     relabelled_analogue: bool = Field(default=False, description="True if the concept is the same physics as its parent (or another listed concept) with only the inspiration label changed, i.e. the claimed origin does not actually supply the mechanism")
     relabel_reason: str = Field(default="", description="If relabelled_analogue: one line naming the concept it copies")

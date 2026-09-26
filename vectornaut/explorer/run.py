@@ -99,8 +99,11 @@ class ExplorerRunner:
                 f"The archive {self.archive.path} was built for the query {known[0]!r}. Scores for a different "
                 "request are not comparable: use --archive NAME for a separate map, or --allow-new-query to mix."
             )
-        self.archive.declare_relevance_axes(getattr(profile, "relevance_axes", ()) or ())
+        self.archive.declare_relevance_axes(getattr(profile, "relevance_axes", ()) or (),
+                                            soft=getattr(profile, "soft_relevance_axes", ()) or ())
         self._update_preferences()
+        # Archive-level scoring (materials: the objective scale) is brought up to date on start.
+        self.startup_scoring = profile.update_scoring(self.archive, None)
         self.out_dir = os.path.abspath(out_dir or os.path.join(self.archive.directory, "reports"))
         self.generator = CandidateGenerator(profile, client=client, mock=mock)
         self.ctx = EvaluationContext(query=self.query, mock=mock, epochs=epochs, opt_rounds=opt_rounds,
@@ -113,7 +116,10 @@ class ExplorerRunner:
         self.ctx.requirements = archive.requirements
         self.ctx.objective_statement = archive.objective_statement
         self.ctx.baseline_statement = archive.baseline_statement
-        self.ctx.relevant = {axis: archive.stated_relevant_values(axis) for axis in archive.relevance_axes()}
+        self.ctx.relevant = {axis: archive.stated_relevant_values(axis) for axis in archive.all_relevance_axes()}
+        scale = archive.objective_scale
+        self.ctx.objective_scale_pct = scale.get("pct")
+        self.ctx.objective_scale_source = scale.get("source") or "default"
 
     def _update_preferences(self) -> Dict[str, List[str]]:
         """Preferred axis values derived by the profile from the request and the stored requirements."""
@@ -124,21 +130,28 @@ class ExplorerRunner:
         return changed
 
     def _update_request_analysis(self, notes: Mapping[str, Any], round_no: int) -> Dict[str, Any]:
-        """Stores the first requirement list, objective and baseline, and the relevant values named by the generator."""
+        """
+        Stores the first requirement list, objective, baseline and target gain, and the relevant values
+        named by the generator. A newly stored target gain changes the objective scale at once (so this
+        round is already scored with it).
+        """
         archive = self.archive
         stored = archive.set_requirements(notes.get("requirements") or [], round_no)
         framing = archive.set_framing(notes.get("objective_statement") or "", notes.get("baseline_statement") or "",
                                       round_no)
+        target = archive.set_target_gain(notes.get("target_gain_pct"), round_no)
         added: Dict[str, List[str]] = {}
         for axis, values in sorted((notes.get("relevant_values") or {}).items()):
-            if axis in archive.relevance_axes():
+            if axis in archive.all_relevance_axes():
                 new = archive.add_relevant_values(axis, values)
                 if new:
                     added[axis] = new
         preferred = self._update_preferences()
+        scoring = self.profile.update_scoring(archive, round_no) if target else None
         self._sync_context()
         return {"requirements_stored": stored, "objective_stored": framing["objective"],
-                "baseline_stored": framing["baseline"], "relevant_added": added, "preferred_changed": preferred}
+                "baseline_stored": framing["baseline"], "target_stored": target, "relevant_added": added,
+                "preferred_changed": preferred, "scoring_update": scoring}
 
     # ------------------------------------------------------------------
     def run_round(self, batch: int, run_id: str) -> Dict[str, Any]:
@@ -186,10 +199,17 @@ class ExplorerRunner:
                 pass
             elif item.status == TARGET_INFEASIBLE:
                 reason = item.issues[0] if item.issues else "reported infeasible"
+                # The generator may say which axes the impossibility depends on: the pattern is closed.
+                scope = list(getattr(item.candidate, "infeasibility_scope", None) or [])
+                pattern, used, scope_note = archive.infeasibility_pattern(order["target"], scope)
                 entry = archive.add_entry(**common, descriptors=None, status=INFEASIBLE, reason=reason,
-                                          score_breakdown={"basis": "target reported infeasible by the generator"})
-                archive.mark_infeasible(order["target"], reason, entry_id=entry["id"], round_no=round_no,
-                                        source="generator")
+                                          score_breakdown={"basis": "target reported infeasible by the generator",
+                                                           "infeasibility_scope": used,
+                                                           "infeasible_pattern": space.cell_key(pattern)})
+                archive.mark_infeasible(pattern, reason, entry_id=entry["id"], round_no=round_no,
+                                        source="generator", scope=used, note=scope_note)
+                if scope_note:
+                    log["note"] = f"{log['note']}; {scope_note}".strip("; ")[:300]
             elif item.status == ITEM_INVALID:
                 entry = archive.add_entry(**common, descriptors=None, status=INVALID, reason="; ".join(item.issues))
             elif item.status == ITEM_REJECTED:
@@ -215,10 +235,23 @@ class ExplorerRunner:
                             "tiebreak": entry.get("tiebreak")})
             order_logs.append(log)
 
+        # The objective scale follows the archive (materials): re-score everything if it changed.
+        scoring = self.profile.update_scoring(archive, round_no)
+        if scoring:
+            for log in order_logs:
+                entry = archive.entries.get(log.get("entry_id") or "")
+                if entry is not None and entry.get("status") == EVALUATED:
+                    breakdown = entry.get("score_breakdown") or {}
+                    log.update({"score": entry["score"], "flags": list(breakdown.get("flags") or []),
+                                "objective_gain_pct": breakdown.get("objective_gain_pct"),
+                                "tiebreak": entry.get("tiebreak")})
+            self._sync_context()
+
         record = {
             "round": round_no, "run_id": run_id, "seed": self.seed, "query": self.query, "mock": self.mock,
             "orders": order_logs, "batch_notes": generation.batch_notes, "unmatched": generation.unmatched,
             "request_analysis_update": analysis_update, "strategy_notes": diagnostics,
+            "scoring_update": scoring, "objective_scale": archive.objective_scale,
             "started_at": started, "finished_at": archive.clock(),
         }
         archive.log_round(record)

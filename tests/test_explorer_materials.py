@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from vectornaut.config import ParameterProposal
-from vectornaut.explorer.archive import EVALUATED, IMPROVED, NOT_BETTER, TIE_EPSILON, Archive
+from vectornaut.explorer.archive import ARCHIVE_VERSION, EVALUATED, IMPROVED, NOT_BETTER, TIE_EPSILON, Archive
 from vectornaut.explorer.generator import CandidateGenerator, build_prompt, check_batch, compact_context
 from vectornaut.explorer.profiles.base import EvaluationContext, PreparedCandidate
 from vectornaut.explorer.profiles.materials import (
@@ -164,14 +164,16 @@ class TierAndScoreTest(unittest.TestCase):
             b = res.breakdown
             c = b["components"]
             expected = 100 * c["gate"] * (W_OBJ * c["objective_score"] + W_SIM * c["simulated_score"]
-                                          + W_REQ * c["requirement_coverage"]) * b["relabel_factor"]
+                                          + W_REQ * c["requirement_score"]) * b["relabel_factor"] \
+                * b["baseline_factor"] * b["must_factor"]
             if b["evidence_tier"] == "estimated":
                 expected = min(expected, ESTIMATED_SCORE_CAP)
             self.assertAlmostEqual(res.score, expected, places=3)
             if not b["capped"]:
                 self.assertAlmostEqual(sum(b["contributions"].values()), res.score, places=2)
             self.assertIn("score = 100 * gate * (0.45 * objective_score + 0.1 * simulated_score + "
-                          "0.45 * requirement_coverage) * relabel_factor", b["formula"])
+                          "0.45 * requirement_score) * relabel_factor * baseline_factor * must_factor", b["formula"])
+            self.assertIn("objective scale 2 % (default)", b["formula"])
             self.assertEqual(b["weights"], {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ})
         # No validity floor: a 0.13 % gain with poor coverage scores little.
         tiny = score_pipeline_result(pipeline_result(0.13, "warn", 0.956), candidate(estimate=50.0),
@@ -185,10 +187,17 @@ class TierAndScoreTest(unittest.TestCase):
                                          review=review(sim=19.0, obj=5.0, coverage=cov), requirements=REQUIREMENTS)
         good = score([("low_friction_drag", 0.9), ("non_toxic_antifouling", 0.9), ("multi_year_durability", 0.9)])
         poor = score([("low_friction_drag", 0.9), ("non_toxic_antifouling", 0.1), ("Multi Year Durability", 0.1)])
-        self.assertAlmostEqual(good.score - poor.score, 100 * W_REQ * (0.9 - 1.1 / 3), places=3)
-        self.assertGreater(good.score - poor.score, 20.0)
+        self.assertAlmostEqual(good.breakdown["requirement_score"], 0.9, places=4)
+        self.assertEqual(good.breakdown["must_factor"], 1.0)
+        self.assertGreater(good.score - poor.score, 30.0)
         self.assertAlmostEqual(poor.breakdown["requirement_coverage"], (0.9 + 0.1 + 0.1) / 3, places=4)
+        # Soft minimum over the must-requirements (all must by default) and the soft gate below 0.3.
+        self.assertAlmostEqual(poor.breakdown["requirement_score"], 0.5 * 1.1 / 3 + 0.5 * 0.1, places=4)
+        self.assertAlmostEqual(poor.breakdown["must_min_coverage"], 0.1)
+        self.assertAlmostEqual(poor.breakdown["must_factor"], 1 - 0.5 * (0.3 - 0.1) / 0.3, places=5)
+        self.assertIn("must_requirement_unmet", poor.breakdown["flags"])
         self.assertEqual([r["coverage"] for r in poor.breakdown["requirements"]], [0.9, 0.1, 0.1])
+        self.assertEqual({r["priority"] for r in poor.breakdown["requirements"]}, {"must"})
         partial = score([("low_friction_drag", 1.0), ("unknown", 0.0)])
         self.assertIn("requirements_partially_rated", partial.breakdown["flags"])
         self.assertAlmostEqual(partial.breakdown["requirement_coverage"], (1.0 + 0.5 + 0.5) / 3, places=4)
@@ -406,8 +415,10 @@ class CriticStageTest(unittest.TestCase):
         model, prompt, config = client.calls[0]
         self.assertEqual(model, "critic-model")
         self.assertIs(config.response_schema, MaterialsCriticBatch)
-        for text in ("REQUEST: \"hull coating\"", "non_toxic_antifouling: no biocide release", "[r001-01]", "[r001-02]",
+        self.assertNotIn("into the sea", prompt)
+        for text in ("REQUEST: \"hull coating\"", "non_toxic_antifouling [must]: no biocide release", "[r001-01]", "[r001-02]",
                      "formulation: d2u_dy2 = 0", "calibrated_gap=8.8e-05", "simulated gain: 19.35 %",
+                     "conventional_equivalent_gain_pct", "equal-R", "into the environment",
                      "REJECTED as implausible", "candidate's estimate: 85 %", "clean standard foul-release",
                      "surface displacement", "uniform silicone", f"OBJECTIVE (fixed for this map): {OBJECTIVE}",
                      f"CONVENTIONAL BASELINE (fixed for this map): {BASELINE}",
@@ -566,7 +577,7 @@ class GeneratorAnalysisTest(unittest.TestCase):
             archive.add_relevant_values("governing_quantity", ["wall_shear"])
             archive.set_framing(OBJECTIVE, "", 1)
             prompt = build_prompt(MaterialsProfile(), "q", orders, archive)
-            self.assertIn("- non_toxic_antifouling: no biocide release", prompt)
+            self.assertIn("- non_toxic_antifouling [must]: no biocide release", prompt)
             self.assertIn("RELEVANT GOVERNING QUANTITIES", prompt)
             self.assertIn(f"Already stored: objective = {OBJECTIVE}; baseline = (none)", prompt)
             archive.set_framing("", "clean standard foul-release coating", 2)
@@ -592,7 +603,8 @@ class GeneratorAnalysisTest(unittest.TestCase):
         self.assertEqual(result.items[0].status, "ok")
         self.assertEqual(result.batch_notes["objective_statement"], "time-averaged drag over 5 years")
         self.assertEqual(result.batch_notes["baseline_statement"], BASELINE)
-        self.assertEqual(result.batch_notes["requirements"], [{"name": "low_friction_drag", "criterion": "c"}])
+        self.assertEqual(result.batch_notes["requirements"],
+                         [{"name": "low_friction_drag", "criterion": "c", "priority": "must"}])
         self.assertEqual(result.batch_notes["relevant_values"], {"governing_quantity": ["wall_shear", "stress"]})
         self.assertEqual(result.batch_notes["relevant_values_rejected"], ["drag"])
 
@@ -618,13 +630,14 @@ V3_PROXIES = ("oil_free_palm_leaching", "bound_hydration_leaching")
 class ObjectiveDrivenScoringTest(unittest.TestCase):
     """P2/P3: the objective term dominates differences; proxies by construction lose the simulated term."""
 
-    def score(self, name, proxy=False):
+    def score(self, name, proxy=False, scale=None):
         sim, critic_sim, objective, coverage = V3_CASES[name]
         return score_pipeline_result(pipeline_result(sim), candidate(estimate=2.0, cell=FOULING_CELL),
                                      review=review(sim=critic_sim, obj=objective, coverage=full_coverage(coverage),
                                                    proxy_by_construction=proxy,
                                                    proxy_reason="leaching flux vs an oil-containing baseline"),
-                                     requirements=REQUIREMENTS, relevant_quantities=["fouling_adhesion"])
+                                     requirements=REQUIREMENTS, relevant_quantities=["fouling_adhesion"],
+                                     objective_scale_pct=scale)
 
     def test_one_percent_objective_outweighs_requirement_noise_and_saturated_simulation(self):
         gain = 100 * W_OBJ * (f(1.5, OBJECTIVE_SCALE_PCT) - f(0.5, OBJECTIVE_SCALE_PCT))
@@ -717,15 +730,19 @@ class ArchiveV3MigrationTest(unittest.TestCase):
             archive.data["version"] = 3
             archive.save()
             loaded = Archive.load("materials", MATERIALS_SPACE, path=archive.path, migrate=profile.migrate_archive)
-            self.assertEqual(loaded.data["version"], 4)
+            self.assertEqual(loaded.data["version"], ARCHIVE_VERSION)
             self.assertEqual(loaded.data["migrated_from"], 3)
             migration = loaded.data["migrations"][-1]
             self.assertEqual(migration["rescored_entries"], 3)
             self.assertEqual(migration["elite_changes"][key],
                              {"from": ids["glacier_soft_bed"], "to": ids["pack_ice_tiles"], "tiebreak": True})
+            # No target was stored before version 5: the scale comes from the archive's critic objective
+            # gains (1.5, 1.5, 1.0 -> 2 x median 1.5 = 3 %).
+            self.assertEqual((loaded.objective_scale["pct"], loaded.objective_scale["source"]), (3.0, "archive"))
+            self.assertEqual(migration["objective_scale_pct"], 3.0)
             pack = loaded.entries[ids["pack_ice_tiles"]]
             self.assertAlmostEqual(pack["score"], ObjectiveDrivenScoringTest.score(
-                ObjectiveDrivenScoringTest(), "pack_ice_tiles").score, places=3)
+                ObjectiveDrivenScoringTest(), "pack_ice_tiles", scale=3.0).score, places=3)
             self.assertEqual(pack["score_breakdown"]["rescored_from"]["score"], 40.0)
             self.assertEqual(pack["score_breakdown"]["tiebreak"], [1.5, -1.0, 60.0])
             self.assertIn("0.45 * objective_score", pack["score_breakdown"]["formula"])

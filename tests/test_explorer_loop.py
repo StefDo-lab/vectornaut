@@ -10,7 +10,9 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from vectornaut.explorer.archive import EVALUATED, FAILED, IMPROVED, IMPROVED_ON_TIEBREAK, INFEASIBLE, TIE_EPSILON, Archive
+from vectornaut.explorer.archive import (
+    ARCHIVE_VERSION, EVALUATED, FAILED, IMPROVED, IMPROVED_ON_TIEBREAK, INFEASIBLE, TIE_EPSILON, Archive,
+)
 from vectornaut.explorer.generator import CandidateGenerator, build_prompt
 from vectornaut.explorer.profiles.base import EvaluationContext, PreparedCandidate
 from vectornaut.explorer.profiles.business import BusinessProfile
@@ -164,11 +166,12 @@ class MaterialsLoopTest(OfflineTestCase):
         entry = evaluated[0]
         self.assertIn(entry["score_breakdown"]["basis"], ("simulated", "simulated, critic-checked"))
         self.assertTrue(entry["score_breakdown"]["critic_used"])
-        self.assertEqual(len(entry["score_breakdown"]["requirements"]), 3)
-        self.assertEqual(entry["score_breakdown"]["objective_gain_source"], "critic")
+        self.assertEqual(len(entry["score_breakdown"]["requirements"]), 4)
+        self.assertTrue(entry["score_breakdown"]["objective_gain_source"].startswith("critic"))
         # Requirements, objective and baseline come from the (mock) function analysis and are stored once.
-        self.assertEqual([r["name"] for r in archive.requirements],
-                         ["low_friction_drag", "non_toxic_antifouling", "multi_year_durability"])
+        self.assertEqual([(r["name"], r["priority"]) for r in archive.requirements],
+                         [("low_friction_drag", "must"), ("non_toxic_antifouling", "must"),
+                          ("multi_year_durability", "must"), ("low_application_cost", "nice")])
         self.assertIn("time-averaged", archive.objective_statement)
         self.assertIn("after 12 months in service", archive.baseline_statement)
         self.assertEqual(runner.ctx.baseline_statement, archive.baseline_statement)
@@ -195,16 +198,16 @@ class MaterialsLoopTest(OfflineTestCase):
             map_md = f.read()
         for heading in ("## Map: mechanism_class x length_scale", "## Requirements of the request",
                         "## Requirement coverage (critic ratings, elites)", "## Values never proposed",
-                        "| tier | points obj / sim / req | objective gain % |", "Elites by evidence tier",
+                        "| tier | points obj / sim / req | objective gain used % |", "Elites by evidence tier",
                         "- **Objective**:", "- **Baseline**:", "0.45 * objective_score + 0.1 * simulated_score"):
             self.assertIn(heading, map_md)
         with open(os.path.join(archive.directory, "reports", "round_002.md"), encoding="utf-8") as f:
             round_md = f.read()
-        self.assertIn("Extrapolation: ", round_md)
+        self.assertIn("Extrapolation (decided at scheduling time", round_md)
         self.assertIn("- Baseline: ", round_md)
         with open(os.path.join(archive.directory, "reports", "archive_export.json"), encoding="utf-8") as f:
             export = json.load(f)
-        self.assertEqual(len(export["requirements"]), 3)
+        self.assertEqual(len(export["requirements"]), 4)
         self.assertEqual(export["baseline_statement"], archive.baseline_statement)
         self.assertTrue(all("evidence_tier" in e and "flags" in e for e in export["elites"]))
 
@@ -259,7 +262,7 @@ class MaterialsLoopTest(OfflineTestCase):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f)
         again = ExplorerRunner(MaterialsProfile(), "q", seed=1, mock=True, epochs=5, clock=lambda: FROZEN)
-        self.assertEqual(again.archive.data["version"], 4)
+        self.assertEqual(again.archive.data["version"], ARCHIVE_VERSION)
         self.assertEqual(again.archive.data["migrations"][0]["from_version"], 3)
         for entry_id, score in scores.items():
             if score is not None:
