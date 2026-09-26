@@ -1,0 +1,13 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = (oil_film_thickness * (water_viscosity / oil_viscosity - 1) / viscous_sublayer_thickness) * du_dy(0)",
+    "u(1) = sublayer_edge_velocity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "viscous_sublayer_thickness", "value": 4e-05, "min_bound": 1e-05, "max_bound": 8e-05, "justification": "5 nu/u_tau with u_tau = sqrt(tau/rho) = sqrt(18/1025) = 0.13 m/s, consistent with wall_shear_stress = 18 Pa."},
+    {"name": "sublayer_edge_velocity", "value": 0.66, "min_bound": 0.3, "max_bound": 1.5, "justification": "Mean velocity at y+ = 5, i.e. 5 u_tau = 5*0.13 m/s, held fixed so that only the wall condition changes."}
+  ]
+}

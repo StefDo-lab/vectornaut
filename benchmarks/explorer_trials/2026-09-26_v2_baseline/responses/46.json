@@ -1,0 +1,585 @@
+{
+ "reviews": [
+  {
+   "order_id": "r001-01",
+   "plausible_gain_pct": 1.5,
+   "plausible_gain_reasoning": "Riblets give 5-8% only at s+ 10-20 on clean, sharp riblets in lab; on ships speed varies (s+ 8-25 over the profile), soft PDMS tips round off and slime fills grooves within months, and ship trials of riblet films showed at best 1-3%. Time-averaged over a docking cycle ~1-2%.",
+   "key_assumption_issues": [
+    "Equivalent layer thickness (17.5 viscous units) chosen to reproduce DR = 2 b+/U+; the gain is a restatement of the assumed protrusion height, not a solved turbulence result",
+    "Protrusion difference 4.5 um assumes sharp crests; PDMS crests with tip radius >3 um lose a large part of it",
+    "Single operating point (15 kn, s+=15); no off-design or fouled state",
+    "Crest flexing claimed to shed slime is not modelled and unproven"
+   ],
+   "killer_risks": [
+    "Biofilm/ diatom and calcareous fill of 40 um grooves in weeks to months, converting riblets into roughness",
+    "Mechanical damage of soft riblets by cleaning, fenders, anchor chains",
+    "Riblet misalignment with local streamlines on curved hull regions"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.3,
+     "reason": "~1-2% real, only while grooves stay clean"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.45,
+     "reason": "silicone FR without biocides, but grooves trap slime and hamper cleaning"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.3,
+     "reason": "soft micro-riblets unlikely to keep sharp geometry for 3-5 years"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.9,
+     "reason": "passive, no consumables"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.75,
+     "reason": "real shark-denticle principle, but textbook"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-02",
+   "plausible_gain_pct": 4.0,
+   "plausible_gain_reasoning": "Commercial air lubrication gives ~4-8% gross and 3-5% net fuel savings on flat-bottomed ships after 1-3% compressor power; the micro-rib stabilisation adds at most a small reduction in air demand and is unproven. Net ~4% of total resistance.",
+   "key_assumption_issues": [
+    "Covered fraction 0.5 and bottom share 0.35 are free assumptions that directly set the 17.5% result",
+    "Laminar two-layer Couette with an intact air film gives ~100% local reduction; real air layers break up, measured local 60-90% only above a critical air flux",
+    "Compressor power (2-4% of propulsion) not subtracted",
+    "Rib pinning: Laplace pressure ~290 Pa is below turbulent pressure peaks, so the claimed stabilisation is doubtful"
+   ],
+   "killer_risks": [
+    "Air layer instability in roll/pitch, ballast condition and at bilge; gains vanish on fine-hulled or fast ships",
+    "Energy and hardware cost of compressors and air outlets, maintenance of outlets (fouling, corrosion)",
+    "Ribbed surface wetted when air is off adds slight roughness"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.7,
+     "reason": "the only concept with a proven multi-percent friction reduction, but mainly from the air system"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.4,
+     "reason": "FR silicone without biocides; air contact reduces some bottom fouling"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.55,
+     "reason": "silicone ribs on flat bottom plausible; air system needs maintenance"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.4,
+     "reason": "compressor power ~2-4% of propulsion, a large part of the saving"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.35,
+     "reason": "penguin analogy is loose; the working principle is industrial air lubrication"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-03",
+   "plausible_gain_pct": 0.5,
+   "plausible_gain_reasoning": "Membrane-fed plastrons have never been demonstrated at ship Reynolds numbers; depth-zoned pressure regulation, membrane fouling and Cassie-Wenzel transitions under slamming make sustained coverage unlikely; b+~1 at best gives ~3-4%, realistically <1% averaged over years.",
+   "key_assumption_issues": [
+    "Isotropic slip 6 um from an ideal Cassie state with 90% gas fraction, maintained everywhere",
+    "Spanwise penalty factor 0.35 is a free parameter",
+    "No account of gas dissolution variation, meniscus curvature (bulging) or pressure zoning losses",
+    "Laminar-equivalent layer again sets the gain"
+   ],
+   "killer_risks": [
+    "Biofouling and surfactant contamination wet out the membrane and posts within months",
+    "Depth-dependent pressure: a single supply cannot balance 0-1 bar head; zoning over 1e4 m2 is impractical",
+    "3 um posts and ePTFE membrane destroyed by abrasion, cleaning and impacts"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.25,
+     "reason": "small, unproven gain at full scale"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.35,
+     "reason": "plastron may deter settlement briefly; fouling of membrane is the failure mode"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.15,
+     "reason": "fragile posts and membranes unlikely to survive years"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.6,
+     "reason": "gas demand small, but needs ducting and regulation"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.8,
+     "reason": "water-spider plastron/ physical gill principle genuinely transferred"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-04",
+   "plausible_gain_pct": 0.5,
+   "plausible_gain_reasoning": "Electrolytic regeneration works in the lab at small scale, but at hull scale the required current (up to thousands of A) produces large amounts of chlorine and calcareous deposits; operation would be restricted, leaving at most short-lived partial plastrons.",
+   "key_assumption_issues": [
+    "Coverage 0.7 and net slip 5 um assumed, not derived from a regeneration balance",
+    "Anode chemistry (chlorine), calcareous deposition and gas crossover not modelled",
+    "Energy counted only as ohmic power"
+   ],
+   "killer_risks": [
+    "Up to ~160 kg active chlorine/day at full duty makes it an electrochemical biocide (regulatory and requirement conflict)",
+    "Calcareous deposits at the cathode clog grooves within months",
+    "Short circuits, cathodic disbonding and hydrogen embrittlement risk"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.25,
+     "reason": "small gain if plastrons survive"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.1,
+     "reason": "generates oxidants in relevant amounts, contradicting the non-toxic requirement"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.2,
+     "reason": "electrode layer, deposits and disbonding threaten multi-year life"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.65,
+     "reason": "electrical power small vs propulsion; no consumables"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.3,
+     "reason": "mostly a technology (ICCP) idea with a plastron borrowed from insects"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-05",
+   "plausible_gain_pct": 1.0,
+   "plausible_gain_reasoning": "Anisotropic permeable walls are supported only by DNS at low Re_tau; the linear regime requires tiny wall-normal permeability that conflicts with a porous face, and 40 um channels clog with diatoms and bacteria. Real ~0-2%.",
+   "key_assumption_issues": [
+    "Slip taken as sqrt(Kx) - sqrt(Kz) with Kx at the upper limit of the linear regime",
+    "Constraint sqrt(Ky+) < 0.4 not enforced in the model; roughness of perforations ignored",
+    "No fouling state; permeability assumed constant for years"
+   ],
+   "killer_risks": [
+    "Channel and perforation clogging by biofilm, diatoms, sediment and calcareous deposits",
+    "Onset of Kelvin-Helmholtz rollers (drag increase) if Ky too large or channels deform",
+    "Thin porous silicone skin tears under cleaning"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.3,
+     "reason": "theoretical riblet-like gain, fragile in practice"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.3,
+     "reason": "no biocides, but the porous structure is a fouling trap"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.2,
+     "reason": "clogging within months likely"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 1.0,
+     "reason": "passive, no consumables"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.45,
+     "reason": "xylem anisotropy is a loose analogy; the concept comes from DNS research"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-06",
+   "plausible_gain_pct": 0.0,
+   "plausible_gain_reasoning": "Compliant-coating drag reduction in turbulent water flow has never been reproduced robustly at ship scale; at U/c_t ~2 divergence waves can increase drag. Expect 0% (range -2 to +1%).",
+   "key_assumption_issues": [
+    "The 'gain' is an empirical input (compliance-equivalent virtual-origin shift), not computed",
+    "Tuning factor 0.5 is arbitrary",
+    "Steady model cannot represent fluid-structure interaction"
+   ],
+   "killer_risks": [
+    "Static divergence and travelling-wave flutter increase drag",
+    "15 kPa gel tears and wears; 3 mm build adds weight and cost",
+    "Off-design operation over the speed profile"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.05,
+     "reason": "no reliable reduction; possible increase"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.5,
+     "reason": "very soft silicone is a good foul-release surface"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.2,
+     "reason": "soft gel vulnerable to damage and swelling"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.9,
+     "reason": "passive"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.6,
+     "reason": "dolphin skin compliance principle transferred, though the biological claim is disputed"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-07",
+   "plausible_gain_pct": 0.0,
+   "plausible_gain_reasoning": "Hydrogel slip of ~0.1 um is b+ ~0.02: no measurable drag change vs clean FR; any benefit is keeping the hull clean longer.",
+   "key_assumption_issues": [
+    "Slip length for hydrogels uncertain (10-100 nm)",
+    "Drag model irrelevant to the actual antifouling claim"
+   ],
+   "killer_risks": [
+    "Hydrogel abrasion and delamination in 1-2 years",
+    "Macrofouling during idle periods still settles"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.05,
+     "reason": "no reduction vs clean FR"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.6,
+     "reason": "zwitterionic hydrogels strongly resist protein/ diatom adhesion without release"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.35,
+     "reason": "thin hydrogels wear; multi-year sea data lacking"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 1.0,
+     "reason": "passive"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.75,
+     "reason": "pilot whale nanoridge-gel skin is a real model"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-08",
+   "plausible_gain_pct": 0.0,
+   "plausible_gain_reasoning": "Clean-state drag equals FR; the concept only restores a clean surface after fouling, which is not a reduction vs the clean baseline.",
+   "key_assumption_issues": [
+    "Peel threshold G/Gc = 1.25 (fouled) vs 0.31 (clean) depends on segment length and speed squared",
+    "No flow gain simulated; baseline absent",
+    "Assumes interlayer toughness stable over years in water"
+   ],
+   "killer_risks": [
+    "Uncontrolled shedding at higher speeds or wave impact (clean lamellae peel at ~20 kn)",
+    "Release of ~20 g/m2 silicone flakes per shedding (~200 kg per shedding for 1e4 m2): microplastic discharge",
+    "Only ~7 sheddings available; then recoating"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.1,
+     "reason": "no reduction vs clean FR, only restores clean state"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.35,
+     "reason": "removes fouling mechanically but by releasing microplastic flakes"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.35,
+     "reason": "limited number of sheddings; interlayer ageing"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.45,
+     "reason": "consumes the coating itself"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.8,
+     "reason": "algal epidermis shedding principle genuinely transferred"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-09",
+   "plausible_gain_pct": 0.0,
+   "plausible_gain_reasoning": "Nanometre slip is irrelevant for drag; the mechano-bactericidal effect is weak for marine biofilms and useless against macrofoulers.",
+   "key_assumption_issues": [
+    "Slip 20 nm, hydraulically smooth; model has no bearing on the claimed benefit"
+   ],
+   "killer_risks": [
+    "Conditioning films cover nanopillars in days",
+    "Brittle nanopillars abraded by sand and cleaning",
+    "Scale-up of nanostructures to 1e4 m2 hulls"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.05,
+     "reason": "no reduction"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.25,
+     "reason": "weak marine antifouling effect"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.2,
+     "reason": "nanopillars and brushes wear quickly"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 1.0,
+     "reason": "passive"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.6,
+     "reason": "cicada wing nanopillars are a real model, but the function differs"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-10",
+   "plausible_gain_pct": 0.0,
+   "plausible_gain_reasoning": "Passive plastrons collapse at >0.7 m depth immediately and dissolve near the surface within hours to days; averaged over service life the gain is 0, and flooded grooves may add slight roughness.",
+   "key_assumption_issues": [
+    "Coverage 0.05 already an optimistic short-term value",
+    "Philip slip assumes flat menisci and pinned Cassie state"
+   ],
+   "killer_risks": [
+    "Cassie-Wenzel transition under hydrostatic pressure",
+    "Loss of superhydrophobicity by biofilm and abrasion within weeks"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.05,
+     "reason": "no lasting reduction"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.2,
+     "reason": "superhydrophobicity lost quickly, then fouls normally"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.1,
+     "reason": "nanotextured ridges wear quickly"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 1.0,
+     "reason": "passive"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.65,
+     "reason": "rice-leaf anisotropic wetting is transferred, but its function (drop shedding in air) differs"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-11",
+   "plausible_gain_pct": 1.5,
+   "plausible_gain_reasoning": "Same as straight riblets; the waviness is below the optimal wavelength/amplitude for spanwise forcing and experiments show -1 to +2 points. Real ~1-2% while clean.",
+   "key_assumption_issues": [
+    "Protrusion difference equals straight riblets after audit; the oscillation effect is not modelled",
+    "Equivalent layer sets the gain"
+   ],
+   "killer_risks": [
+    "Groove fouling as for straight riblets",
+    "Speed dependence of s+",
+    "Tooling complexity and misalignment"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.3,
+     "reason": "~1-2% while clean"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.4,
+     "reason": "FR silicone without biocides but grooves trap slime"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.3,
+     "reason": "soft riblets wear"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.9,
+     "reason": "passive"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.15,
+     "reason": "inspired by active flow control, not by biology"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-13",
+   "plausible_gain_pct": 0.0,
+   "plausible_gain_reasoning": "No drag change in the clean state; the computed fouling release stress drops only ~3.5% vs a uniform FR, so the self-cleaning speed barely changes.",
+   "key_assumption_issues": [
+    "Gain not available: baseline simulation missing despite a defined uniform-coating baseline",
+    "Exponential grading puts compliance only in the top ~20%",
+    "Kendall thin-layer release idealisation vs real barnacle interlock"
+   ],
+   "killer_risks": [
+    "Soft top damaged by cleaning/ fenders",
+    "Slime (diatoms) adheres to all silicones",
+    "Catechol oxidation over years in seawater"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.05,
+     "reason": "no drag reduction vs clean FR"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.55,
+     "reason": "biocide-free foul-release, only marginally better release"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.6,
+     "reason": "catechol-anchored base addresses the main FR failure mode (adhesion)"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 1.0,
+     "reason": "passive"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.6,
+     "reason": "mussel DOPA adhesion genuinely transferred"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-14",
+   "plausible_gain_pct": 1.0,
+   "plausible_gain_reasoning": "Lubricant-infused surfaces in turbulent flow lose excess oil quickly and give 0-10% in short lab tests; with a more viscous oil (N=2.5) slip is small; averaged over time ~1%.",
+   "key_assumption_issues": [
+    "Slip 3 um for a lubricant more viscous than water is optimistic",
+    "Depletion rate 1 um/day is a guess uncertain by 10x; reservoir life follows directly",
+    "Laminar-equivalent layer sets the gain"
+   ],
+   "killer_risks": [
+    "Continuous oil discharge ~3.6 m3/year per ship",
+    "Reservoir exhausted before the docking interval if depletion is faster",
+    "Pore clogging stops replenishment"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.3,
+     "reason": "small gain"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.15,
+     "reason": "relies on continuous oil release into the sea"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.3,
+     "reason": "reservoir life uncertain, soft porous structure"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.15,
+     "reason": "continuous consumable supply"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.6,
+     "reason": "swordfish oil gland principle transferred"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-15",
+   "plausible_gain_pct": 0.0,
+   "plausible_gain_reasoning": "Nanometre slip gives no drag change vs clean FR; a hard smooth topcoat only helps against an aged, damaged FR baseline.",
+   "key_assumption_issues": [
+    "Slip 20 nm; the model says nothing about the durability claim"
+   ],
+   "killer_risks": [
+    "Cracking/ spalling of a brittle glassy layer on flexing steel",
+    "Brush wears off at first cleaning; then fouling adheres to a hard high-energy surface and needs frequent cleaning"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "low_friction_drag",
+     "coverage": 0.05,
+     "reason": "no reduction"
+    },
+    {
+     "name": "non_toxic_fouling_control",
+     "coverage": 0.3,
+     "reason": "low-adhesion brush short-lived; relies on cleaning"
+    },
+    {
+     "name": "multi_year_seawater_durability",
+     "coverage": 0.45,
+     "reason": "hard layer abrasion resistant but crack-prone"
+    },
+    {
+     "name": "low_resource_consumption",
+     "coverage": 0.9,
+     "reason": "passive; periodic cleaning"
+    },
+    {
+     "name": "bionic_inspiration",
+     "coverage": 0.1,
+     "reason": "geology analogy, not a biological model"
+    }
+   ]
+  }
+ ]
+}

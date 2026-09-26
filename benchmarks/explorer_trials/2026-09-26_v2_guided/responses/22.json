@@ -1,0 +1,61 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: same exponentially graded layer as the dolphin-skin elite, G(z) = G_base exp(k z), k = ln(6e4/3e6) = -3.91, loaded at the surface by a fluctuation amplitude p'_rms = 45 Pa (treated as a quasi-static shear traction). Analytical: surface compliance C = u(1)/p' = (t/G_base)(e^{3.91}-1)/3.91 = 1e-9*12.5 = 1.25e-8 m/Pa. Drag check (not computable by the steady model, done here by energy balance): dissipated power per area P = pi*tan_delta*p'^2*C*f = 3.14*1*2025*1.25e-8*300 = 0.024 W/m2, compared with near-wall turbulence production ~ tau*U ~ 126 W/m2, i.e. 0.02%; the drag benefit claimed (0.5%) would need a leverage of ~25 of dissipated energy on turbulent production, for which there is no evidence. I rate the direct drag effect as ~0-0.2%. Metric chosen for what the field shows: fouling detachment stress sigma_c = sqrt(2 w_a/C) versus a standard silicone foul-release coating (t = 0.3 mm, homogeneous G = 0.33 MPa, C = 9.1e-10 m/Pa): expected sigma_c ratio 0.27, i.e. ~73% lower. This is a release gain, not a drag gain. Stability: G_surface = 6e4 Pa gives c_s = sqrt(6e4/1100) = 7.4 m/s, practically equal to the cruising speed 7 m/s; U/c_s = 0.95 is in the range where compliant layers develop hydroelastic surface waves (static divergence reported for U above ~1-2 c_s). This is a serious risk: I keep the audit passed because the parameters are within physical limits, but the surface modulus is at the edge of the safe range, and a tan_delta ~ 1 gel has low tear strength (<1 kN/m) and poor abrasion resistance. Hydrolytic stability of silicone gels is good. Dimensionless: U/c_s = 0.95, modulus ratio 0.02, dissipation share 2e-4, surface strain p'/G = 7.5e-4.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "coating_thickness", "value": 0.003},
+    {"name": "surface_shear_modulus", "value": 60000.0},
+    {"name": "base_shear_modulus", "value": 3000000.0},
+    {"name": "loss_tangent", "value": 1.0},
+    {"name": "pressure_fluctuation_rms", "value": 45.0},
+    {"name": "wall_shear_stress", "value": 18.0},
+    {"name": "adhesion_work_barnacle", "value": 0.05}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FlowToShearWaveSpeedRatio_U_over_cs", "value": 0.95},
+    {"name": "ModulusRatio_Gs_over_Gb", "value": 0.02},
+    {"name": "DissipatedPowerShareOfNearWallProduction", "value": 0.0002},
+    {"name": "SurfaceStrain_p_over_Gs", "value": 0.00075}
+  ],
+  "simulation_coefficient": 1.25e-08,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Viscoelasticity / Fouling Release",
+    "independent_var": {"label": "Normalized depth from primer (0) to surface (1)", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement", "unit": "m"},
+    "primary_metric": {"label": "Critical fouling detachment stress (design)"},
+    "reference_metric": {"label": "Critical fouling detachment stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of fouling detachment stress vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Fouling detachment stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouling detachment stress (design)",
+    "reference_metric": "Critical fouling detachment stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "surface_shear_modulus >= 5e4 Pa; U/c_s < 1 at design speed"
+    ],
+    "design_variables": ["coating_thickness", "surface_shear_modulus", "base_shear_modulus", "loss_tangent"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "1/pressure_fluctuation_rms",
+    "unit": "Pa",
+    "label": "Critical fouling detachment stress",
+    "transform": "sqrt(2*adhesion_work_barnacle/m)"
+  },
+  "baseline_parameters": [
+    {"name": "coating_thickness", "value": 0.0003},
+    {"name": "surface_shear_modulus", "value": 330000.0},
+    {"name": "base_shear_modulus", "value": 330000.0}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating, 0.3 mm, homogeneous E ~ 1 MPa"
+}

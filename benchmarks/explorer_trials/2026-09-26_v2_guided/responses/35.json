@@ -1,0 +1,49 @@
+{
+  "reviews": [
+    {
+      "order_id": "r004-01",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "A mistuned (1.8 kHz) passive membrane-cell wall has no demonstrated friction benefit; Kramer-type membrane coatings never reproduced drag reduction reliably, and cell dimpling can add slight roughness, so 0% versus a clean foul-release coating.",
+      "key_assumption_issues": [
+        "Simulated 45% is fouling detachment stress, not drag.",
+        "Foundation stiffness G_gel/h ignores the incompressibility of a confined gel; a sealed gel cell is far stiffer in the normal direction, which could remove most of the compliance advantage.",
+        "Mean compliance over a cell averages rigid septa lines with compliant centres; barnacles spanning several cells feel the stiff septa."
+      ],
+      "killer_risks": [
+        "Membrane-septa joints fatigue under ~1e10 pressure cycles per year and let seawater into cells.",
+        "Cuts or punctures expose gel-filled cells; the gel washes out or swells.",
+        "Paneling or laminating a cellular film on curved hull areas is costly and slow."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.05, "reason": "No credible friction reduction."},
+        {"name": "non_toxic_antifouling", "coverage": 0.6, "reason": "Biocide-free, easier release than standard foul release if cells stay compliant; stiff septa lines weaken it."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.45, "reason": "Tough skin helps abrasion, but joint fatigue and water ingress are long-term risks."},
+        {"name": "low_consumption_operation", "coverage": 0.9, "reason": "Passive."},
+        {"name": "hull_scale_applicability", "coverage": 0.25, "reason": "Requires manufactured cellular panels or films, not a paint."}
+      ]
+    },
+    {
+      "order_id": "r004-02",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "The concept does not alter near-wall turbulence measurably (dissipation ~0.02% of production), so clean-hull friction equals a standard foul-release coating; the 68% is a fouling-release stress reduction.",
+      "key_assumption_issues": [
+        "Metric is fouling detachment stress, not drag.",
+        "1D series-shear compliance ignores crust bending and peel mechanics; real release depends on the barnacle size relative to the crust bending length.",
+        "Adhesion work of the crust (0.06 J/m2) assumed close to PDMS."
+      ],
+      "killer_risks": [
+        "Crust/gel delamination under impact: gel cohesive strength is very low, so blisters and tears appear after fender contact.",
+        "Once the crust is cut, the exposed gel is destroyed by cleaning and flow.",
+        "Thick (~2.8 mm) multi-layer silicone build costs several times a standard foul-release system.",
+        "Microfouling slime still forms at low speed."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.05, "reason": "No credible friction reduction."},
+        {"name": "non_toxic_antifouling", "coverage": 0.75, "reason": "Biocide-free with very low release stress; no settlement prevention."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.4, "reason": "Crust fixes abrasion of the gel surface but introduces a weak crust/gel interface."},
+        {"name": "low_consumption_operation", "coverage": 0.85, "reason": "Passive; repairs at dockings."},
+        {"name": "hull_scale_applicability", "coverage": 0.4, "reason": "Sprayable multi-layer system, but thick and costly with tight thickness control."}
+      ]
+    }
+  ]
+}

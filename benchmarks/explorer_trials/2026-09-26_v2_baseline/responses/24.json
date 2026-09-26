@@ -1,0 +1,107 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Shear-lag model of one lamella loaded at its edge by the accumulated fouling drag N0 = tau_f * L_patch = 100*0.05 = 5 N/m. Interlayer stiffness k = G_i/h_i = 1e5/5e-6 = 2e10 N/m3; film stiffness E t = 1e6*2e-5 = 20 N/m; decay length 1/lambda = sqrt(E t / k) = 31.6 um; domain 300 um = 9.5 decay lengths (far-field BC valid). Analytical: u(0) = N0/(E t lambda) = 7.9e-6 m, peak interlayer shear tau_i = k u(0) = N0 lambda = 1.58e5 Pa. Fracture criterion (steady-state lap-shear energy release rate) G = N0^2/(2 E t) = 25/40 = 0.63 J/m2 > Gc = 0.5 J/m2 -> the fouled lamella sheds. Critical force for shedding N_c = sqrt(2 E t Gc) = 4.5 N/m. The window is narrow: a CLEAN lamella at service speed carries 50 Pa over the same segment length -> N = 2.5 N/m, G = 0.16 J/m2 (safe), but at 20 kn (tau ~85 Pa) or with segments longer than ~9 cm, clean lamellae also shed (G scales with (tau L)^2). Segmentation lines (perforations) every few cm are therefore mandatory, and the threshold is sensitive to speed by a factor 4 per doubling of shear. Material consumption: each shedding releases ~20 um of silicone = ~20 g/m2; a 150 um laminate gives ~7 sheddings. Released flakes are silicone microplastic (not toxic in the biocide sense, but a release into the sea). The flow drag of the clean surface equals a smooth FR coating, so no drag gain can be computed against a clean baseline: baseline_parameters left empty (gain n/a). Metric: peak interlayer shear stress at the lamella edge, informational. Dimensionless: lambda*L_domain = 9.5; G/Gc = 1.25 (fouled), 0.31 (clean).",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "lamella_thickness",
+   "value": 2e-05
+  },
+  {
+   "name": "lamella_modulus",
+   "value": 1000000.0
+  },
+  {
+   "name": "interlayer_toughness",
+   "value": 0.5
+  },
+  {
+   "name": "fouling_shear_load",
+   "value": 100.0
+  },
+  {
+   "name": "interlayer_shear_modulus",
+   "value": 100000.0
+  },
+  {
+   "name": "interlayer_thickness",
+   "value": 5e-06
+  },
+  {
+   "name": "fouled_patch_length",
+   "value": 0.05
+  },
+  {
+   "name": "shear_lag_domain_length",
+   "value": 0.0003
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "shear_lag_parameter_lambda_L",
+   "value": 9.5
+  },
+  {
+   "name": "energy_release_ratio_fouled",
+   "value": 1.25
+  },
+  {
+   "name": "energy_release_ratio_clean",
+   "value": 0.31
+  }
+ ],
+ "simulation_coefficient": 0.0,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fracture Mechanics",
+  "independent_var": {
+   "label": "Normalised distance from lamella edge x/L",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Lamella displacement",
+   "unit": "m"
+  },
+  "primary_metric": {
+   "label": "Peak interlayer shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Peak interlayer shear stress"
+  },
+  "performance_gain": {
+   "label": "Fouling shedding stress (no baseline)"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Fouling-triggered shedding stress",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Peak interlayer shear stress",
+  "reference_metric": "Analytical Peak interlayer shear stress",
+  "lower_is_better": false,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds",
+   "clean-surface energy release rate < interlayer toughness at max service speed"
+  ],
+  "design_variables": [
+   "lamella_thickness",
+   "lamella_modulus",
+   "interlayer_toughness",
+   "interlayer_shear_modulus",
+   "interlayer_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "value_at",
+  "location": "0",
+  "scale": "interlayer_shear_modulus/interlayer_thickness",
+  "unit": "Pa",
+  "label": "Peak interlayer shear stress"
+ },
+ "baseline_parameters": [],
+ "baseline_description": "none (no sensible conventional baseline for a shedding stress; drag equals clean FR)"
+}

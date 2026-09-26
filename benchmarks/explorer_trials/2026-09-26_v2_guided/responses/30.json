@@ -1,0 +1,58 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: tensioned membrane on an elastic (Winkler) foundation spanning one lattice cell between rigid septa, T w'' - k w = -p, normalized by cell size L; lambda^2 = k L^2/T = 5e7*4e-6/50 = 4. Analytical: w(x) = (p/k)[1 - cosh(lambda(x-1/2))/cosh(lambda/2)], mean deflection = (p/k)(1 - tanh(lambda/2)/(lambda/2)) = 0.238 p/k = 2.1e-7 m for p = 45 Pa; mean compliance C = 4.8e-9 m/Pa. Fouling release via Kendall: sigma_c = sqrt(2 w_a/C) = sqrt(0.16/4.8e-9) = 5.8 kPa. Baseline: standard silicone foul-release layer (G = 0.33 MPa, t = 0.3 mm -> k = G/t = 1.1e9 Pa/m) without lattice, represented by a very large cell (cell_size = 0.05 m, so the clamping edges do not matter: mean deflection 0.99 p/k), silicone surface w_a = 0.05: C = 9.0e-10, sigma_c = 10.5 kPa -> expected ~45% lower release stress. CAVEATS: (1) the mean-deflection compliance mixes very compliant cell centres with rigid septa lines; barnacles (5-15 mm) span several cells and the septa lines carry stress concentrations, so the real release benefit is smaller; (2) the 'foundation stiffness' of gel-filled cells is taken as G_gel/h and ignores gel incompressibility (a confined, incompressible gel is much stiffer in the normal direction unless cells are vented/foamed) - this is the largest uncertainty; (3) no drag quantity is computed; cell natural frequency f = (1/2L) sqrt(T/m') with m' ~ 1 kg/m2 including added mass -> ~1.8 kHz, mistuned from the ~300 Hz burst band, so drag effect ~0. Stability: membrane dimple depth 0.2 um under p' is hydraulically smooth (k+ ~ 0.03); static divergence unlikely with T = 50 N/m. Durability: tough skin is an improvement; septa-membrane bond fatigue and water ingress through cuts are risks. Dimensionless: lambda^2 = 4, dimple k+ = 0.03, f_cell/f_burst ~ 6.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "cell_size", "value": 0.002},
+    {"name": "membrane_thickness", "value": 0.0003},
+    {"name": "membrane_tension", "value": 50.0},
+    {"name": "foundation_stiffness", "value": 50000000.0},
+    {"name": "surface_load", "value": 45.0},
+    {"name": "adhesion_work_surface", "value": 0.08}
+  ],
+  "dimensionless_numbers": [
+    {"name": "MembraneFoundationParameter_lambda_squared", "value": 4.0},
+    {"name": "DimpleDepthWallUnits_k_plus", "value": 0.03},
+    {"name": "CellToBurstFrequencyRatio", "value": 6.0}
+  ],
+  "simulation_coefficient": 4.8e-09,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics / Fouling Release",
+    "independent_var": {"label": "Normalized position across a lattice cell", "unit": "-"},
+    "dependent_var": {"label": "Membrane deflection", "unit": "m"},
+    "primary_metric": {"label": "Critical fouling detachment stress (design)"},
+    "reference_metric": {"label": "Critical fouling detachment stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of fouling detachment stress vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Fouling detachment stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouling detachment stress (design)",
+    "reference_metric": "Critical fouling detachment stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 10.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "dimple depth < 5 um (hydraulically smooth)"
+    ],
+    "design_variables": ["cell_size", "membrane_thickness", "membrane_tension", "foundation_stiffness"]
+  },
+  "metric": {
+    "kind": "mean",
+    "scale": "1/surface_load",
+    "unit": "Pa",
+    "label": "Critical fouling detachment stress",
+    "transform": "sqrt(2*adhesion_work_surface/m)"
+  },
+  "baseline_parameters": [
+    {"name": "foundation_stiffness", "value": 1100000000.0},
+    {"name": "cell_size", "value": 0.05},
+    {"name": "adhesion_work_surface", "value": 0.05}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating, 0.3 mm, E ~ 1 MPa, no lattice"
+}

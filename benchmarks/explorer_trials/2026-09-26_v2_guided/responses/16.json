@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2v_dx2 = defect_length**2 * tie_layer_shear_modulus / (topcoat_modulus * topcoat_thickness * tie_layer_thickness) * v",
+  "boundary_conditions": [
+    "dv_dx(0) = -hull_strain * defect_length",
+    "v(1) = 0"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["v"],
+  "parameters": [
+    {"name": "defect_length", "value": 0.0001, "min_bound": 2e-05, "max_bound": 0.5, "justification": "Length of the modelled zone next to a free coating edge (cut, damage or end of a coating patch), normalized to [0,1]; the peak interfacial stress only depends on the transfer length 1/beta (~9 um for the design, ~1.4 um for a standard tie-coat) as long as the zone is several transfer lengths long, so 0.1 mm keeps the problem well resolved for the solvers without changing the peak."}
+  ]
+}

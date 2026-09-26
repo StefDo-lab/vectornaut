@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2w_dx2 = (gel_youngs_modulus / gel_thickness) * half_span**2 / (crust_shear_modulus * crust_thickness) * w - half_span**2 / (crust_shear_modulus * crust_thickness) * load_pressure * exp(-pi * (x * half_span / load_width)**2)",
+  "boundary_conditions": [
+    "dw_dx(0) = 0",
+    "w(1) = 0"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["w"],
+  "parameters": [
+    {"name": "half_span", "value": 0.015, "min_bound": 0.005, "max_bound": 0.1, "justification": "Half-width of the modelled strip from the load centre (symmetry at x=0) to a far edge at ~3 spreading lengths, where deflection has decayed; kept small so the 0.3 mm load is resolved."}
+  ]
+}

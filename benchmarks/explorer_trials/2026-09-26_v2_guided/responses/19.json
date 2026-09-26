@@ -1,0 +1,50 @@
+{
+  "reviews": [
+    {
+      "order_id": "r002-02",
+      "plausible_gain_pct": 0.3,
+      "plausible_gain_reasoning": "The 48.5% is a fouling-detachment-stress reduction, not a friction change; clean-hull compliant-wall drag reduction at ship Reynolds numbers is unproven and the streamwise ribs even stiffen the wall in the streamwise direction, so a friction gain of ~0-0.5% is the realistic range.",
+      "key_assumption_issues": [
+        "Metric is fouling detachment stress while the request's primary benefit is frictional drag.",
+        "The claimed anisotropy (streamwise compliant, spanwise stiff) is contradicted by the model itself: streamwise ribs clamp streamwise shear displacement too.",
+        "Ribs are modelled as full height and rigid, while the concept has 60% height ribs; compliance and gain are therefore uncertain by a factor ~1.5-2.",
+        "Shear compliance used as proxy for normal pull-off compliance."
+      ],
+      "killer_risks": [
+        "Soft 0.1 MPa top still gouged by fenders; ribs only limit crack length, not damage initiation.",
+        "Rib edges telegraph through the soft top under point loads and create roughness that adds drag.",
+        "2 mm soft build plus rib structure costs several times a standard foul-release system.",
+        "Slime (diatom) fouling at low speeds not addressed."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.1, "reason": "No credible friction reduction versus a clean foul-release coating."},
+        {"name": "non_toxic_antifouling", "coverage": 0.65, "reason": "Biocide-free foul release with lower release stress than standard; no settlement prevention."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.5, "reason": "Rib keying improves tear arrest and anchoring, but the soft top remains vulnerable."},
+        {"name": "low_consumption_operation", "coverage": 0.85, "reason": "Passive; repairs at dockings."},
+        {"name": "hull_scale_applicability", "coverage": 0.35, "reason": "Needs a two-step rib + soft layer build or laminated films; costly on 1e4 m2."}
+      ]
+    },
+    {
+      "order_id": "r002-03",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "The concept does not act on the flow at all; its friction benefit versus a clean foul-release coating is zero, and the 84% interfacial stress reduction concerns stresses that are already ~100x below adhesion strength.",
+      "key_assumption_issues": [
+        "Metric (peak shear-lag stress from hull strain) addresses a failure mode that does not govern foul-release service life.",
+        "Baseline tie-coat stiffness (20 MPa, 0.1 mm) chosen by the auditor; real tie-coats vary widely, so the 84% depends on that choice.",
+        "Shear-lag ignores peel stresses, which dominate real edge debonding."
+      ],
+      "killer_risks": [
+        "No drag benefit at all, the request's main goal.",
+        "Real delamination is driven by impact, abrasion, osmosis and surface preparation, which the gradient barely affects.",
+        "A thick graded layer adds material, drying time and QA effort in the dock."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.0, "reason": "Does not change wall shear."},
+        {"name": "non_toxic_antifouling", "coverage": 0.6, "reason": "Inherits biocide-free foul release from a standard silicone top, nothing added."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.5, "reason": "Marginal improvement of edge stresses; main failure modes untouched."},
+        {"name": "low_consumption_operation", "coverage": 0.9, "reason": "Passive, no consumption."},
+        {"name": "hull_scale_applicability", "coverage": 0.6, "reason": "Sprayable with a dosing plant; moderate extra cost."}
+      ]
+    }
+  ]
+}

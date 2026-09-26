@@ -1,0 +1,1329 @@
+{
+ "function_analysis": "The coating must (1) lower skin-friction drag of a ship hull in turbulent flow at service speed relative to today's best clean coatings, (2) keep the hull free of biofouling (slime, weed, barnacles) because fouling raises drag far more than any texture lowers it, (3) do so without releasing biocides or other harmful substances, and (4) keep adhesion, geometry and function for several years in seawater (abrasion, UV, hydrolysis, hydrostatic pressure, cleaning, impacts). It must also be applicable to large steel areas at acceptable cost and energy.",
+ "requirements": [
+  {
+   "name": "low_friction_drag",
+   "criterion": "Measurably lowers hull skin friction (wall shear) at service speed versus a clean state-of-the-art foul-release coating."
+  },
+  {
+   "name": "non_toxic_fouling_control",
+   "criterion": "Keeps fouling off or releasable without biocides and without releasing oils, microplastics or electrochemically generated oxidants in relevant amounts."
+  },
+  {
+   "name": "multi_year_seawater_durability",
+   "criterion": "Keeps adhesion, structure and function for at least 3-5 years in seawater, including cleaning and impacts."
+  },
+  {
+   "name": "low_resource_consumption",
+   "criterion": "Needs no continuous supply of consumables and only energy that is small against the propulsion saving."
+  },
+  {
+   "name": "bionic_inspiration",
+   "criterion": "Derived from a biological model whose principle is actually transferred."
+  }
+ ],
+ "mechanism_classes_considered": [
+  "interfacial_slip",
+  "flow_redirection",
+  "trapped_gas_or_liquid",
+  "porous_transport",
+  "graded_stiffness",
+  "radiative_control",
+  "other"
+ ],
+ "analogues_considered": [
+  "shark denticles (riblets)",
+  "penguin plumage air release",
+  "water spider plastron / physical gill",
+  "Salvinia air retention",
+  "rice leaf anisotropic wetting",
+  "wood xylem anisotropic permeability",
+  "dolphin skin compliance",
+  "pilot whale nanoridges with gel",
+  "kelp epidermal shedding",
+  "cicada wing nanopillars",
+  "mussel DOPA adhesion",
+  "swordfish head oil glands",
+  "bioluminescent photophore light guides",
+  "ship cathodic protection (technology)",
+  "active spanwise wall oscillation (technology)",
+  "wear-polished river pebbles (geology)"
+ ],
+ "relevant_governing_quantities": [
+  "wall_shear",
+  "stress"
+ ],
+ "candidates": [
+  {
+   "order_id": "r001-01",
+   "title": "Foul-release silicone riblets with flexing fouling-shedding crests",
+   "summary": "Streamwise micro-riblets moulded directly into a soft PDMS foul-release topcoat, with thin crests (tip radius <3 um) that flex under wall shear. The riblets give the known viscous-regime drag reduction; the flexing, low-modulus crests shed early slime so the riblet geometry is not buried by biofilm, which is what kills conventional riblet films at sea.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "flow_redirection"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean smooth FR hull",
+    "formula": "s+ = s*u_tau/nu = 80e-6*0.221/1.19e-6 = 15 (optimum); peak lab DR ~7% corresponds to Delta U+ ~1; at ship Re U+_b = sqrt(2/Cf) = 35, DR = 2*DeltaU+/U+ ~ 5.7%; u_tau varies +-20% along hull and with speed, and slime rounds tips -> area/time averaged ~4%",
+    "value": 4.0,
+    "unit": "%"
+   },
+   "main_risk": "Biofilm and calcareous micro-fouling fill the 40 um grooves within months in warm waters, turning the riblets into roughness (drag increase instead of reduction).",
+   "novelty_vs_known": "Closest: 3M/ Lufthansa AeroSHARK riblet films and Sharklet micro-topographies. New: riblets are the foul-release topcoat itself (no adhesive film) and use crest compliance for biofilm shedding, rather than rigid riblets on a biocide paint.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Shark placoid denticles (Galapagos/ shortfin mako) with flexible scale-tip bristling",
+   "domain": "Fluid Dynamics",
+   "physical_mechanism": "Riblets impede spanwise motion of near-wall streaks: the spanwise protrusion height is smaller than the streamwise one, shifting the virtual origin of turbulence away from the wall (Delta U+ ~ mu0*(h_par+ - h_perp+)). Modelled as an effective streamwise slip length b_eff = h_par - h_perp at the wall of a viscous sublayer Couette layer.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "riblet_spacing",
+     "value": 8e-05,
+     "min_bound": 4e-05,
+     "max_bound": 0.00015,
+     "justification": "s+~15 at service speed (viscous length 5.4 um)"
+    },
+    {
+     "name": "riblet_height",
+     "value": 4e-05,
+     "min_bound": 1.5e-05,
+     "max_bound": 8e-05,
+     "justification": "h/s ~0.5 blade/trapezoid optimum"
+    },
+    {
+     "name": "effective_protrusion_difference",
+     "value": 4.5e-06,
+     "min_bound": 1e-06,
+     "max_bound": 1e-05,
+     "justification": "h_par - h_perp ~0.06 s for trapezoidal riblets (Luchini)"
+    },
+    {
+     "name": "crest_elastic_modulus",
+     "value": 1000000.0,
+     "min_bound": 100000.0,
+     "max_bound": 10000000.0,
+     "justification": "PDMS foul-release modulus; soft enough to flex under 50 Pa at thin tips"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-02",
+   "title": "Penguin-plumage micro-ribbed bottom coating that stabilises an injected air layer",
+   "summary": "A hydrophobic silicone coating with streamwise micro-ribs (~0.5 mm pitch) on the flat bottom of the hull that pins an injected air layer and suppresses its break-up into bubbles, so air-layer drag reduction is reached at a lower air flux. Inspired by emperor penguins releasing air from plumage to reduce friction during ascent.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "100_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "total skin-friction reduction of hull vs clean FR hull",
+    "formula": "flat-bottom share of wetted area ~0.35 (tanker/bulker); local friction reduction under a stable air layer ~0.6; fraction of bottom actually covered at practical air flux ~0.5 -> 0.35*0.6*0.5 = 10.5%; compressor power (~2-3% of propulsion) not included",
+    "value": 10.0,
+    "unit": "%"
+   },
+   "main_risk": "Air layer is swept off by roll, pitch, bilge vortices and hull curvature; required air flux and compressor energy eat most of the gain on anything but flat-bottomed, slow ships.",
+   "novelty_vs_known": "Closest: air lubrication systems (Mitsubishi MALS, Silverstream) on a normal paint, and Salvinia-type plastrons. New: a textured, hydrophobic foul-release coating as the air-layer stabiliser (lower critical air flux), not a passive plastron that must hold air by itself.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Emperor penguin feather air release; Salvinia hairs for pinning",
+   "domain": "Fluid Dynamics",
+   "physical_mechanism": "A continuous gas film of viscosity mu_a << mu_w between wall and water: two-layer Couette flow gives an effective slip length b = h_a*(mu_w/mu_a - 1). Micro-ribs pin the three-phase contact line and suppress spanwise break-up, raising the coverage fraction.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "air_layer_thickness",
+     "value": 0.0015,
+     "min_bound": 0.0003,
+     "max_bound": 0.006,
+     "justification": "mm-scale air layers observed in ALDR experiments (Elbing et al.)"
+    },
+    {
+     "name": "air_dynamic_viscosity",
+     "value": 1.8e-05,
+     "min_bound": 1.7e-05,
+     "max_bound": 1.9e-05,
+     "justification": "air at 15 C"
+    },
+    {
+     "name": "water_dynamic_viscosity",
+     "value": 0.00122,
+     "min_bound": 0.0009,
+     "max_bound": 0.0016,
+     "justification": "seawater at 15 C"
+    },
+    {
+     "name": "rib_pitch",
+     "value": 0.0005,
+     "min_bound": 0.0001,
+     "max_bound": 0.002,
+     "justification": "pins gas/water interface; below capillary length 2.7 mm"
+    },
+    {
+     "name": "rib_height",
+     "value": 0.0002,
+     "min_bound": 5e-05,
+     "max_bound": 0.001,
+     "justification": "enough to hold meniscus without large roughness when wetted"
+    },
+    {
+     "name": "covered_bottom_fraction",
+     "value": 0.5,
+     "min_bound": 0.1,
+     "max_bound": 0.9,
+     "justification": "fraction of flat bottom under continuous air at practical air flux"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-03",
+   "title": "Diving-bell-spider plastron fed through a gas-permeable membrane backing",
+   "summary": "A superhydrophobic micro-pillar layer sits on a gas-permeable microporous PTFE membrane that is connected to a low-pressure air manifold inside the hull. Like the plastron of Argyroneta, the gas is continuously topped up, so the plastron survives hydrostatic pressure and gas dissolution, giving a durable shear-free wall fraction.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "posts pitch L=10 um, solid fraction phi_s=0.1: b/L = 0.325/sqrt(phi_s) - 0.44 = 0.59 -> b = 6 um, b+ = 1.1; isotropic slip, spanwise slip penalty ~0.4 -> Delta U+ ~0.7; DR = 2*0.7/35 = 4%; plus partial loss near bow/bilge -> keep ~4% on covered area, hull average ~3.5%; I state 4% as the upper estimate",
+    "value": 4.0,
+    "unit": "%"
+   },
+   "main_risk": "The microporous membrane and pillars foul and wet out (Cassie-Wenzel transition) under turbulent pressure fluctuations and surfactant/biofilm contamination within months.",
+   "novelty_vs_known": "Closest: passive Salvinia/ lotus plastrons (die after hours to days at sea). New: active, pressure-regulated gas supply through the substrate (physical-gill principle) replacing passive retention.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Water spider Argyroneta aquatica diving bell and insect plastron respiration",
+   "domain": "Fluid Dynamics",
+   "physical_mechanism": "A gas-water interface over most of the wall acts as a shear-free boundary; the effective Navier slip length b of a post array reduces the viscous-sublayer shear. Supply pressure balances hydrostatic plus Laplace pressure so the menisci stay pinned.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "post_pitch",
+     "value": 1e-05,
+     "min_bound": 3e-06,
+     "max_bound": 3e-05,
+     "justification": "b+ ~1 needs pitch ~10 um; Laplace pressure 2*gamma/L ~ 14 kPa holds ~1.4 m water head"
+    },
+    {
+     "name": "solid_fraction",
+     "value": 0.1,
+     "min_bound": 0.03,
+     "max_bound": 0.3,
+     "justification": "lower phi_s increases slip but weakens meniscus"
+    },
+    {
+     "name": "effective_slip_length",
+     "value": 6e-06,
+     "min_bound": 1e-06,
+     "max_bound": 1.5e-05,
+     "justification": "Ybert et al. scaling for posts"
+    },
+    {
+     "name": "gas_supply_overpressure",
+     "value": 20000.0,
+     "min_bound": 0.0,
+     "max_bound": 100000.0,
+     "justification": "compensates hydrostatic head at draft up to 10 m"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-04",
+   "title": "Cathodic-protection-coupled electrolytic plastron regeneration",
+   "summary": "A superhydrophobic micro-ridged coating contains a buried conductive mesh that acts as the cathode of the ship's impressed-current cathodic protection; a small extra current generates hydrogen microbubbles at pore bottoms that re-inflate the plastron whenever it collapses. Gas generation is local and on demand, so no air ducts are needed.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "technology"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "gas need: plastron 5 um thick = 5e-6 m3/m2; H2 at j=0.5 A/m2: j/(2F)*V_m = 0.5/192970*0.0245 = 6.3e-8 m3/(s m2) -> refill in 80 s; power 0.5 A/m2*3 V = 1.5 W/m2 (15 kW for 1e4 m2, ~0.15% of propulsion); slip b+~1 over ~70% of wetted area -> DR ~ 0.7*2*0.7/35 ~ 3%",
+    "value": 3.0,
+    "unit": "%"
+   },
+   "main_risk": "Anode-side chlorine/ hypochlorite and pH shifts make it an electrochemical biocide in practice (conflicting with the non-toxic requirement), and cathodic calcareous deposits clog the pores.",
+   "novelty_vs_known": "Closest: electrolytic bubble generation on superhydrophobic surfaces in lab (Lee & Kim 2011) and ICCP. New: coupling with existing cathodic protection and use of the plastron-restoring current only on demand.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Ship impressed-current cathodic protection plus insect plastron",
+   "domain": "Electrochemistry / Fluid Dynamics",
+   "physical_mechanism": "Gas-filled grooves act as shear-free wall fraction; regenerated by Faradaic H2 evolution. Steady model: Navier slip b at wall of a viscous-sublayer Couette flow; gas balance as source term.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "ridge_pitch",
+     "value": 2e-05,
+     "min_bound": 5e-06,
+     "max_bound": 5e-05,
+     "justification": "gives b ~5 um at 90% gas fraction"
+    },
+    {
+     "name": "gas_fraction",
+     "value": 0.85,
+     "min_bound": 0.5,
+     "max_bound": 0.95,
+     "justification": "shear-free area fraction"
+    },
+    {
+     "name": "current_density",
+     "value": 0.5,
+     "min_bound": 0.05,
+     "max_bound": 5.0,
+     "justification": "extra current on top of CP demand"
+    },
+    {
+     "name": "effective_slip_length",
+     "value": 5e-06,
+     "min_bound": 1e-06,
+     "max_bound": 1.2e-05,
+     "justification": "longitudinal/transverse average for ridges"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-05",
+   "title": "Xylem-like anisotropic permeable skin (streamwise-open, spanwise-sealed)",
+   "summary": "A 100-200 um thick foul-release silicone skin with aligned streamwise micro-channels (~40 um) beneath a perforated face, permeable only in the flow direction. Anisotropic permeable walls let near-wall streamwise velocity slip while blocking spanwise and wall-normal transpiration, which DNS show can reduce drag like riblets.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "porous_transport"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "Gomez-de-Segura & Garcia-Mayoral 2019: Delta U+ ~ sqrt(Kx+) - sqrt(Kz+) while sqrt(Ky+) < 0.4; with sqrt(Kx+)=1.0, sqrt(Kz+)=0.2 -> Delta U+ ~0.8 -> DR = 2*0.8/35 = 4.6%; roughness of perforations and partial clogging -> ~3.5%",
+    "value": 3.5,
+    "unit": "%"
+   },
+   "main_risk": "The open channels and face perforations fill with biofilm, diatoms and sediment, destroying the anisotropy and adding roughness.",
+   "novelty_vs_known": "Closest: riblets (same virtual-origin mechanism) and isotropic porous walls (increase drag). New: anisotropic permeability as a hull skin, made of foul-release silicone.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Wood xylem vessels / tracheids (highly anisotropic permeability)",
+   "domain": "Fluid Dynamics / Porous Media",
+   "physical_mechanism": "Brinkman layer with streamwise permeability Kx >> Kz, Ky: the streamwise velocity penetrates the layer (effective slip length ~sqrt(Kx)) while spanwise fluctuations are blocked.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "streamwise_permeability",
+     "value": 3e-11,
+     "min_bound": 1e-12,
+     "max_bound": 1e-10,
+     "justification": "sqrt(Kx) ~5.4 um = 1 viscous unit"
+    },
+    {
+     "name": "spanwise_permeability",
+     "value": 1e-12,
+     "min_bound": 1e-14,
+     "max_bound": 1e-11,
+     "justification": "sqrt(Kz+) ~0.2"
+    },
+    {
+     "name": "layer_thickness",
+     "value": 0.00015,
+     "min_bound": 5e-05,
+     "max_bound": 0.0005,
+     "justification": "several channel diameters"
+    },
+    {
+     "name": "channel_diameter",
+     "value": 4e-05,
+     "min_bound": 1e-05,
+     "max_bound": 0.0001,
+     "justification": "Kx ~ phi r^2/8 with phi~0.5"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-06",
+   "title": "Dolphin-skin graded compliant coating tuned to ship speed",
+   "summary": "A 3 mm viscoelastic coating with a soft, damped outer layer (shear-wave speed about half the flow speed) over a stiffer tie layer. Tuned compliance damps near-wall pressure fluctuations and can modestly weaken turbulent bursts.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "graded_stiffness"
+    },
+    {
+     "axis": "length_scale",
+     "value": "mm"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "Kramer/ Choi et al.: compliant coatings give 0-7% in tuned lab conditions; tuning c_t = sqrt(G/rho) ~ U/2 -> G ~ 1025*(3.85)^2 = 15 kPa; off-design speeds and wear -> ~2%",
+    "value": 2.0,
+    "unit": "%"
+   },
+   "main_risk": "Very soft (15 kPa) layers tear, swell and get damaged by fenders and cleaning; off-tuning at other speeds gives no gain or flutter-induced drag increase.",
+   "novelty_vs_known": "Closest: Kramer compliant coatings; new is the grading with a durable FR top skin, but the physics is known and weak.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Dolphin skin (dermal ridges, damped compliant layer)",
+   "domain": "Fluid-Structure Interaction",
+   "physical_mechanism": "Wall compliance absorbs part of the turbulent pressure fluctuation energy; modelled as effective reduction of wall shear via a damped elastic foundation (steady effective coefficient).",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "coating_thickness",
+     "value": 0.003,
+     "min_bound": 0.001,
+     "max_bound": 0.01,
+     "justification": "Kramer-type thickness"
+    },
+    {
+     "name": "outer_shear_modulus",
+     "value": 15000.0,
+     "min_bound": 5000.0,
+     "max_bound": 100000.0,
+     "justification": "c_t ~U/2 tuning"
+    },
+    {
+     "name": "loss_factor",
+     "value": 0.3,
+     "min_bound": 0.05,
+     "max_bound": 1.0,
+     "justification": "damping of viscoelastic silicone gel"
+    },
+    {
+     "name": "tie_layer_modulus",
+     "value": 10000000.0,
+     "min_bound": 1000000.0,
+     "max_bound": 100000000.0,
+     "justification": "stiff base for adhesion"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-07",
+   "title": "Pilot-whale nanoridge skin with zwitterionic hydrogel infill",
+   "summary": "A foul-release coating with sub-micron ridges (~0.3 um) whose valleys are filled with a covalently anchored zwitterionic hydrogel, copying the pilot whale's nanoridged skin with intercristate gel. The tightly bound hydration layer resists protein and larval adhesion and keeps the surface hydraulically smooth for years.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "interfacial_slip"
+    },
+    {
+     "axis": "length_scale",
+     "value": "sub_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "hydration/ hydrogel slip b ~0.2 um -> b+ = 0.2/5.4 = 0.04 -> DR = 2*0.04/35 = 0.2%; main value is keeping the surface smooth, not a clean-state gain",
+    "value": 0.3,
+    "unit": "%"
+   },
+   "main_risk": "Hydrogel abrasion and swelling-deswelling in seawater degrade the thin layer within 1-2 years; macrofoulers settle anyway at low speed/idle.",
+   "novelty_vs_known": "Closest: zwitterionic/ amphiphilic foul-release coatings (Hempel, PPG research). New: sub-micron topographic anchoring of the hydrogel for mechanical protection.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Pilot whale (Globicephala melas) skin nanoridges with intercristate gel",
+   "domain": "Surface Science / Fluid Dynamics",
+   "physical_mechanism": "Hydrated polymer layer with small effective slip at the wall; Navier slip on viscous-sublayer Couette flow.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "ridge_spacing",
+     "value": 3e-07,
+     "min_bound": 1e-07,
+     "max_bound": 1e-06,
+     "justification": "pilot whale ~0.2-1 um"
+    },
+    {
+     "name": "hydrogel_thickness",
+     "value": 1e-06,
+     "min_bound": 2e-07,
+     "max_bound": 1e-05,
+     "justification": "thin enough to stay anchored"
+    },
+    {
+     "name": "effective_slip_length",
+     "value": 2e-07,
+     "min_bound": 1e-08,
+     "max_bound": 1e-06,
+     "justification": "measured slip on hydrogels"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-08",
+   "title": "Kelp-epidermis lamellar self-shedding foul-release coating",
+   "summary": "A laminate of 5-8 thin (~20 um) silicone-hydrogel lamellae separated by weak, engineered interlayers. When fouling makes the local drag force exceed the interlayer peel threshold, the top lamella peels off in flakes with the fouling, exposing a fresh smooth surface, as kelp sheds its epidermis.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "other"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "stress"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "drag reduction vs clean FR hull at the same moment",
+    "formula": "at t=0 the surface is as smooth as clean FR -> 0%; the benefit is keeping the clean state (FR coatings accumulate slime worth +5-15% friction over years), not beating a clean baseline",
+    "value": 0.0,
+    "unit": "%"
+   },
+   "main_risk": "Shed lamellae are silicone microplastic flakes released to the ocean (~20 g/m2 per shedding), and the peel threshold is hard to set between too early (wind/abrasion) and too late.",
+   "novelty_vs_known": "Closest: self-polishing copolymer paints (erosion of the matrix releasing biocides). New: discrete mechanical shedding of lamellae without any biocide, triggered by fouling-induced shear stress.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Brown algae (Ascophyllum, kelp) epidermal shedding; plane-tree bark",
+   "domain": "Fracture Mechanics",
+   "physical_mechanism": "Interfacial fracture: lamella peels when the fouling-induced shear load on a fouled patch produces an energy release rate above the interlayer toughness G_c. Steady model: shear-lag stress in a thin film bonded by a compliant interlayer.",
+   "parameters": [
+    {
+     "name": "lamella_thickness",
+     "value": 2e-05,
+     "min_bound": 5e-06,
+     "max_bound": 5e-05,
+     "justification": "one shed layer"
+    },
+    {
+     "name": "lamella_modulus",
+     "value": 1000000.0,
+     "min_bound": 200000.0,
+     "max_bound": 10000000.0,
+     "justification": "silicone"
+    },
+    {
+     "name": "interlayer_toughness",
+     "value": 0.5,
+     "min_bound": 0.05,
+     "max_bound": 5.0,
+     "justification": "J/m2, weak interface"
+    },
+    {
+     "name": "fouling_shear_load",
+     "value": 100.0,
+     "min_bound": 20.0,
+     "max_bound": 500.0,
+     "justification": "Pa, wall shear on a fouled patch at speed"
+    },
+    {
+     "name": "interlayer_shear_modulus",
+     "value": 100000.0,
+     "min_bound": 10000.0,
+     "max_bound": 1000000.0,
+     "justification": "compliant interlayer"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-09",
+   "title": "Cicada-wing nanopillar skin with liquid-like PDMS brushes",
+   "summary": "A hard silica-siloxane nanopillar layer (~150 nm) mimicking cicada/dragonfly wings, whose tips are grafted with liquid-like PDMS brushes. Nanopillars mechanically rupture bacteria and destabilise early biofilm; the brushes give very low adhesion for diatoms and larvae; the hard pillars give abrasion resistance.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "interfacial_slip"
+    },
+    {
+     "axis": "length_scale",
+     "value": "sub_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "brush slip b ~50 nm -> b+ ~0.01 -> <0.1% ; pillars k+ = 0.15/5.4 = 0.03 -> hydraulically smooth; gain is maintaining smoothness",
+    "value": 0.1,
+    "unit": "%"
+   },
+   "main_risk": "Mechano-bactericidal effect is weak for marine bacteria and irrelevant for barnacle cyprids; dead cells cover the pillars within weeks.",
+   "novelty_vs_known": "Closest: mechano-bactericidal nanopatterns (medical) and SOCAL liquid-like surfaces. New: combination on a marine hull with hard ceramic nanopillars for durability.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Cicada (Psaltoda claripennis) and dragonfly wing nanopillars",
+   "domain": "Surface Science",
+   "physical_mechanism": "Navier slip from a liquid-like brush layer; nanopillars below the viscous scale do not add drag.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "pillar_height",
+     "value": 1.5e-07,
+     "min_bound": 5e-08,
+     "max_bound": 5e-07,
+     "justification": "cicada wing"
+    },
+    {
+     "name": "pillar_pitch",
+     "value": 1.7e-07,
+     "min_bound": 5e-08,
+     "max_bound": 5e-07,
+     "justification": "cicada wing"
+    },
+    {
+     "name": "effective_slip_length",
+     "value": 5e-08,
+     "min_bound": 1e-09,
+     "max_bound": 5e-07,
+     "justification": "liquid-like brushes"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-10",
+   "title": "Rice-leaf anisotropic superhydrophobic streamwise grooves",
+   "summary": "Hierarchical streamwise micro-grooves (20 um pitch) with nanotexture, as on rice leaves, holding air in the grooves. Streamwise-aligned shear-free stripes give much larger longitudinal than transverse slip, which is the favourable arrangement for turbulent drag reduction.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "Philip/ Lauga-Stone: b_par = (L/pi) ln(sec(pi*phi_g/2)) = (20e-6/pi)*ln(1/cos(0.45 pi)) = 11.8 um -> b_par+ = 2.2; b_perp ~ b_par/2 -> b_perp+ = 1.1; Delta U+ ~ b_par+ - 0.6 b_perp+ = 1.5 -> DR = 2*1.5/35 = 8.6%; plastron survival partial -> ~6%",
+    "value": 6.0,
+    "unit": "%"
+   },
+   "main_risk": "Passive plastrons dissolve under hydrostatic pressure and collapse in turbulent flow within hours to days; below ~1 m draft the gas diffuses away.",
+   "novelty_vs_known": "Closest: lotus/ Salvinia superhydrophobic surfaces. New: explicitly anisotropic (streamwise stripes) to maximise b_par/b_perp; still needs gas replenishment to be practical.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Rice leaf (Oryza sativa) anisotropic wetting; butterfly wing",
+   "domain": "Fluid Dynamics",
+   "physical_mechanism": "Alternating no-slip and shear-free stripes; effective anisotropic Navier slip at the wall of the viscous sublayer.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "groove_pitch",
+     "value": 2e-05,
+     "min_bound": 5e-06,
+     "max_bound": 5e-05,
+     "justification": "b+ ~2 needs ~20 um"
+    },
+    {
+     "name": "gas_fraction",
+     "value": 0.9,
+     "min_bound": 0.5,
+     "max_bound": 0.97,
+     "justification": "shear-free share"
+    },
+    {
+     "name": "longitudinal_slip_length",
+     "value": 1.18e-05,
+     "min_bound": 1e-06,
+     "max_bound": 3e-05,
+     "justification": "Philip formula"
+    },
+    {
+     "name": "transverse_slip_length",
+     "value": 5.9e-06,
+     "min_bound": 5e-07,
+     "max_bound": 1.5e-05,
+     "justification": "half longitudinal"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-11",
+   "title": "Sinusoidal riblets emulating spanwise wall oscillation",
+   "summary": "Riblets whose crests meander sinusoidally in the streamwise direction (wavelength ~1-2 mm, amplitude ~0.1 mm), so the near-wall flow experiences a spatially oscillating spanwise shear similar to active spanwise wall oscillation, but passively. Built in foul-release silicone.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "flow_redirection"
+    },
+    {
+     "axis": "length_scale",
+     "value": "100_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "technology"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "lab: sinusoidal riblets up to ~1.5x straight-riblet DR (Grueneberger et al.) -> Delta U+ ~1.3 at best -> DR = 2*1.3/35 = 7.4%; off-design speeds, fouling -> ~5%",
+    "value": 5.0,
+    "unit": "%"
+   },
+   "main_risk": "Same as riblets: fouling fills the grooves; the extra benefit of the waviness is small and speed-dependent.",
+   "novelty_vs_known": "Closest: straight riblets and active spanwise wall oscillation (Jung 1992). New: passive stationary waves on an FR hull coating.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Spanwise wall oscillation / streamwise travelling waves (active flow control)",
+   "domain": "Fluid Dynamics",
+   "physical_mechanism": "Streamwise-periodic spanwise shear generates a Stokes layer that tilts and weakens near-wall streaks; modelled as effective protrusion-height difference (slip length) in the sublayer.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "riblet_spacing",
+     "value": 8e-05,
+     "min_bound": 4e-05,
+     "max_bound": 0.00015,
+     "justification": "s+~15"
+    },
+    {
+     "name": "wave_length",
+     "value": 0.0015,
+     "min_bound": 0.0005,
+     "max_bound": 0.005,
+     "justification": "lambda_x+ ~ 300 (optimum for wall oscillation ~1000-1250 not reachable passively)"
+    },
+    {
+     "name": "wave_amplitude",
+     "value": 0.0001,
+     "min_bound": 2e-05,
+     "max_bound": 0.0003,
+     "justification": "crest excursion"
+    },
+    {
+     "name": "effective_protrusion_difference",
+     "value": 5.5e-06,
+     "min_bound": 1e-06,
+     "max_bound": 1.2e-05,
+     "justification": "slightly above straight riblets"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-12",
+   "title": "Photophore-inspired UV-C light-guide foul-release skin",
+   "summary": "A UV-transparent silicone light-guide layer fed by embedded UV-C LEDs leaks a low, uniform irradiance at the surface, preventing microbial and larval settlement without chemicals, the way photophores guide light through tissue. The surface itself is a smooth foul-release silicone.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "100_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "other"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "drag reduction vs clean FR hull",
+    "formula": "surface stays clean like a new FR coating -> 0% vs clean baseline; power ~5 W/m2 UV-C (10 mW/m2 at surface after losses) ~ 50 kW for 1e4 m2",
+    "value": 0.0,
+    "unit": "%"
+   },
+   "main_risk": "UV-C LEDs age (~10000 h), silicone yellows under UV, and cabling/ LED encapsulation over 1e4 m2 of hull does not last several years under impacts.",
+   "novelty_vs_known": "Closest: Philips/ AkzoNobel UV-C antifouling tiles. New: the light-guide integrated in the foul-release topcoat rather than tiles.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Bioluminescent photophores (light guides in squid/ fish)",
+   "domain": "Optics / Photobiology",
+   "physical_mechanism": "Steady diffusion of UV fluence through the scattering silicone layer: 1D radiative diffusion with source at LED positions and absorption.",
+   "parameters": [
+    {
+     "name": "layer_thickness",
+     "value": 0.0005,
+     "min_bound": 0.0001,
+     "max_bound": 0.002,
+     "justification": "light guide"
+    },
+    {
+     "name": "absorption_coefficient",
+     "value": 50.0,
+     "min_bound": 5.0,
+     "max_bound": 500.0,
+     "justification": "1/m for UV silicone"
+    },
+    {
+     "name": "scattering_coefficient",
+     "value": 200.0,
+     "min_bound": 10.0,
+     "max_bound": 2000.0,
+     "justification": "1/m"
+    },
+    {
+     "name": "surface_irradiance_target",
+     "value": 0.01,
+     "min_bound": 0.001,
+     "max_bound": 0.1,
+     "justification": "W/m2 needed to prevent settlement"
+    },
+    {
+     "name": "led_pitch",
+     "value": 0.05,
+     "min_bound": 0.01,
+     "max_bound": 0.2,
+     "justification": "m between LEDs"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-13",
+   "title": "Graded-modulus foul-release coating on a mussel-DOPA tie layer",
+   "summary": "A three-zone silicone coating whose modulus falls from a stiff, DOPA-catechol-anchored base (strong, multi-year adhesion to steel/primer) to a very soft thin top (~0.2 MPa, low critical fouling release stress). The grading avoids the weak interface of classic FR systems and lowers the speed at which fouling self-cleans.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "graded_stiffness"
+    },
+    {
+     "axis": "length_scale",
+     "value": "100_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "stress"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "drag reduction vs clean FR hull",
+    "formula": "clean-state drag equal to FR -> 0%; fouling critical release stress sigma_c ~ sqrt(E*Wa/t) (Kendall/ Brady): E 1 MPa->0.2 MPa at same Wa, t lowers sigma_c by sqrt(5)=2.2x -> self-cleaning at ~1.5x lower speed",
+    "value": 0.0,
+    "unit": "%"
+   },
+   "main_risk": "Soft top layers are easily damaged mechanically; a gradient does not prevent slime (diatoms) which releases poorly from any silicone.",
+   "novelty_vs_known": "Closest: commercial silicone FR (Intersleek) with tie coat; mussel-inspired primers. New: continuous modulus grading plus catechol anchoring for multi-year adhesion.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Mussel byssus (DOPA adhesion, graded stiffness from stiff to soft)",
+   "domain": "Structural Mechanics / Adhesion",
+   "physical_mechanism": "Shear-lag / fracture: stress transfer from fouling through a graded elastic layer; release when the interfacial stress exceeds the adhesion limit.",
+   "parameters": [
+    {
+     "name": "top_modulus",
+     "value": 200000.0,
+     "min_bound": 50000.0,
+     "max_bound": 1000000.0,
+     "justification": "soft FR top"
+    },
+    {
+     "name": "base_modulus",
+     "value": 20000000.0,
+     "min_bound": 5000000.0,
+     "max_bound": 100000000.0,
+     "justification": "stiff anchored base"
+    },
+    {
+     "name": "coating_thickness",
+     "value": 0.0004,
+     "min_bound": 0.0001,
+     "max_bound": 0.001,
+     "justification": "typical FR build"
+    },
+    {
+     "name": "work_of_adhesion",
+     "value": 0.05,
+     "min_bound": 0.01,
+     "max_bound": 0.2,
+     "justification": "J/m2 barnacle cement on silicone"
+    },
+    {
+     "name": "tie_layer_adhesion_strength",
+     "value": 5000000.0,
+     "min_bound": 1000000.0,
+     "max_bound": 20000000.0,
+     "justification": "Pa, DOPA primer to steel"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-14",
+   "title": "Swordfish-rostrum pore-fed lubricant surface",
+   "summary": "A micro-porous coating fed from a thin reservoir layer with a biodegradable low-viscosity ester oil, mimicking the oil glands that lubricate the swordfish head. Pores re-infuse the surface texture continuously so the lubricant film survives turbulent shear drainage.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "viscosity ratio N = mu_w/mu_o = 1.2/3 = 0.4 -> infused grooves give b ~0.1-0.3 L; L=20 um -> b ~4 um, b+ ~0.7 streamwise -> Delta U+ ~0.5 -> DR ~ 2*0.5/35 = 3%; oil consumption ~1 um/day film loss -> 1e-6 m3/m2/day = 10 L/day for 1e4 m2 (~3.6 m3/yr)",
+    "value": 3.0,
+    "unit": "%"
+   },
+   "main_risk": "Continuous oil release to the sea (m3 per year per ship) conflicts with the non-toxic/ no-release requirement, and the reservoir cannot hold years of supply.",
+   "novelty_vs_known": "Closest: SLIPS (Nepenthes) and vascularised SLIPS. New: low-viscosity biodegradable oil, pore-fed, but consumption remains the killer.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Swordfish (Xiphias gladius) oil-producing gland and rostrum pores",
+   "domain": "Fluid Dynamics / Tribology",
+   "physical_mechanism": "Liquid-infused texture: water flows over a lubricant film of lower viscosity -> effective slip length; lubricant replenished by capillary/ pressure-driven flow through pores.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "texture_pitch",
+     "value": 2e-05,
+     "min_bound": 5e-06,
+     "max_bound": 5e-05,
+     "justification": "infused grooves"
+    },
+    {
+     "name": "lubricant_viscosity",
+     "value": 0.003,
+     "min_bound": 0.0005,
+     "max_bound": 0.02,
+     "justification": "Pa s, ester oil"
+    },
+    {
+     "name": "effective_slip_length",
+     "value": 4e-06,
+     "min_bound": 5e-07,
+     "max_bound": 1e-05,
+     "justification": "Schoenecker/ Hultmark"
+    },
+    {
+     "name": "reservoir_thickness",
+     "value": 0.001,
+     "min_bound": 0.0002,
+     "max_bound": 0.005,
+     "justification": "supply volume per m2"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-15",
+   "title": "River-pebble polished glass-ceramic topcoat with liquid-like brushes",
+   "summary": "A hard, ultra-smooth sol-gel silica-siloxane (glass-ceramic) topcoat, mimicking the self-polished smoothness of river-worn pebbles and obsidian, grafted with liquid-like PDMS brushes. Roughness stays below 1 um for years because the coating is 10-100x harder than silicone foul-release, and the brush layer gives low fouling adhesion.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "interfacial_slip"
+    },
+    {
+     "axis": "length_scale",
+     "value": "nm"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "geology"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "wall_shear"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "skin-friction reduction vs clean FR hull",
+    "formula": "both hydraulically smooth (k+ <1); slip b ~20-50 nm -> b+ <0.01 -> <0.1%; benefit vs aged FR (roughness from damage, 50-100 um) is durability, not clean-state gain",
+    "value": 0.2,
+    "unit": "%"
+   },
+   "main_risk": "Hard glassy coatings crack on steel under hull flexing and thermal cycling; the nm brush layer wears off on first cleaning or fender contact.",
+   "novelty_vs_known": "Closest: hard foul-release (e.g. Ecospeed glass-flake), SOCAL liquid-like surfaces. New: combination of hardness for durability with liquid-like brush for low adhesion.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Clean, hydraulically smooth silicone foul-release hull coating (state of the art, e.g. PDMS/fluoropolymer FR), same ship at 15 kn, u_tau~0.22 m/s, viscous length ~5.4 um",
+   "inspiration_source": "Wear-polished river pebbles and obsidian (geology)",
+   "domain": "Surface Science",
+   "physical_mechanism": "Nanometric liquid-like brush gives a slight Navier slip; hardness keeps the wall hydraulically smooth.",
+   "parameters": [
+    {
+     "name": "free_stream_velocity",
+     "value": 7.7,
+     "min_bound": 3.0,
+     "max_bound": 12.0,
+     "justification": "15 kn service speed of a merchant ship; bounds 6-23 kn"
+    },
+    {
+     "name": "kinematic_viscosity",
+     "value": 1.19e-06,
+     "min_bound": 9e-07,
+     "max_bound": 1.6e-06,
+     "justification": "Seawater at 15 C; bounds 5-30 C"
+    },
+    {
+     "name": "baseline_wall_shear_stress",
+     "value": 50.0,
+     "min_bound": 10.0,
+     "max_bound": 120.0,
+     "justification": "tau_w = 0.5*rho*U^2*Cf with Cf~0.0016 on a clean FR hull"
+    },
+    {
+     "name": "brush_thickness",
+     "value": 5e-09,
+     "min_bound": 1e-09,
+     "max_bound": 2e-08,
+     "justification": "PDMS brush"
+    },
+    {
+     "name": "effective_slip_length",
+     "value": 3e-08,
+     "min_bound": 1e-09,
+     "max_bound": 2e-07,
+     "justification": "liquid-like surfaces"
+    },
+    {
+     "name": "topcoat_roughness",
+     "value": 5e-07,
+     "min_bound": 1e-07,
+     "max_bound": 5e-06,
+     "justification": "Ra after years"
+    }
+   ]
+  }
+ ]
+}

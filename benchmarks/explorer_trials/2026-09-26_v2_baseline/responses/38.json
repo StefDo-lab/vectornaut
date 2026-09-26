@@ -1,0 +1,105 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Model: through-thickness shear of a layer with exponentially graded shear modulus G(z) = (E_base/3) exp(-a z), a = ln(E_base/E_top) = ln(100) = 4.61, z = 0 at the anchored base, z = 1 at the surface; (G u')' = 0 gives u'' = a u'. Surface compliance c = u(1)/tau = 3 t (1 - e^-a)/(a E_top) = 3*4e-4*0.99/(4.61*2e5) = 1.29e-9 m/Pa. Kendall/ Brady thin-layer release criterion for a rigid fouler larger than the coating thickness: sigma_c = sqrt(2 Wa / c) -> sqrt(2*0.05/1.29e-9) = 8.8 kPa. Baseline: uniform silicone FR with E = 1 MPa, same thickness: c = 3 t/E = 1.2e-9 m/Pa -> sigma_c = 9.1 kPa. Expected gain (lower release stress) only ~3.5%: an exponential grading concentrates the compliance in the soft top ~20% of the thickness, so a 100x softer top buys almost nothing for large foulers; the benefit of a soft top applies mainly to foulers smaller than the soft-skin thickness (diatoms, early barnacle bases), which a 1D model does not resolve. To really lower sigma_c, the soft zone must be thick (e.g. linear or step grading with >50% soft volume). Note: measured barnacle release on silicone FR is 0.02-0.1 MPa because of cement penetration and interlock; the absolute sigma_c here is an idealisation, the ratio is what matters. Structural: DOPA-anchored base with 5 MPa adhesion strength is far above service loads (tau_w 50 Pa, fouling drag kPa), supporting multi-year adhesion; soft top (E = 0.2 MPa) has tear strength ~0.5-1 kN/m, vulnerable to abrasion. Dimensionless: E_base/E_top = 100, a = 4.61, Wa/(E_top t) = 6e-7.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "top_modulus",
+   "value": 200000.0
+  },
+  {
+   "name": "base_modulus",
+   "value": 20000000.0
+  },
+  {
+   "name": "coating_thickness",
+   "value": 0.0004
+  },
+  {
+   "name": "work_of_adhesion",
+   "value": 0.05
+  },
+  {
+   "name": "tie_layer_adhesion_strength",
+   "value": 5000000.0
+  },
+  {
+   "name": "applied_shear_stress",
+   "value": 1000.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "modulus_ratio",
+   "value": 100.0
+  },
+  {
+   "name": "grading_exponent",
+   "value": 4.61
+  },
+  {
+   "name": "adhesion_elastocapillary_number",
+   "value": 6.25e-07
+  }
+ ],
+ "simulation_coefficient": 1.29e-09,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Structural Mechanics / Adhesion",
+  "independent_var": {
+   "label": "Normalised depth from base z/t",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Shear displacement",
+   "unit": "m"
+  },
+  "primary_metric": {
+   "label": "Critical fouling release stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Critical fouling release stress"
+  },
+  "performance_gain": {
+   "label": "Reduction of fouling release stress vs uniform FR"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Fouling release stress reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Critical fouling release stress",
+  "reference_metric": "Analytical Critical fouling release stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "top_modulus",
+   "base_modulus",
+   "coating_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "value_at",
+  "location": "1",
+  "unit": "Pa",
+  "label": "Critical fouling release stress",
+  "transform": "sqrt(2*work_of_adhesion*applied_shear_stress/m)"
+ },
+ "baseline_parameters": [
+  {
+   "name": "top_modulus",
+   "value": 1000000.0
+  },
+  {
+   "name": "base_modulus",
+   "value": 1000000.0
+  }
+ ],
+ "baseline_description": "Uniform silicone foul-release coating, E = 1 MPa, same thickness"
+}

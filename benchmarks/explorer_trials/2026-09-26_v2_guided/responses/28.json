@@ -1,0 +1,97 @@
+{
+  "function_analysis": "Unchanged: lower the mean wall shear at cruising speed versus a clean foul-release coating, biocide-free fouling control, 3-5 year durability (fender/cleaning abrasion is the main killer of soft coatings), no large consumption, hull-scale application. Lessons so far: soft graded layers give strong fouling-release gains but no credible drag gain and are fragile; hard surfaces are durable but release fouling poorly. Architected structures could decouple surface toughness from overall compliance.",
+  "requirements": [
+    {"name": "low_friction_drag", "criterion": "Reduces the mean wall shear stress / frictional resistance at cruising speed versus a clean, standard foul-release hull coating."},
+    {"name": "non_toxic_antifouling", "criterion": "Prevents fouling settlement or makes it release easily without releasing biocides, heavy metals or other toxic substances into the sea."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps its function and adhesion for at least 3-5 years in seawater (hydrolysis, abrasion, UV at the waterline, cleaning)."},
+    {"name": "low_consumption_operation", "criterion": "Needs no continuous supply of material or energy that is large compared with the fuel it saves, and no frequent reapplication."},
+    {"name": "hull_scale_applicability", "criterion": "Can be applied to large steel hull areas with dry-dock methods at a cost comparable to premium hull coatings."}
+  ],
+  "mechanism_classes_considered": [
+    "architected_lattice (membrane over a compliant septa lattice: structural rather than material compliance)",
+    "graded_stiffness (tough crust over dissipative gel)",
+    "electrostatic_field (checked against Debye screening and ohmic losses in seawater)"
+  ],
+  "analogues_considered": [
+    "Cuttlebone: thin lamellae held apart by wavy septa, a chambered lattice with tunable stiffness",
+    "Kramer's dolphin-inspired coatings: rubber membrane over stubs and viscous fluid",
+    "Nilas: thin elastic ice crust forming on grease ice/slush",
+    "Electric rays and weakly electric fish (field generation in conductive water)",
+    "Sea urchin stereom"
+  ],
+  "relevant_governing_quantities": ["wall_shear", "stress"],
+  "candidates": [
+    {
+      "order_id": "r004-01",
+      "title": "Cuttlebone-septa membrane lattice skin",
+      "summary": "A tough 0.3 mm silicone-polyurethane membrane spans a 2 mm high lattice of thin, wavy septa (cell size 2 mm) copied from cuttlebone; the cells are filled with a soft, water-swollen gel. Compliance is set by the septa geometry and membrane tension instead of by a very soft surface material, so the surface can be tough enough for fenders and cleaning while the structure stays as compliant as a soft foul-release coating.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "architected_lattice"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of mean wall shear at 7 m/s versus a clean standard silicone foul-release coating",
+        "formula": "As for all passive compliant walls: cell natural frequency f = (1/2L)*sqrt(T/m') with T = 50 N/m, m' = rho*h = 1100*3e-4 = 0.33 kg/m2 (plus added water mass ~rho_w*L/pi = 0.65 kg/m2), L = 2 mm -> f ~ 1.8 kHz, above the near-wall burst band (~300 Hz); DNS/experiments give 0-few % only at matched tuning, mistuned -> ~0-1%; take 0.5%. Main benefit: fouling release with a tough surface.",
+        "value": 0.5,
+        "unit": "%"
+      },
+      "main_risk": "Cell-scale surface waviness under pressure (membrane dimpling) can act as roughness or excite flutter, and the septa-membrane joints fatigue and let water into the cells.",
+      "novelty_vs_known": "Closest: Kramer's stub-supported membrane coatings (1960s) and honeycomb cores (textbook). Adapted: cuttlebone-like wavy septa (bending-dominated, tunable, damage-tolerant) filled with gel, used to decouple surface toughness from compliance for a biocide-free foul-release coating rather than for drag alone.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (~0.3 mm, E ~ 1 MPa) at 7 m/s",
+      "inspiration_source": "Cuttlebone of Sepia officinalis: lamellae separated by thin, wavy septa",
+      "domain": "Structural Mechanics / Fluid-structure interaction",
+      "physical_mechanism": "The surface membrane under tension T spans cells of size L and rests on an effective elastic foundation k (septa bending plus gel), so the steady deflection w(x) across a cell under a surface load p obeys T w'' - k w = -p with fixed edges at the septa. The mean deflection per load gives the surface compliance that sets fouling-release stress (Kendall) and the local stiffness seen by near-wall pressure fluctuations.",
+      "parameters": [
+        {"name": "cell_size", "value": 0.002, "min_bound": 0.0005, "max_bound": 0.005, "justification": "Cuttlebone chamber spacing ~0.2-1 mm scaled to hull coating build."},
+        {"name": "membrane_thickness", "value": 0.0003, "min_bound": 0.0001, "max_bound": 0.001, "justification": "Tough silicone-PU skin thickness similar to a standard topcoat."},
+        {"name": "membrane_tension", "value": 50.0, "min_bound": 5.0, "max_bound": 500.0, "justification": "Pre-tension from cure shrinkage (~0.1 MPa x 0.3 mm = 30-60 N/m)."},
+        {"name": "foundation_stiffness", "value": 50000000.0, "min_bound": 5000000.0, "max_bound": 500000000.0, "justification": "Gel in 2 mm cells: k ~ G_gel/h ~ 1e5/2e-3 = 5e7 Pa/m."},
+        {"name": "surface_load", "value": 45.0, "min_bound": 10.0, "max_bound": 200.0, "justification": "Near-wall pressure fluctuation amplitude p' ~ 2.5 tau_w."},
+        {"name": "adhesion_work_surface", "value": 0.08, "min_bound": 0.03, "max_bound": 0.3, "justification": "Tough silicone-PU skin, slightly higher than pure PDMS."}
+      ]
+    },
+    {
+      "order_id": "r004-02",
+      "title": "Nilas-crust over slush-gel damped skin",
+      "summary": "Like young sea ice, where a thin elastic nilas crust forms on top of grease-ice slush, a 0.15 mm tough, low-surface-energy silicone-PU crust (G ~ 0.5 MPa) covers a 2.5 mm soft, lossy gel (G ~ 60 kPa, tan delta ~ 1) that grades into a stiff base. The crust takes abrasion and raises the effective surface wave speed (bending stiffness), removing the hydroelastic instability of the bare gel, while the gel below keeps the coating compliant for easy fouling release.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "atmosphere_ocean"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of mean wall shear at 7 m/s versus a clean standard silicone foul-release coating",
+        "formula": "Direct drag effect as for the parent: dissipated power ~ pi*tan_delta*p'^2*C*f ~ 0.02 W/m2 << 126 W/m2 near-wall production -> ~0.1-0.3%; take 0.3%. Series compliance C = t_crust/G_crust + C_gel = 1.5e-4/5e5 + ~1.1e-8 = 1.1e-8 m/Pa, so fouling release stays ~3x easier than standard foul release even with the crust.",
+        "value": 0.3,
+        "unit": "%"
+      },
+      "main_risk": "The crust/gel interface delaminates under repeated impacts because the gel has low cohesive strength, and a cut crust exposes the fragile gel.",
+      "novelty_vs_known": "Closest: the grease-ice parent and commercial two-layer foul-release systems. New: a thin tough crust over a thick dissipative gel, which fixes the parent's two killer risks (abrasion and hydroelastic waves) without losing compliance; still honest that drag gain is negligible.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (~0.3 mm, E ~ 1 MPa) at 7 m/s",
+      "inspiration_source": "Nilas (thin elastic sea-ice crust) forming on grease ice/frazil slush",
+      "domain": "Viscoelasticity / Structural Mechanics",
+      "physical_mechanism": "Series of a thin stiff crust and a thick graded soft gel under surface traction; the crust spreads concentrated loads (fender, brush) over a larger gel area and carries abrasion, the gel sets the overall compliance. Steady model: 1D shear deformation through the layered/graded stack under a surface traction, giving surface compliance and hence Kendall release stress; stability judged by crust bending wave speed.",
+      "parameters": [
+        {"name": "crust_thickness", "value": 0.00015, "min_bound": 5e-05, "max_bound": 0.0005, "justification": "Thin nilas-like skin."},
+        {"name": "crust_shear_modulus", "value": 500000.0, "min_bound": 200000.0, "max_bound": 5000000.0, "justification": "Tough silicone-PU."},
+        {"name": "gel_thickness", "value": 0.0025, "min_bound": 0.001, "max_bound": 0.005, "justification": "Dissipative slush-like zone."},
+        {"name": "gel_surface_shear_modulus", "value": 60000.0, "min_bound": 30000.0, "max_bound": 300000.0, "justification": "Soft lossy gel under the crust (crust carries the flow loads)."},
+        {"name": "base_shear_modulus", "value": 3000000.0, "min_bound": 500000.0, "max_bound": 20000000.0, "justification": "Stiff base like consolidated ice."},
+        {"name": "surface_traction", "value": 45.0, "min_bound": 10.0, "max_bound": 200.0, "justification": "Near-wall fluctuation amplitude."},
+        {"name": "adhesion_work_surface", "value": 0.06, "min_bound": 0.02, "max_bound": 0.3, "justification": "Low-energy silicone-PU crust."}
+      ]
+    },
+    {
+      "order_id": "r004-03",
+      "target_feasible": false,
+      "infeasibility_reason": "Seawater screens static fields within the Debye length (~0.4 nm), so a mm-scale electric field can only be sustained by an ohmic current (sigma ~ 5 S/m: ~50 W/m2 for 100 V/m over 1 mm, comparable with the entire friction power density of ~126 W/m2) that electrolyses seawater into chlorine/hypochlorite, violating both the energy balance and the non-toxic requirement; no electrostatic mechanism at this scale can lower wall shear."
+    }
+  ]
+}

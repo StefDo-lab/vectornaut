@@ -1,0 +1,58 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: Couette flow across the viscous sublayer (thickness delta = 5 nu/u_tau = 5*1.05e-6/0.19 = 27.6 um; 26 um used, consistent) with fixed edge velocity 5 u_tau = 0.95 m/s and a Navier slip wall u(0) = (b/delta) du/dy(0). Analytical: u(y) = U_e (y + b/delta)/(1 + b/delta), wall shear tau = mu U_e /(delta + b). Baseline: same flow with b = 0 (clean silicone foul-release coating has no measurable slip in water). Wall-shear reduction = b/(delta+b) = 5e-8/2.605e-5 = 0.19%. Dimensionless: b+ = b u_tau/nu = 5e-8*0.19/1.05e-6 = 0.009; delta+ = 4.7; Re_tau of the hull boundary layer (delta_BL ~ 1.5 m at 100 m) ~ 2.7e5. This laminar-sublayer model is a lower-bound-type proxy; in real turbulent flow, streamwise slip also weakens near-wall streaks, but for b+ < 0.1 the effect remains below ~1% (Min & Kim 2004), so the order of magnitude is right. Brush slip lengths in the literature are debated: many careful measurements on hydrated brushes find b <= 10 nm or even negative (hydrodynamic thickness adds effective no-slip), so 50 nm is optimistic. Structural/durability check: wall shear of ~18 Pa on a 100 nm brush is harmless mechanically, but abrasion (fenders, cleaning brushes, sand-laden water), hydrolysis of ester/amide linkers in pH 8.1 seawater and oxidative degradation limit such brushes to months, not years; the texture shield idea is not part of this model. Parameters are physically plausible; audit passed with these caveats.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "slip_length", "value": 5e-08},
+    {"name": "brush_thickness", "value": 1e-07},
+    {"name": "viscous_sublayer_thickness", "value": 2.6e-05},
+    {"name": "friction_velocity", "value": 0.19},
+    {"name": "kinematic_viscosity", "value": 1.05e-06},
+    {"name": "sublayer_edge_velocity", "value": 0.95},
+    {"name": "dynamic_viscosity", "value": 0.00108}
+  ],
+  "dimensionless_numbers": [
+    {"name": "SlipLengthWallUnits_b_plus", "value": 0.009},
+    {"name": "SublayerThicknessWallUnits_delta_plus", "value": 4.7},
+    {"name": "SlipToSublayerRatio_b_over_delta", "value": 0.0019},
+    {"name": "FrictionReynoldsNumber_Re_tau", "value": 270000.0}
+  ],
+  "simulation_coefficient": 5e-08,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics (viscous sublayer with slip)",
+    "independent_var": {"label": "Normalized wall distance y/delta_v", "unit": "-"},
+    "dependent_var": {"label": "Streamwise velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress (design)"},
+    "reference_metric": {"label": "Wall shear stress (reference solver)"},
+    "performance_gain": {"label": "Wall shear reduction vs clean foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Wall shear stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress (design)",
+    "reference_metric": "Wall shear stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "slip_length <= brush_thickness (apparent slip cannot exceed the hydrated layer scale for a brush)"
+    ],
+    "design_variables": ["slip_length", "brush_thickness"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "dynamic_viscosity/viscous_sublayer_thickness",
+    "unit": "Pa",
+    "label": "Wall shear stress"
+  },
+  "baseline_parameters": [
+    {"name": "slip_length", "value": 0.0}
+  ],
+  "baseline_description": "Clean standard silicone foul-release coating (no-slip wall)"
+}

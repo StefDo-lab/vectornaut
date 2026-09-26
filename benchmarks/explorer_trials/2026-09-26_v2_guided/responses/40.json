@@ -1,0 +1,10 @@
+{
+  "governing_equation": "d2u_dx2 = (interface_shear_stiffness * base_radius**2 / (cement_modulus * base_plate_thickness)) * u",
+  "boundary_conditions": [
+    "du_dx(0) = -hydrodynamic_shear_on_organism * base_radius**2 / (2 * cement_modulus * base_plate_thickness)",
+    "du_dx(1) = 0"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["u"],
+  "parameters": []
+}

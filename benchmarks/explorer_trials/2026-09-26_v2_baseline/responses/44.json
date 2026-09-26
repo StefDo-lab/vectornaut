@@ -1,0 +1,109 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Slip: 30 nm is at the upper end of measured water slip on hydrophobic smooth surfaces (10-30 nm); adjusted to 2e-8 m for consistency with the brush literature. b+ = 0.004 -> expected gain 0.02%: no drag change versus a clean FR hull. Roughness 0.5 um = 0.09 viscous units: hydraulically smooth (both design and baseline). The real value of a hard, smooth topcoat is that roughness stays low over years (damaged FR coatings reach 50-150 um roughness, k+ = 10-30, i.e. +3-8% friction), but that is a comparison against an aged baseline and cannot be computed here. Structural: glass-ceramic/ sol-gel silica-siloxane has E ~5-20 GPa and failure strain ~0.2-0.5%, while hull plating sees strains up to ~0.1-0.15% (hogging/sagging, thermal) and local impacts; cracking and spalling are likely on steel unless the layer is thin (<20 um) on a tough primer. The 5 nm PDMS brush wears off at first mechanical cleaning. Baseline: smooth FR, slip 0.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "brush_thickness",
+   "value": 5e-09
+  },
+  {
+   "name": "effective_slip_length",
+   "value": 2e-08
+  },
+  {
+   "name": "topcoat_roughness",
+   "value": 5e-07
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "slip_length_plus",
+   "value": 0.0037
+  },
+  {
+   "name": "roughness_plus",
+   "value": 0.093
+  }
+ ],
+ "simulation_coefficient": 2e-08,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "brush_thickness",
+   "effective_slip_length",
+   "topcoat_roughness"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_slip_length",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull"
+}

@@ -1,0 +1,100 @@
+{
+ "audit_passed": false,
+ "audit_notes": "Light-transport check (diffusion approximation): mu_a = 50 1/m, mu_s' = 200 1/m, surface out-coupling mu_out = 700 1/m (silicone n=1.41 vs seawater n=1.34: critical angle ~72 deg, so the layer barely guides light; ~70% of diffuse light escapes per surface encounter). Effective attenuation k = sqrt(3 (mu_a+mu_s')(mu_a+mu_out)) = sqrt(3*250*750) = 750 1/m -> lateral decay length 1.3 mm. With LED pitch 50 mm the midpoint fluence is phi(1)/phi(0) = 1/cosh(k*pitch/2) = 1/cosh(18.8) ~ 1e-8: the surface between LEDs receives essentially no UV-C, so the concept as parameterised does not work. Fix attempt: a midpoint/LED ratio >= 0.1 needs k*pitch/2 <= 3, i.e. pitch <= 8 mm (or <= 16 mm without scatterers). On a 1e4 m2 hull that is 4e7-1.6e8 UV-C LEDs, each with wiring and encapsulation that must survive years of seawater immersion, impacts and cleaning; UV-C LED wall-plug efficiency ~2-5% and lifetime ~10^4 h (~1.1 years continuous) add replacement cycles within the multi-year service life. Additionally, UV-C degrades (yellows, embrittles) most silicones; only special UV-transparent grades survive. Not fixable within realistic bounds -> audit_passed = false. The request itself is feasible (other concepts exist). Drag: equal to clean FR, no gain computable; baseline left empty.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "layer_thickness",
+   "value": 0.0005
+  },
+  {
+   "name": "absorption_coefficient",
+   "value": 50.0
+  },
+  {
+   "name": "scattering_coefficient",
+   "value": 200.0
+  },
+  {
+   "name": "surface_irradiance_target",
+   "value": 0.01
+  },
+  {
+   "name": "led_pitch",
+   "value": 0.05
+  },
+  {
+   "name": "outcoupling_coefficient",
+   "value": 700.0
+  },
+  {
+   "name": "led_edge_fluence",
+   "value": 1.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "optical_attenuation_times_half_pitch",
+   "value": 18.8
+  },
+  {
+   "name": "midpoint_to_led_fluence_ratio",
+   "value": 1.4e-08
+  },
+  {
+   "name": "transport_albedo",
+   "value": 0.8
+  }
+ ],
+ "simulation_coefficient": 750.0,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Optics / Photobiology",
+  "independent_var": {
+   "label": "Normalised distance from LED x/(pitch/2)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "UV-C fluence rate (relative)",
+   "unit": "-"
+  },
+  "primary_metric": {
+   "label": "Midpoint UV-C fluence (relative)"
+  },
+  "reference_metric": {
+   "label": "Analytical Midpoint UV-C fluence (relative)"
+  },
+  "performance_gain": {
+   "label": "Irradiance uniformity (no baseline)"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Minimum surface UV-C irradiance",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Midpoint UV-C fluence (relative)",
+  "reference_metric": "Analytical Midpoint UV-C fluence (relative)",
+  "lower_is_better": false,
+  "acceptance_threshold": 0.1,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds",
+   "midpoint fluence >= 10% of LED fluence"
+  ],
+  "design_variables": [
+   "layer_thickness",
+   "scattering_coefficient",
+   "led_pitch"
+  ]
+ },
+ "metric": {
+  "kind": "value_at",
+  "location": "1",
+  "unit": "-",
+  "label": "Midpoint UV-C fluence (relative)"
+ },
+ "baseline_parameters": [],
+ "baseline_description": "none (drag equals clean FR; no conventional UV baseline)"
+}

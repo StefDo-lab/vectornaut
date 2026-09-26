@@ -1,0 +1,13 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = (slip_length / viscous_sublayer_thickness) * du_dy(0)",
+    "u(1) = sublayer_edge_velocity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "sublayer_edge_velocity", "value": 0.95, "min_bound": 0.5, "max_bound": 1.75, "justification": "Mean velocity at the edge of the viscous sublayer, u(y+=5) = 5*u_tau = 5*0.19 m/s; held fixed so the wall shear change reflects only the slip boundary condition."},
+    {"name": "dynamic_viscosity", "value": 0.00108, "min_bound": 0.0008, "max_bound": 0.0018, "justification": "Seawater dynamic viscosity at 15-20 C (rho ~1025 kg/m3 times nu ~1.05e-6 m2/s); converts the velocity gradient into wall shear stress."}
+  ]
+}

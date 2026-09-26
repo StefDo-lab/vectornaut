@@ -1,0 +1,58 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: classical shear-lag of a coating (topcoat, E_c t_c) bonded to a straining hull through a tie-layer of shear stiffness G_i/t_i; v = coating-minus-hull displacement, v'' = beta^2 L^2 v with beta^2 = G_i/(E_c t_c t_i); free edge dv/dx(0) = -eps L (zero coating stress at the cut), v(1) = 0 (coating locked to the hull away from the edge). Interfacial shear tau_i = G_i v / t_i, peak at the edge: tau_max = eps E_c t_c beta tanh(beta L). CORRECTION of the formulator's zone length: beta^2 = 5e6/(1e6*4e-4*1e-3) = 1.25e7 1/m^2, beta = 3536 1/m, transfer length 1/beta = 0.28 mm (not 9 um), so a 0.1 mm zone would truncate the transfer zone (beta L = 0.35) and underestimate the peak. I reset defect_length to 5 mm (beta L = 17.7 for the design, 112 for the baseline), where the peak is length-independent. Baseline: standard thin silicone tie-coat, t_i = 0.1 mm, G_i = 20 MPa: beta = sqrt(2e7/(400*1e-4)) = 22,360 1/m. Peaks: design tau_max = 5e-4*1e6*4e-4*3536 = 707 Pa; baseline 4,472 Pa; reduction 84%. REALITY CHECK: both peaks are 2-3 orders of magnitude below the adhesion strength of silicone topcoats to tie-coats (~0.1-0.5 MPa) and hull-girder strain is not a known failure driver for foul-release systems; delamination in service is driven by impact, abrasion, poor surface preparation and osmotic blistering. So the computed stress reduction is real but its practical durability value is small, and it contributes nothing to drag reduction. Dimensionless: beta*L (design) = 17.7; beta ratio design/baseline = 0.158; interfacial stress / adhesion strength ~ 0.007 (design), 0.045 (baseline). Structural: all stresses far below limits; audit passed.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "hull_strain", "value": 0.0005},
+    {"name": "topcoat_modulus", "value": 1000000.0},
+    {"name": "topcoat_thickness", "value": 0.0004},
+    {"name": "tie_layer_shear_modulus", "value": 5000000.0},
+    {"name": "tie_layer_thickness", "value": 0.001},
+    {"name": "defect_length", "value": 0.005}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ShearLagParameter_betaL_design", "value": 17.7},
+    {"name": "ShearLagParameter_betaL_baseline", "value": 111.8},
+    {"name": "PeakStressToAdhesionStrength_design", "value": 0.007},
+    {"name": "PeakStressToAdhesionStrength_baseline", "value": 0.045}
+  ],
+  "simulation_coefficient": 3536.0,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics (shear-lag in a coating system)",
+    "independent_var": {"label": "Normalized distance from the coating edge", "unit": "-"},
+    "dependent_var": {"label": "Coating-to-hull relative displacement", "unit": "m"},
+    "primary_metric": {"label": "Peak interfacial shear stress at the edge (design)"},
+    "reference_metric": {"label": "Peak interfacial shear stress at the edge (reference solver)"},
+    "performance_gain": {"label": "Peak interfacial shear stress reduction vs standard tie-coat"}
+  },
+  "objective_metric": {
+    "objective_name": "Peak interfacial shear stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak interfacial shear stress at the edge (design)",
+    "reference_metric": "Peak interfacial shear stress at the edge (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "defect_length >= 5 / beta (transfer zone resolved)"
+    ],
+    "design_variables": ["tie_layer_shear_modulus", "tie_layer_thickness", "topcoat_thickness", "topcoat_modulus"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "0",
+    "scale": "tie_layer_shear_modulus/tie_layer_thickness",
+    "unit": "Pa",
+    "label": "Peak interfacial shear stress"
+  },
+  "baseline_parameters": [
+    {"name": "tie_layer_shear_modulus", "value": 20000000.0},
+    {"name": "tie_layer_thickness", "value": 0.0001}
+  ],
+  "baseline_description": "Standard foul-release system with a thin (0.1 mm), stiffer silicone tie-coat"
+}

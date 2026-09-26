@@ -1,0 +1,136 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Physical check: air/water viscosity ratio 1.8e-5/1.22e-3 = 0.0148. Two-layer Couette gives effective slip b = h_a (mu_w/mu_a - 1) = 1.5e-3*66.8 = 0.10 m, i.e. >1000x the equivalent wall layer: under an intact air layer the local friction almost vanishes (99.9% in the laminar-equivalent model). Air-layer Reynolds number Re_a = U_d h_a / nu_a = 3.9*1.5e-3/1.5e-5 = 390 (laminar air film plausible). Measured local reductions in the air-layer regime are 80-90% (Elbing et al. 2008, HIPLATE), so the model overestimates the local effect by ~10-15%. Hull-level effect is obtained with metric.transform as area-weighted shear: (1 - A f) tau_0 + A f tau_air with bottom_area_fraction A=0.35 and covered_bottom_fraction f=0.5 -> expected gain ~17.5% of skin friction (upper bound; with 85% local DR it would be ~15%). Not included: compressor power (air flux ~0.05-0.1 m3/s per m of span at 15 kn with 10 m draft pressure ~1 bar -> several hundred kW to MW, typically 2-4% of propulsion power), loss of air at bilge keels/ roll, and the fact that the covered fraction 0.5 is an assumption, not a result. Capillary check: rib pitch 0.5 mm < capillary length 2.7 mm; Laplace pressure 2*gamma/pitch = 2*0.072/5e-4 = 290 Pa, far smaller than turbulent pressure fluctuations (~3 tau_w = 150 Pa rms, peaks >500 Pa) and hydrostatic head differences across the bottom, so the ribs pin the contact line only marginally; the stabilising claim is uncertain. Structural: silicone ribs 200 um high, 500 um pitch, no load issue. Simulation coefficient = effective slip length 0.10 m. Baseline: same hull without air layer (air_layer_thickness = 0) -> smooth FR wall.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "air_layer_thickness",
+   "value": 0.0015
+  },
+  {
+   "name": "air_dynamic_viscosity",
+   "value": 1.8e-05
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  },
+  {
+   "name": "rib_pitch",
+   "value": 0.0005
+  },
+  {
+   "name": "rib_height",
+   "value": 0.0002
+  },
+  {
+   "name": "covered_bottom_fraction",
+   "value": 0.5
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "bottom_area_fraction",
+   "value": 0.35
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "viscosity_ratio_air_water",
+   "value": 0.0148
+  },
+  {
+   "name": "air_layer_Reynolds_number",
+   "value": 390.0
+  },
+  {
+   "name": "slip_length_over_layer_thickness",
+   "value": 1054.0
+  },
+  {
+   "name": "Laplace_pressure_over_wall_shear",
+   "value": 5.8
+  },
+  {
+   "name": "capillary_length_over_rib_pitch",
+   "value": 5.4
+  }
+ ],
+ "simulation_coefficient": 0.1,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Hull-averaged wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Hull-averaged wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Hull skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Hull-averaged wall shear stress",
+  "reference_metric": "Analytical Hull-averaged wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds",
+   "compressor power must be subtracted before a net fuel saving is claimed"
+  ],
+  "design_variables": [
+   "air_layer_thickness",
+   "rib_pitch",
+   "rib_height",
+   "covered_bottom_fraction"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Hull-averaged wall shear stress",
+  "transform": "(1 - bottom_area_fraction*covered_bottom_fraction)*water_dynamic_viscosity*edge_velocity/equivalent_layer_thickness + bottom_area_fraction*covered_bottom_fraction*m"
+ },
+ "baseline_parameters": [
+  {
+   "name": "air_layer_thickness",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull without air lubrication"
+}

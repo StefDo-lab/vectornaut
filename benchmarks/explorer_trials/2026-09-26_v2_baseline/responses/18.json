@@ -1,0 +1,131 @@
+{
+ "audit_passed": true,
+ "audit_notes": "IMPORTANT: the drag benefit in this model is an empirical input (compliance_equivalent_virtual_origin_shift), not a result of the physics solved; a steady 1D Couette model cannot resolve the fluid-structure interaction of a compliant wall. The simulated gain therefore only restates the assumption and must be treated as an estimate. Checks: shear-wave speed c_t = sqrt(G/rho) = sqrt(15000/1050) = 3.8 m/s; U/c_t = 2.0. Compliant-wall theory (Duncan 1986, Gad-el-Hak) predicts static-divergence waves at U ~ 2-3 c_t for lightly damped layers; with loss factor 0.3 the onset is near the upper end, so the design operates close to an instability that increases drag. At lower speeds (10 kn) the coating is off-tuned. I therefore reduce outer_shear_modulus_tuning_factor from 1.0 to 0.5 (half the tuned effect retained on average over the operating profile) -> expected gain 1.0/96 = 1.0%. Static deformation: shear strain 50/15000 = 0.33%, surface displacement ~10 um over 3 mm: negligible. Hydrostatic 1 bar on a near-incompressible gel: no issue. Material limits: 15 kPa silicone gel has tear strength of only ~0.1-1 kN/m and very low abrasion resistance; a durable thin top skin (E ~1 MPa, 50-100 um) is mandatory, which in turn stiffens the surface response. Dimensionless: coating thickness in viscous units 3e-3/5.4e-6 = 556; ratio of coating frequency c_t/thickness to burst frequency (u_tau^2/nu /100 ~ 410 Hz): 3.8/3e-3/(2 pi) ~ 200 Hz (same order: tuned). Baseline: rigid smooth FR wall (shift 0).",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "coating_thickness",
+   "value": 0.003
+  },
+  {
+   "name": "outer_shear_modulus",
+   "value": 15000.0
+  },
+  {
+   "name": "loss_factor",
+   "value": 0.3
+  },
+  {
+   "name": "tie_layer_modulus",
+   "value": 10000000.0
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  },
+  {
+   "name": "compliance_equivalent_virtual_origin_shift",
+   "value": 2e-06
+  },
+  {
+   "name": "outer_shear_modulus_tuning_factor",
+   "value": 0.5
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "flow_to_shear_wave_speed_ratio",
+   "value": 2.0
+  },
+  {
+   "name": "coating_thickness_plus",
+   "value": 556.0
+  },
+  {
+   "name": "coating_to_burst_frequency_ratio",
+   "value": 0.5
+  },
+  {
+   "name": "static_shear_strain",
+   "value": 0.0033
+  }
+ ],
+ "simulation_coefficient": 1e-06,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid-Structure Interaction",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds",
+   "U/c_t below static-divergence onset (~2-3)"
+  ],
+  "design_variables": [
+   "coating_thickness",
+   "outer_shear_modulus",
+   "loss_factor",
+   "tie_layer_modulus"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "compliance_equivalent_virtual_origin_shift",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean rigid smooth silicone foul-release hull"
+}

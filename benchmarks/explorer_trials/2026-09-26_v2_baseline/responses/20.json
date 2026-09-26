@@ -1,0 +1,36 @@
+{
+ "governing_equation": "d2u_dy2 = 0",
+ "boundary_conditions": [
+  "u(0) = ((effective_slip_length) / equivalent_layer_thickness) * du_dy(0)",
+  "u(1) = edge_velocity"
+ ],
+ "independent_variables": [
+  "y"
+ ],
+ "dependent_variables": [
+  "u"
+ ],
+ "parameters": [
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05,
+   "min_bound": 5e-05,
+   "max_bound": 0.0002,
+   "justification": "Laminar-equivalent wall layer chosen so that b/(delta+b) reproduces the turbulent result DR = 2*b+/U_b+: delta+ = U_b+/2 = 17.5 viscous units = 95 um. y is normalised by this thickness."
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9,
+   "min_bound": 1.0,
+   "max_bound": 8.0,
+   "justification": "Velocity at the top of the equivalent layer such that a no-slip wall carries the baseline shear: U_d = tau0*delta/mu = 50*9.5e-5/1.22e-3 = 3.9 m/s, held fixed (same outer flow)."
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122,
+   "min_bound": 0.0009,
+   "max_bound": 0.0016,
+   "justification": "Seawater at 15 C, converts du/dy into wall shear stress."
+  }
+ ]
+}

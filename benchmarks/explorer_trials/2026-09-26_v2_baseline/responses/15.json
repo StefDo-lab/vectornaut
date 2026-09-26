@@ -1,0 +1,127 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Permeability check: straight channels d = 40 um at porosity 0.5: Kx = phi r^2/8 = 0.5*(20e-6)^2/8 = 2.5e-11 m2, consistent with 3e-11. sqrt(Kx) = 5.5 um -> sqrt(Kx+) = 1.0; sqrt(Kz) = 1.0 um -> sqrt(Kz+) = 0.19. Gomez-de-Segura & Garcia-Mayoral (JFM 2019): in the linear regime Delta U+ ~ sqrt(Kx+) - sqrt(Kz+) (virtual-origin difference, Brinkman slip lengths), valid while the wall-normal permeability stays small, sqrt(Ky+) < ~0.4 (otherwise spanwise Kelvin-Helmholtz rollers appear and drag increases). This requires the face perforations to limit Ky to < (0.4*5.4e-6)^2 = 4.7e-12 m2 - a hard design constraint not in the parameters. Slip used: 5.5 - 1.0 = 4.5 um -> expected gain 4.5/99.5 = 4.5% (theoretical maximum in the linear regime; roughness of the perforated face not included). Channel Reynolds number U_c d/nu with U_c ~ u at y+~1 = 0.22 m/s -> 7.4 (Stokes/ Darcy flow valid). Structural: 150 um silicone skin with 50% porosity has ~1/4 of the bulk stiffness; under 50 Pa shear and 1 bar static pressure (the channels are pressure-equalised) no collapse. Durability: 40 um channels and perforations are exactly the size of diatoms and bacterial colonies; clogging within weeks to months is the dominant risk. Baseline: impermeable smooth FR wall (both permeabilities 0).",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "streamwise_permeability",
+   "value": 3e-11
+  },
+  {
+   "name": "spanwise_permeability",
+   "value": 1e-12
+  },
+  {
+   "name": "layer_thickness",
+   "value": 0.00015
+  },
+  {
+   "name": "channel_diameter",
+   "value": 4e-05
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "sqrt_Kx_plus",
+   "value": 1.0
+  },
+  {
+   "name": "sqrt_Kz_plus",
+   "value": 0.19
+  },
+  {
+   "name": "channel_Reynolds_number",
+   "value": 7.4
+  },
+  {
+   "name": "layer_thickness_plus",
+   "value": 28.0
+  }
+ ],
+ "simulation_coefficient": 4.5e-06,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics / Porous Media",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds",
+   "wall-normal permeability sqrt(Ky+) < 0.4"
+  ],
+  "design_variables": [
+   "streamwise_permeability",
+   "spanwise_permeability",
+   "layer_thickness",
+   "channel_diameter"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "streamwise_permeability",
+   "value": 0.0
+  },
+  {
+   "name": "spanwise_permeability",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth impermeable silicone foul-release hull"
+}

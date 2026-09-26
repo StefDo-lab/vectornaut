@@ -1,0 +1,63 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady shear deformation of a coating with exponentially graded shear modulus G(z) = G_base*exp(k z), k = ln(G_surface/G_base) = ln(0.05) = -3.0, z normalized from primer (0) to wetted surface (1). Equilibrium d/dz(G du/dz) = 0 gives u'' = -k u', with a clamped base u(0)=0 and the traction BC G_surface*(du/dz)/t = tau at the surface. This is correct and linear; the analytical solution is u(1) = tau*t/G_base * (exp(-k)-1)/(-k) = 18*0.002/2e6*6.33 = 1.14e-7 m (surface strain tau/G_surface = 1.8e-4, i.e. far in the linear-elastic regime, no damage). IMPORTANT LIMITATION: the steady solid model cannot compute the compliant-wall drag reduction claimed (that is an unsteady fluid-structure effect); the drag benefit of ~3% remains an unverified estimate. What the field does show is the surface compliance per unit area C = u(1)/tau, which governs fouling release (Kendall/Brady-Singer thin-layer release stress sigma_c = sqrt(2*w/C)). I therefore set the metric to that detachment stress and compare with a standard silicone foul-release coating (t = 0.3 mm, homogeneous G = 0.33 MPa, E ~ 1 MPa): C_base = 3e-4/3.3e5 = 9.1e-10 m/Pa vs C_design = 6.33e-9 m/Pa, so sigma_c drops by ~62% (0.38x). This gain is a fouling-release gain, not a drag gain, and should not be read as a friction reduction. The shear formulation is used as a proxy for the normal-mode pull-off compliance; the ratio is indicative, the absolute value is not. Structural check: wall shear 18 Pa and hydrostatic pressure are negligible for elastomers (tear strength of soft silicone ~1-3 kN/m). Risks: fender and cleaning abrasion of a 0.1 MPa top layer, cohesive tearing of soft silicones, and hydrodynamic flutter/static divergence: the surface shear-wave speed c_s = sqrt(G_s/rho) = sqrt(1e5/1100) = 9.5 m/s is only 1.36x the cruising speed; Gad-el-Hak's divergence onset near U ~ 2 c_s is not reached at 7 m/s but would be approached at 12 m/s by softer variants (G_s < 5e4 Pa), which the optimizer must not choose. Bounds on surface_shear_modulus kept at >= 2e4 Pa; values below ~5e4 Pa should be treated as unsafe. Baseline: standard clean silicone foul-release coating.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "coating_thickness", "value": 0.002},
+    {"name": "surface_shear_modulus", "value": 100000.0},
+    {"name": "base_shear_modulus", "value": 2000000.0},
+    {"name": "loss_tangent", "value": 0.3},
+    {"name": "freestream_velocity", "value": 7.0},
+    {"name": "wall_shear_stress", "value": 18.0},
+    {"name": "adhesion_work_barnacle", "value": 0.05}
+  ],
+  "dimensionless_numbers": [
+    {"name": "HullReynoldsNumber_L200m", "value": 1330000000.0},
+    {"name": "SurfaceShearStrain_tau_over_Gs", "value": 0.00018},
+    {"name": "ModulusRatio_Gs_over_Gb", "value": 0.05},
+    {"name": "FlowToShearWaveSpeedRatio_U_over_cs", "value": 0.74},
+    {"name": "ComplianceRatio_design_over_baseline", "value": 6.96}
+  ],
+  "simulation_coefficient": 6.33e-09,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics / Fouling Release",
+    "independent_var": {"label": "Normalized depth from primer (0) to surface (1)", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement", "unit": "m"},
+    "primary_metric": {"label": "Critical fouling detachment stress (design)"},
+    "reference_metric": {"label": "Critical fouling detachment stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of fouling detachment stress vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Fouling detachment stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouling detachment stress (design)",
+    "reference_metric": "Critical fouling detachment stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "surface shear strain tau/G_surface < 0.05 (linear elastic, no tearing)",
+      "surface_shear_modulus >= 5e4 Pa to keep shear-wave speed above ~1.3x cruising speed (no flutter/divergence)"
+    ],
+    "design_variables": ["coating_thickness", "surface_shear_modulus", "base_shear_modulus"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "1/wall_shear_stress",
+    "unit": "Pa",
+    "label": "Critical fouling detachment stress",
+    "transform": "sqrt(2*adhesion_work_barnacle/m)"
+  },
+  "baseline_parameters": [
+    {"name": "coating_thickness", "value": 0.0003},
+    {"name": "surface_shear_modulus", "value": 330000.0},
+    {"name": "base_shear_modulus", "value": 330000.0}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating, 0.3 mm, homogeneous E ~ 1 MPa"
+}

@@ -1,0 +1,60 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: effective-slip Couette flow across the viscous sublayer (delta = 5 nu/u_tau = 40 um for tau = 18 Pa, u_tau = 0.13 m/s, edge velocity 0.66 m/s). A pinned oil film of thickness h_o and viscosity mu_o under water is equivalent to a Navier slip length b = h_o (mu_w/mu_o - 1) (two-layer Couette, continuity of velocity and shear stress). With the proposed ester oil (mu_o = 10 mPa s, 9x more viscous than seawater) b = 1e-5*(0.108 - 1) = -8.9 um: NEGATIVE slip, i.e. the viscous film acts like a raised no-slip wall and increases wall shear by delta/(delta+b) - 1 = 40/31.1 - 1 = +29%. Only an oil less viscous than water (mu_o < 1.08 mPa s, e.g. light alkanes or silicone fluids of 0.65 cSt, which are volatile and not benign) could give positive slip, at most b ~ h_o for an inviscid film. Simulation coefficient = b = -8.9e-6 m. Dimensionless: viscosity ratio mu_o/mu_w = 9.3; b+ = b u_tau/nu = -1.1; film Reynolds number (tau h_o^2 rho/mu_o^2) = 18*1e-10*900/1e-4 = 1.6e-3 (film laminar). Supply/consumption check (not in the field): a free film is dragged at mean speed tau h_o/(2 mu_o) = 9 mm/s, so over a 200 m hull it is replaced every ~6 h; the steady oil loss per unit span is q = tau h_o^2/(2 mu_o) = 9e-8 m2/s, i.e. ~9e-8*40 m girth ~ 3.6e-6 m3/s ~ 13 L/h ~ 300 L/day for the whole ship, continuously discharged into the sea. Darcy supply through the layer: required pressure gradient q_area*mu_o/k is small, so supply is not the limit; consumption and discharge are. Structural check: capillary network inside a 1 mm polymer coating is mechanically plausible; the pores clog with biofilm and calcareous deposits. Physically the model is consistent, so the audit passes, but the concept performs worse than the baseline on drag and conflicts with the non-toxic/low-consumption requirements.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "oil_film_thickness", "value": 1e-05},
+    {"name": "oil_viscosity", "value": 0.01},
+    {"name": "water_viscosity", "value": 0.00108},
+    {"name": "pore_diameter", "value": 5e-06},
+    {"name": "layer_permeability", "value": 1e-13},
+    {"name": "wall_shear_stress", "value": 18.0},
+    {"name": "viscous_sublayer_thickness", "value": 4e-05},
+    {"name": "sublayer_edge_velocity", "value": 0.66}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ViscosityRatio_oil_over_water", "value": 9.26},
+    {"name": "EffectiveSlipLengthWallUnits_b_plus", "value": -1.1},
+    {"name": "SlipToSublayerRatio_b_over_delta", "value": -0.223},
+    {"name": "FilmReynoldsNumber", "value": 0.0016}
+  ],
+  "simulation_coefficient": -8.9e-06,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fluid Dynamics (oil-lubricated wall, viscous sublayer)",
+    "independent_var": {"label": "Normalized wall distance y/delta_v", "unit": "-"},
+    "dependent_var": {"label": "Streamwise velocity", "unit": "m/s"},
+    "primary_metric": {"label": "Wall shear stress on the water side (design)"},
+    "reference_metric": {"label": "Wall shear stress on the water side (reference solver)"},
+    "performance_gain": {"label": "Wall shear reduction vs clean foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Wall shear stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Wall shear stress on the water side (design)",
+    "reference_metric": "Wall shear stress on the water side (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "effective slip length |b| < viscous_sublayer_thickness (model validity)",
+      "oil discharge to sea < 1 L/day per ship (not met by this design)"
+    ],
+    "design_variables": ["oil_film_thickness", "oil_viscosity", "pore_diameter", "layer_permeability"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "water_viscosity/viscous_sublayer_thickness",
+    "unit": "Pa",
+    "label": "Wall shear stress"
+  },
+  "baseline_parameters": [
+    {"name": "oil_film_thickness", "value": 0.0}
+  ],
+  "baseline_description": "Clean standard silicone foul-release coating (no oil film, no-slip wall)"
+}

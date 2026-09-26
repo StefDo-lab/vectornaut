@@ -1,0 +1,63 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: exponentially graded gel (G from 3 MPa at the base to 60 kPa under the crust, k = ln(0.02) = -3.91) under a surface traction, d/dz(G du/dz) = 0; crust compliance added in series in the metric transform (C_total = u(1)/traction + t_crust/G_crust). Analytical: C_gel = (t_gel/G_base)(e^{3.91}-1)/3.91 = 8.3e-10*12.5 = 1.04e-8 m/Pa; C_crust = 1.5e-4/5e5 = 3e-10; C_total = 1.07e-8 m/Pa. Release: sigma_c = sqrt(2*0.06/1.07e-8) = 3.3 kPa. Baseline: standard silicone foul-release (t = 0.3 mm, homogeneous G = 0.33 MPa, no crust, w_a = 0.05): C = 9.1e-10, sigma_c = 10.5 kPa -> ~68% lower release stress. Note that for a thin crust over a soft gel the local peel compliance is set by the crust bending over the gel (a longer peel zone), which the 1D shear model ignores; it may increase or decrease release depending on barnacle size relative to the crust bending length l = (D/k)^(1/4) = ((5e5*3*(1.5e-4)^3/12)/(6e4/2.5e-3))^(1/4) ~ 0.35 mm, i.e. smaller than a barnacle, so the 1D estimate is acceptable. Stability: crust bending raises the surface wave speed; the flexural wave speed at the dominant near-wall wavelength (~1000 viscous units ~ 5 mm) is c = sqrt(k/(rho k_w^2)... ) ~ well above 7 m/s once combined with the gel foundation; the divergence risk of the bare gel is largely removed. Drag: not computed; dissipation argument gives < 0.3%. Durability: crust improves abrasion but crust/gel delamination under impact is the main risk (gel cohesive strength < 0.1 MPa). Dimensionless: modulus ratio base/gel = 50, crust/gel = 8.3, bending length / barnacle size ~ 0.05.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "crust_thickness", "value": 0.00015},
+    {"name": "crust_shear_modulus", "value": 500000.0},
+    {"name": "gel_thickness", "value": 0.0025},
+    {"name": "gel_surface_shear_modulus", "value": 60000.0},
+    {"name": "base_shear_modulus", "value": 3000000.0},
+    {"name": "surface_traction", "value": 45.0},
+    {"name": "adhesion_work_surface", "value": 0.06}
+  ],
+  "dimensionless_numbers": [
+    {"name": "BaseToGelModulusRatio", "value": 50.0},
+    {"name": "CrustToGelModulusRatio", "value": 8.3},
+    {"name": "CrustComplianceShare", "value": 0.028},
+    {"name": "BendingLengthToBarnacleSize", "value": 0.05}
+  ],
+  "simulation_coefficient": 1.07e-08,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Viscoelasticity / Fouling Release",
+    "independent_var": {"label": "Normalized depth through the gel (base 0, crust 1)", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement", "unit": "m"},
+    "primary_metric": {"label": "Critical fouling detachment stress (design)"},
+    "reference_metric": {"label": "Critical fouling detachment stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of fouling detachment stress vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Fouling detachment stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouling detachment stress (design)",
+    "reference_metric": "Critical fouling detachment stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "crust_shear_modulus >= 2e5 Pa (abrasion and stability)"
+    ],
+    "design_variables": ["crust_thickness", "crust_shear_modulus", "gel_thickness", "gel_surface_shear_modulus", "base_shear_modulus"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "1/surface_traction",
+    "unit": "Pa",
+    "label": "Critical fouling detachment stress",
+    "transform": "sqrt(2*adhesion_work_surface/(m + crust_thickness/crust_shear_modulus))"
+  },
+  "baseline_parameters": [
+    {"name": "gel_thickness", "value": 0.0003},
+    {"name": "gel_surface_shear_modulus", "value": 330000.0},
+    {"name": "base_shear_modulus", "value": 330000.0},
+    {"name": "crust_thickness", "value": 0.0},
+    {"name": "adhesion_work_surface", "value": 0.05}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating, 0.3 mm, E ~ 1 MPa, no crust"
+}

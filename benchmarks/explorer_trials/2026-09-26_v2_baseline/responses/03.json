@@ -1,0 +1,126 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameters positive and consistent: s=80 um > h=40 um (h/s=0.5). u_tau = sqrt(50/1025)=0.221 m/s, l_nu = 1.19e-6/0.221 = 5.4 um -> s+ = 14.8 (inside the 10-20 drag-reducing window), h+ = 7.4. Protrusion-height difference 4.5 um = 0.056 s is consistent with Luchini et al. (1991) values for trapezoidal/blade riblets (0.03-0.08 s) -> Delta h+ = 0.83, Delta U+ ~ 0.83 -> DR ~ 2*0.83/35 = 4.7%. The model is a laminar-equivalent wall layer of thickness 95 um (17.5 viscous units, chosen so that b/(delta+b) = 2 b+/U_b+), with fixed edge velocity 3.9 m/s. Analytical solution u = U_d (b/delta + y)/(1 + b/delta), wall shear tau = mu U_d /(delta+b); gain = b/(delta+b) = 4.5%. Simulation coefficient: the pipeline's riblet formula 0.2 s (1-exp(-2h/s)) = 0.2*80e-6*0.632 = 10.1 um; this generic formula gives roughly twice the Luchini protrusion difference and would overstate DR; the equations use effective_protrusion_difference (4.5 um), so the coefficient is informational. Structural: PDMS crests E=1 MPa under 50 Pa shear: tip deflection of a 40 um tall, ~5 um thick crest under distributed shear ~ tau*h^4/(E*t^3)*(order 1.5) ~ 50*2.56e-18/(1e6*1.25e-16)*1.5 = 1 um -> small flexing, consistent with the claim of modest compliance; no collapse. Durability concern (not a physical safety issue): soft PDMS riblets abrade under cleaning; fouling in grooves is the dominant risk. Baseline: smooth clean FR wall = zero protrusion difference.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "riblet_spacing",
+   "value": 8e-05
+  },
+  {
+   "name": "riblet_height",
+   "value": 4e-05
+  },
+  {
+   "name": "effective_protrusion_difference",
+   "value": 4.5e-06
+  },
+  {
+   "name": "crest_elastic_modulus",
+   "value": 1000000.0
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "riblet_spacing_plus",
+   "value": 14.8
+  },
+  {
+   "name": "riblet_height_plus",
+   "value": 7.4
+  },
+  {
+   "name": "protrusion_difference_plus",
+   "value": 0.83
+  },
+  {
+   "name": "hull_Reynolds_number_200m",
+   "value": 1300000000.0
+  },
+  {
+   "name": "bulk_velocity_plus",
+   "value": 35.0
+  }
+ ],
+ "simulation_coefficient": 4.5e-06,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs smooth FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "riblet_spacing",
+   "riblet_height",
+   "effective_protrusion_difference",
+   "crest_elastic_modulus"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_protrusion_difference",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean hydraulically smooth silicone foul-release coating (no riblets)"
+}

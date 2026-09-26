@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2w_dz2 = 0",
+  "boundary_conditions": [
+    "w(0) = 0",
+    "dw_dz(1) = wall_shear_stress * foundation_thickness / foundation_shear_modulus"
+  ],
+  "independent_variables": ["z"],
+  "dependent_variables": ["w"],
+  "parameters": [
+    {"name": "adhesion_work_surface", "value": 0.3, "min_bound": 0.03, "max_bound": 1.0, "justification": "Work of adhesion of barnacle cement to the wetted surface: ~0.3 J/m2 on hard ceramic-filled epoxy tiles (high surface energy), ~0.05 J/m2 on silicone; the tile surface controls the adhesion, the soft foundation controls the compliance."}
+  ]
+}

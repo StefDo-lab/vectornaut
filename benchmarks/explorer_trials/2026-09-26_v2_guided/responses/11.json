@@ -1,0 +1,72 @@
+{
+  "reviews": [
+    {
+      "order_id": "r001-01",
+      "plausible_gain_pct": 0.5,
+      "plausible_gain_reasoning": "The simulated 66.7% is a reduction of fouling detachment stress, not of friction; compliant-coating drag reduction at ship Reynolds numbers has never been reproduced reliably (most careful tests give 0 +/- a few %), so the clean-hull friction benefit versus a standard foul-release coating is ~0-1%.",
+      "key_assumption_issues": [
+        "The metric is fouling detachment stress, while the request's main benefit is frictional drag; the 66.7% gain is not a drag gain.",
+        "Shear compliance of a clamped layer is used as proxy for normal pull-off compliance (Kendall) - the numbers scale similarly but the absolute value is not a pull-off stress.",
+        "Baseline 0.3 mm/1 MPa is on the stiff/thin side; commercial foul-release systems use 0.15-0.4 mm topcoats at E 0.2-1 MPa over tie-coats, so part of the compliance ratio is baseline choice.",
+        "Compliant drag reduction (3%) is asserted from the literature, not modelled; the tuning estimate (1.2 kHz vs 360 Hz) itself shows mistuning."
+      ],
+      "killer_risks": [
+        "A 0.1 MPa surface layer is torn and gouged by fenders, tugs, anchor chains and diver cleaning; damaged patches foul and roughen within months.",
+        "Hydroelastic instability (static divergence waves) of a soft layer at higher speeds would increase drag sharply.",
+        "Silicone-based foul release still accumulates diatom slime at low speed, which costs 5-15% drag and is not addressed.",
+        "2 mm of silicone hybrid is 5-7x the material cost of a standard foul-release scheme."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.15, "reason": "No demonstrated friction reduction versus a clean foul-release coating; benefit is only indirect via easier release."},
+        {"name": "non_toxic_antifouling", "coverage": 0.7, "reason": "Biocide-free foul release with lower release stress; does not stop settlement or slime, relies on speed or cleaning."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.45, "reason": "Silicone chemistry lasts years, but the very soft top is mechanically fragile; the stiff base helps adhesion only."},
+        {"name": "low_consumption_operation", "coverage": 0.85, "reason": "Passive, no consumption; repairs of damaged soft areas needed at dockings."},
+        {"name": "hull_scale_applicability", "coverage": 0.5, "reason": "Sprayable with existing methods, but graded multi-layer 2 mm build is costly and QA of the gradient on 1e4 m2 is hard."}
+      ]
+    },
+    {
+      "order_id": "r001-02",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "Apparent slip on hydrated brushes is at most a few nm to tens of nm (often zero within error), giving b+ < 0.01 and no measurable turbulent friction change; clean-vs-clean the gain is ~0%.",
+      "key_assumption_issues": [
+        "Slip length of 50 nm is optimistic; many measurements on brushes give b ~ 0 or effectively negative (the hydrodynamic brush thickness shifts the no-slip plane outward).",
+        "Laminar sublayer Couette with fixed edge velocity is a crude proxy; with b+ ~ 0.01 the result is negligible either way.",
+        "The mm-scale texture shielding mentioned in the concept is not modelled and would itself add roughness drag."
+      ],
+      "killer_risks": [
+        "100 nm brushes are removed by abrasion and cleaning and hydrolyse in seawater within months, far short of 3-5 years.",
+        "Hydrated brushes resist proteins and spores but not barnacle cyprids and tubeworms on a hard PU substrate; macrofouling then sticks strongly to hard PU.",
+        "Grafting-from polymerisation on 1e4 m2 of hull is not an industrial process."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.05, "reason": "Simulated and plausible friction gain is ~0.2% or less."},
+        {"name": "non_toxic_antifouling", "coverage": 0.4, "reason": "Non-toxic and good against microfouling initially, weak against macrofouling on a hard substrate."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.1, "reason": "Nanometre brush does not survive years of abrasion and hydrolysis."},
+        {"name": "low_consumption_operation", "coverage": 0.5, "reason": "No consumption, but frequent reapplication would be needed once the brush wears."},
+        {"name": "hull_scale_applicability", "coverage": 0.25, "reason": "Only self-stratifying additive versions could be sprayed; grafted brushes are lab-scale."}
+      ]
+    },
+    {
+      "order_id": "r001-03",
+      "plausible_gain_pct": -5.0,
+      "plausible_gain_reasoning": "Liquid-infused surfaces only reduce turbulent drag with lubricants less viscous than water (Rosenberg et al. 2016); with a 10 mPa s ester oil the film thins to the texture and acts as a slightly rough or raised wall, so a small drag increase (the -29% of the laminar model is an upper bound for a full free film) is the realistic outcome.",
+      "key_assumption_issues": [
+        "A 10 um free oil film is assumed pinned; in reality it drains and is stripped, so the texture fills or partly empties and the wall condition changes over time.",
+        "Effective slip b = h_o(mu_w/mu_o - 1) assumes a flat laminar two-layer Couette flow; interface waves and oil-water emulsion near the wall are ignored.",
+        "Supply and loss are computed outside the model; the field does not include consumption."
+      ],
+      "killer_risks": [
+        "Continuous discharge of order 100-300 L/day of oil into the sea per ship: environmental and regulatory (MARPOL) showstopper.",
+        "Pores and capillaries clog with biofilm and calcareous deposits within weeks when flow stops in port.",
+        "Tanks, pumps and a capillary laminate on 1e4 m2 of hull are a ship modification, not a coating; cost is prohibitive."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.0, "reason": "Friction increases with any oil more viscous than water."},
+        {"name": "non_toxic_antifouling", "coverage": 0.2, "reason": "Fouling-resistant while wetted, but only by continuously releasing a substance into the sea."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.25, "reason": "Capillary network clogs and gets damaged; function degrades within months."},
+        {"name": "low_consumption_operation", "coverage": 0.05, "reason": "Continuous oil consumption of hundreds of litres per day."},
+        {"name": "hull_scale_applicability", "coverage": 0.1, "reason": "Requires embedded capillaries, supply lines and pumps on the whole hull."}
+      ]
+    }
+  ]
+}

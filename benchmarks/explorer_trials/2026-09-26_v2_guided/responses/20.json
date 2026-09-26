@@ -1,0 +1,98 @@
+{
+  "function_analysis": "Unchanged: lower mean wall shear at cruising speed (viscous length ~5-8 um), keep fouling off or releasable without biocides, survive 3-5 years (abrasion by fenders and cleaning is the dominant killer of soft foul-release coatings), no large consumption, hull-scale application. The graded-stiffness family mainly serves fouling release and damage tolerance; any direct drag effect must come from dissipative interaction with near-wall pressure and shear fluctuations and is small at ship Reynolds numbers.",
+  "requirements": [
+    {"name": "low_friction_drag", "criterion": "Reduces the mean wall shear stress / frictional resistance at cruising speed versus a clean, standard foul-release hull coating."},
+    {"name": "non_toxic_antifouling", "criterion": "Prevents fouling settlement or makes it release easily without releasing biocides, heavy metals or other toxic substances into the sea."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps its function and adhesion for at least 3-5 years in seawater (hydrolysis, abrasion, UV at the waterline, cleaning)."},
+    {"name": "low_consumption_operation", "criterion": "Needs no continuous supply of material or energy that is large compared with the fuel it saves, and no frequent reapplication."},
+    {"name": "hull_scale_applicability", "criterion": "Can be applied to large steel hull areas with dry-dock methods at a cost comparable to premium hull coatings."}
+  ],
+  "mechanism_classes_considered": [
+    "graded_stiffness (dissipative soft-over-stiff layers; hard armour over soft foundation)",
+    "phase_change (vapour layers, degassing, melting) - checked for energy balance",
+    "trapped_gas_or_liquid (gas layers fed by gas generation)"
+  ],
+  "analogues_considered": [
+    "Grease ice and frazil slush on the polar ocean: a soft, highly dissipative layer over consolidated ice that damps waves over a broad band",
+    "Mud banks off the Kerala coast damping waves by viscous dissipation in fluid mud",
+    "Desert pavement: a mosaic of hard, interlocking clasts resting on soft, fine-grained vesicular soil",
+    "Cyanobacterial gas vesicles and oxygen bubbles from phototrophic biofilms",
+    "Leidenfrost vapour layers on hot spheres (known drag reduction in lab)"
+  ],
+  "relevant_governing_quantities": ["wall_shear", "stress"],
+  "candidates": [
+    {
+      "order_id": "r003-01",
+      "title": "Grease-ice broadband dissipative gel skin",
+      "summary": "A 3 mm coating copying the vertical structure of young sea ice: a very lossy, soft silicone-gel top (G ~ 60 kPa, tan delta ~ 1, like grease ice/frazil slush) grading into a stiffer, low-loss base (like consolidated ice). Instead of tuning a resonance (dolphin-skin approach) it absorbs near-wall pressure fluctuations over a broad band, which makes the effect less speed-sensitive, and the soft top keeps a low fouling-release stress.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "atmosphere_ocean"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of mean wall shear at 7 m/s versus a clean standard silicone foul-release coating",
+        "formula": "Energy absorbed by the wall per unit area ~ pi * tan_delta * p'^2 * t / G per cycle, with p'_rms ~ 2.5 tau = 45 Pa: E ~ 3.14*1*2025*3e-3/6e4 = 3.2e-4 J/m2 per cycle, times f ~ 300 Hz = 0.1 W/m2, compared with the turbulent production near the wall tau*U ~ 18*7 = 126 W/m2 -> a 0.08% share; even if the absorbed energy were taken entirely from the streak regeneration cycle with a leverage of ~10, DR ~ 0.8%; take 0.5%",
+        "value": 0.5,
+        "unit": "%"
+      },
+      "main_risk": "The dissipated power is three orders below the near-wall turbulence production, so the drag effect is likely unmeasurable, and a very soft lossy gel wears quickly.",
+      "novelty_vs_known": "Closest: compliant coatings (Kramer, Choi) and the dolphin-skin elite, which rely on tuned resonance. New: broadband damping design taken from sea-ice wave attenuation (high-loss soft top, graded to a stiff base) - but my estimate shows the energy argument limits the drag effect to well below 1%.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (~0.3 mm, E ~ 1 MPa) at 7 m/s",
+      "inspiration_source": "Grease ice and frazil slush over consolidated sea ice, which damp ocean waves by viscous dissipation",
+      "domain": "Fluid-structure interaction / Viscoelasticity",
+      "physical_mechanism": "Near-wall pressure and shear fluctuations deform a soft, lossy top layer; the loss modulus converts part of their energy into heat. The stiffness grading (soft/lossy top, stiff base) confines deformation near the surface and keeps the layer stable. Steady proxy model: 1D quasi-static deformation u(z) of the graded layer under a surface pressure/shear amplitude, from which the stored energy and, with tan_delta, the dissipated power per cycle follow; fouling release follows from surface compliance.",
+      "parameters": [
+        {"name": "coating_thickness", "value": 0.003, "min_bound": 0.001, "max_bound": 0.006, "justification": "Thickness of the dissipative zone; young sea-ice slush layers are thicker, a hull coating is limited to a few mm."},
+        {"name": "surface_shear_modulus", "value": 60000.0, "min_bound": 50000.0, "max_bound": 300000.0, "justification": "Soft gel top, kept >= 5e4 Pa for hydroelastic stability at 7 m/s."},
+        {"name": "base_shear_modulus", "value": 3000000.0, "min_bound": 500000.0, "max_bound": 20000000.0, "justification": "Stiff, low-loss base like consolidated ice."},
+        {"name": "loss_tangent", "value": 1.0, "min_bound": 0.3, "max_bound": 1.5, "justification": "Highly dissipative gels reach tan delta ~ 1."},
+        {"name": "pressure_fluctuation_rms", "value": 45.0, "min_bound": 10.0, "max_bound": 200.0, "justification": "p'_rms ~ 2-3 tau_w in turbulent boundary layers."},
+        {"name": "wall_shear_stress", "value": 18.0, "min_bound": 3.0, "max_bound": 80.0, "justification": "Cruising hull at 7 m/s."},
+        {"name": "adhesion_work_barnacle", "value": 0.05, "min_bound": 0.01, "max_bound": 0.3, "justification": "Barnacle cement on silicone."}
+      ]
+    },
+    {
+      "order_id": "r003-02",
+      "target_feasible": false,
+      "infeasibility_reason": "A phase-change drag layer on a hull needs either a vapour film (film boiling needs ~1e5 W/m2, i.e. ~1 GW for 1e4 m2, about 100x the ship's propulsion power, violating the energy balance of the request) or spontaneous degassing, which cannot occur because hydrostatic pressure keeps seawater under-saturated at hull depth; microbial gas production from seawater organics is 3-4 orders of magnitude too slow to feed even a thin gas layer."
+    },
+    {
+      "order_id": "r003-03",
+      "title": "Desert-pavement armoured compliant coating",
+      "summary": "A mosaic of hard, flush, 3 mm ceramic-filled epoxy tiles (gap 50 um) floating on a 1.5 mm soft silicone foundation, copying desert pavement where interlocking hard clasts rest on soft vesicular soil. The hard tiles take fender, cleaning and abrasion loads that destroy soft foul-release coatings, while the soft foundation lets tiles rock individually, so a barnacle spanning several tiles is peeled off at a low load; the flush mosaic stays hydraulically smooth.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "geology"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Change of mean wall shear at 7 m/s versus a clean standard silicone foul-release coating",
+        "formula": "Tile gaps of 50 um, width w+ = 50e-6*0.13/1.05e-6 ~ 6 and depth-filled to 10 um: gap roughness k+ ~ 1-2 < 5, hydraulically smooth; tile edge misalignment 5 um -> k+ ~ 0.6. Friction change vs smooth FR ~ 0 +/- 0.5%. The benefit is durability, which keeps the hull smooth longer; clean-vs-clean drag gain ~0%.",
+        "value": 0.0,
+        "unit": "%"
+      },
+      "main_risk": "Hard tile surfaces give barnacles a strong bond; if tiles do not rock enough under a barnacle base (tile larger than barnacle), fouling release is worse than on soft silicone.",
+      "novelty_vs_known": "Closest: soft silicone foul-release coatings (fragile) and hard ceramic-epoxy coatings (tough but poor release). New: hard-over-soft mosaic from desert pavement that separates the abrasion-bearing surface from the release-enabling compliance; not a textbook bionic surface.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (~0.3 mm, E ~ 1 MPa) at 7 m/s",
+      "inspiration_source": "Desert pavement: interlocking hard clasts on a soft, fine-grained vesicular soil layer",
+      "domain": "Structural Mechanics / Fluid Dynamics",
+      "physical_mechanism": "Hard tiles on an elastic Winkler-like foundation: a local load on a tile (fender, barnacle pull) is spread by the stiff tile and carried by the soft foundation; under a barnacle whose base spans tile edges, differential tile rotation concentrates peel at the base edge and lowers the release force. Wall shear stays that of a smooth wall because the tiles are flush. Steady model: 1D beam (tile) on elastic foundation under a point or distributed pull, or the sublayer shear over a smooth wall with an equivalent roughness correction.",
+      "parameters": [
+        {"name": "tile_size", "value": 0.003, "min_bound": 0.001, "max_bound": 0.01, "justification": "Clast-like tiles; smaller than a mature barnacle base (5-15 mm) so a barnacle spans several tiles."},
+        {"name": "tile_thickness", "value": 0.0005, "min_bound": 0.0002, "max_bound": 0.0015, "justification": "Ceramic-filled epoxy tile thickness."},
+        {"name": "tile_modulus", "value": 5000000000.0, "min_bound": 1000000000.0, "max_bound": 20000000000.0, "justification": "Ceramic-filled epoxy."},
+        {"name": "foundation_thickness", "value": 0.0015, "min_bound": 0.0005, "max_bound": 0.003, "justification": "Soft silicone foundation."},
+        {"name": "foundation_shear_modulus", "value": 200000.0, "min_bound": 50000.0, "max_bound": 1000000.0, "justification": "Foul-release grade silicone."},
+        {"name": "gap_width", "value": 5e-05, "min_bound": 1e-05, "max_bound": 0.0002, "justification": "Gap between tiles, filled flush with soft silicone."},
+        {"name": "wall_shear_stress", "value": 18.0, "min_bound": 3.0, "max_bound": 80.0, "justification": "Cruising hull at 7 m/s."}
+      ]
+    }
+  ]
+}

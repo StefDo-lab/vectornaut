@@ -1,0 +1,64 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: 1D shear of the bead-filled soft foundation with the silicone skin in series (skin compliance added in the metric transform). Bead stiffening of the foundation by rigid spheres (Guth-Gold): volume fraction phi_v = area fraction * (2/3) d / t_f = 0.5*0.667e-3/1.5e-3 = 0.222, G_eff = G(1 + 2.5 phi + 14.1 phi^2) = 2.25 G = 4.5e5 Pa. This is a correction the proposal's estimate missed (it used the unfilled modulus): compliance C = t_f/G_eff + t_s/G_s = 3.33e-9 + 3.0e-10 = 3.6e-9 m/Pa (not 7.8e-9), sigma_c = sqrt(2*0.05/3.6e-9) = 5.2 kPa. Baseline: standard silicone foul-release (0.3 mm, G 0.33 MPa, no beads, no separate skin): C = 9.1e-10 m/Pa, sigma_c = 10.5 kPa -> expected ~50% lower release stress (vs -15% for the tiled parent), because the fouler now sees silicone (w_a 0.05) instead of epoxy tiles. Further caveats: local compliance above a bead crest is only t_s/G_s + (t_f - d)/G_f ~ 1.8e-9 m/Pa - barnacles centred on crests see ~40% higher release stress; Guth-Gold is approximate for phi > 0.2. Drag: overcoated bead waviness 5-10 um amplitude over ~1-2 mm, k+ ~ 1 and slopes < 1% -> hydraulically smooth; wall shear change vs baseline 0 +/- 0.5% (not modelled). Durability: beads limit indentation/gouge depth under blunt loads and carry fender contact; skin still abraded by brushes over crests. Applicability: broadcast aggregate into wet coating is a standard deck-coating technique, feasible in dry dock. Dimensionless: phi_v = 0.22, G_eff/G = 2.25, skin compliance share 8%, bead crest compliance ratio 0.5.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "bead_diameter", "value": 0.001},
+    {"name": "bead_area_fraction", "value": 0.5},
+    {"name": "foundation_thickness", "value": 0.0015},
+    {"name": "foundation_shear_modulus", "value": 200000.0},
+    {"name": "skin_thickness", "value": 0.0001},
+    {"name": "skin_shear_modulus", "value": 330000.0},
+    {"name": "adhesion_work_surface", "value": 0.05},
+    {"name": "wall_shear_stress", "value": 18.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "BeadVolumeFraction", "value": 0.222},
+    {"name": "FoundationStiffeningFactor", "value": 2.25},
+    {"name": "SkinComplianceShare", "value": 0.083},
+    {"name": "WavinessWallUnits_k_plus", "value": 1.0}
+  ],
+  "simulation_coefficient": 3.6e-09,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics / Fouling Release",
+    "independent_var": {"label": "Normalized depth through the bead-filled foundation", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement", "unit": "m"},
+    "primary_metric": {"label": "Critical fouling detachment stress (design)"},
+    "reference_metric": {"label": "Critical fouling detachment stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of fouling detachment stress vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Fouling detachment stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouling detachment stress (design)",
+    "reference_metric": "Critical fouling detachment stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 10.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "bead_diameter + skin_thickness <= foundation_thickness (beads covered)",
+      "waviness amplitude < 10 um (hydraulically smooth)"
+    ],
+    "design_variables": ["bead_diameter", "bead_area_fraction", "foundation_thickness", "foundation_shear_modulus", "skin_thickness"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "1/wall_shear_stress",
+    "unit": "Pa",
+    "label": "Critical fouling detachment stress",
+    "transform": "sqrt(2*adhesion_work_surface/(m + skin_thickness/skin_shear_modulus))"
+  },
+  "baseline_parameters": [
+    {"name": "foundation_thickness", "value": 0.0003},
+    {"name": "foundation_shear_modulus", "value": 330000.0},
+    {"name": "bead_area_fraction", "value": 0.0},
+    {"name": "skin_thickness", "value": 0.0}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating, 0.3 mm, E ~ 1 MPa, no aggregate"
+}

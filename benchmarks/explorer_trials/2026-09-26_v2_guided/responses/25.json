@@ -1,0 +1,62 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: a rigid tile (E = 5 GPa, 0.5 mm; bending stiffness >> foundation) on a soft silicone foundation; under a barnacle pull the tile translates, so the compliance per area is that of the foundation, C = t_f/G_f = 1.5e-3/2e5 = 7.5e-9 m/Pa (linear 1D shear model, analytic w(z) = tau t_f z / G_f). Fouling release (Kendall thin-layer): sigma_c = sqrt(2 w_a / C). Honest trade-off captured by the model: barnacle cement adheres to the hard, higher-energy tile surface with w_a ~ 0.3 J/m2 instead of ~0.05 J/m2 on silicone. Design sigma_c = sqrt(0.6/7.5e-9) = 8.9 kPa vs standard foul-release (0.3 mm, G 0.33 MPa, w_a 0.05) sigma_c = sqrt(0.1/9.1e-10) = 10.5 kPa -> ~15% easier release, much less than a soft thick silicone (the dolphin elite reaches ~4 kPa). Not captured: the tile-rocking peel mechanism when a barnacle spans tile gaps (could improve release further, needs a 4th-order plate-on-foundation model) and edge crack initiation at tile gaps. Drag: tiles flush, gaps 50 um filled; gap Reynolds number w+ ~ 6 and step heights ~5 um (k+ ~ 0.6) make the surface hydraulically smooth, so wall shear equals the smooth baseline within ~0.5%; the concept gives no drag reduction. Durability: hard tiles protect against abrasion and fender loads (main failure mode of soft foul-release), a real advantage; risks are tile debonding by water ingress at gaps and thermal-cycling fatigue of the tile/silicone bond. Dimensionless: t_f/tile_size = 0.5, tile/foundation stiffness ratio E_t/G_f = 2.5e4, gap w+ = 6.2, step k+ = 0.6.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "tile_size", "value": 0.003},
+    {"name": "tile_thickness", "value": 0.0005},
+    {"name": "tile_modulus", "value": 5000000000.0},
+    {"name": "foundation_thickness", "value": 0.0015},
+    {"name": "foundation_shear_modulus", "value": 200000.0},
+    {"name": "gap_width", "value": 5e-05},
+    {"name": "wall_shear_stress", "value": 18.0},
+    {"name": "adhesion_work_surface", "value": 0.3}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FoundationThicknessToTileSize", "value": 0.5},
+    {"name": "TileToFoundationStiffnessRatio", "value": 25000.0},
+    {"name": "GapWidthWallUnits_w_plus", "value": 6.2},
+    {"name": "StepHeightWallUnits_k_plus", "value": 0.6}
+  ],
+  "simulation_coefficient": 7.5e-09,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics / Fouling Release",
+    "independent_var": {"label": "Normalized depth through the foundation", "unit": "-"},
+    "dependent_var": {"label": "Tile/foundation shear displacement", "unit": "m"},
+    "primary_metric": {"label": "Critical fouling detachment stress (design)"},
+    "reference_metric": {"label": "Critical fouling detachment stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of fouling detachment stress vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Fouling detachment stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouling detachment stress (design)",
+    "reference_metric": "Critical fouling detachment stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "tile step height < 10 um (hydraulically smooth)"
+    ],
+    "design_variables": ["tile_size", "tile_thickness", "foundation_thickness", "foundation_shear_modulus", "gap_width"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "1/wall_shear_stress",
+    "unit": "Pa",
+    "label": "Critical fouling detachment stress",
+    "transform": "sqrt(2*adhesion_work_surface/m)"
+  },
+  "baseline_parameters": [
+    {"name": "foundation_thickness", "value": 0.0003},
+    {"name": "foundation_shear_modulus", "value": 330000.0},
+    {"name": "adhesion_work_surface", "value": 0.05}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating, 0.3 mm, E ~ 1 MPa, silicone surface"
+}

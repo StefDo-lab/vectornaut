@@ -1,0 +1,10 @@
+{
+  "governing_equation": "d2u_dz2 = -log(surface_shear_modulus / base_shear_modulus) * du_dz",
+  "boundary_conditions": [
+    "u(0) = 0",
+    "du_dz(1) = wall_shear_stress * coating_thickness / surface_shear_modulus"
+  ],
+  "independent_variables": ["z"],
+  "dependent_variables": ["u"],
+  "parameters": []
+}

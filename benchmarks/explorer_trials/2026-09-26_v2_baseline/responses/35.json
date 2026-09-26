@@ -1,0 +1,29 @@
+{
+ "governing_equation": "d2phi_dx2 = (0.25 * led_pitch**2 * 3 * (absorption_coefficient + scattering_coefficient) * (absorption_coefficient + outcoupling_coefficient)) * phi",
+ "boundary_conditions": [
+  "phi(0) = led_edge_fluence",
+  "dphi_dx(1) = 0"
+ ],
+ "independent_variables": [
+  "x"
+ ],
+ "dependent_variables": [
+  "phi"
+ ],
+ "parameters": [
+  {
+   "name": "outcoupling_coefficient",
+   "value": 700.0,
+   "min_bound": 50.0,
+   "max_bound": 3000.0,
+   "justification": "Effective loss rate of guided light through the surface per unit path: silicone (n~1.41) against seawater (n~1.34) has a critical angle of ~72 deg, so ~70% of diffuse light escapes at each surface encounter; mu_out ~ 0.5*0.7/t = 700 1/m for t = 0.5 mm."
+  },
+  {
+   "name": "led_edge_fluence",
+   "value": 1.0,
+   "min_bound": 0.1,
+   "max_bound": 10.0,
+   "justification": "Fluence rate at the LED position, used as reference (normalised to 1); x runs from an LED (x=0) to the midpoint between two LEDs (x=1, symmetry)."
+  }
+ ]
+}

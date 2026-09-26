@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2w_dx2 / rib_pitch**2 + d2w_dy2 / coating_thickness**2 = 0",
+  "boundary_conditions": [
+    "w(0, y) = 0",
+    "w(1, y) = 0",
+    "w(x, 0) = 0",
+    "dw_dy(x, 1) = wall_shear_stress * coating_thickness / soft_shear_modulus"
+  ],
+  "independent_variables": ["x", "y"],
+  "dependent_variables": ["w"],
+  "parameters": []
+}

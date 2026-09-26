@@ -1,0 +1,97 @@
+{
+  "function_analysis": "Same functions as before: (F1) lower the mean wall shear of the turbulent hull boundary layer (viscous length nu/u_tau ~ 5-8 um at 7 m/s, so a wall feature must act on um to 100 um scales or change the wall condition by at least ~0.1 viscous units to matter); (F2) keep fouling off or let it release without biocides; (F3) survive 3-5 years (abrasion, hydrolysis, interfacial debonding from hull flexing and impacts); (F4) no large continuous consumption; (F5) hull-scale application. For graded-stiffness concepts the realistic levers are fouling release (surface compliance) and durability (stress concentrations at interfaces), while their direct drag lever (compliant-wall interaction with near-wall turbulence) is small and speed-dependent.",
+  "requirements": [
+    {"name": "low_friction_drag", "criterion": "Reduces the mean wall shear stress / frictional resistance at cruising speed versus a clean, standard foul-release hull coating."},
+    {"name": "non_toxic_antifouling", "criterion": "Prevents fouling settlement or makes it release easily without releasing biocides, heavy metals or other toxic substances into the sea."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps its function and adhesion for at least 3-5 years in seawater (hydrolysis, abrasion, UV at the waterline, cleaning)."},
+    {"name": "low_consumption_operation", "criterion": "Needs no continuous supply of material or energy that is large compared with the fuel it saves, and no frequent reapplication."},
+    {"name": "hull_scale_applicability", "criterion": "Can be applied to large steel hull areas with dry-dock methods at a cost comparable to premium hull coatings."}
+  ],
+  "mechanism_classes_considered": [
+    "graded_stiffness (through-thickness and in-plane modulus gradients for release and for interfacial stress relief)",
+    "interfacial_slip (only relevant if b+ >~ 0.1, i.e. b >~ 0.5 um)",
+    "architected_lattice (ridge lattices that anchor soft layers)"
+  ],
+  "analogues_considered": [
+    "Dolphin dermal ridges and papillae keying the epidermis into the dermis",
+    "Mussel byssus threads: stiffness gradient from stiff distal to soft proximal end that avoids stress concentration at the attachment",
+    "Tendon-bone enthesis: graded mineralisation spreading interfacial stress",
+    "Squid beak: hardness gradient from tip to soft base",
+    "Engineering: functionally graded thermal barrier coatings, tapered adhesive joints (shear-lag theory)"
+  ],
+  "relevant_governing_quantities": ["wall_shear", "stress"],
+  "candidates": [
+    {
+      "order_id": "r002-01",
+      "target_feasible": false,
+      "infeasibility_reason": "A graded-stiffness layer thinner than 100 nm deforms by only ~0.02 nm under hull wall shear (tau ~ 20 Pa, G ~ 0.1 MPa, strain 2e-4), about five orders of magnitude below the viscous length (~5 um), so compliance at the nm scale cannot change wall shear; its only possible effect is on fouling adhesion, which belongs to the stress cell, not to wall_shear."
+    },
+    {
+      "order_id": "r002-02",
+      "title": "Dermal-ridge anisotropic compliant skin with tear-arresting ribs",
+      "summary": "A 2 mm soft silicone skin (G ~ 0.08-0.15 MPa) keyed into a stiff polyurethane base by streamwise ribs (1 mm pitch, 1.2 mm high, like the dermal ridges under dolphin epidermis), so the surface is compliant in the streamwise direction but restrained spanwise. The ribs arrest tears and delamination from fender impacts, and the streamwise-anisotropic compliance is the variant that DNS studies (Fukagata et al. 2008) found most favourable for drag, while the soft top keeps low fouling-release stress.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of mean wall shear at 7 m/s versus a clean standard silicone foul-release coating",
+        "formula": "The dynamic wall velocity of a compliant layer under fluctuating shear tau' at frequency omega is u_w' = omega*tau'*t/G, which acts like a dynamic slip length b_dyn = mu*omega*t/G = 1.08e-3*2*pi*360*2e-3/1e5 ~ 5e-11 m (b+ ~ 1e-5): negligible as slip. Any benefit must come from phase-lagged interaction with streaks (tan delta 0.3), which DNS at low Re gives at most ~8% for optimally tuned anisotropic walls; mistuning at hull Re and the finite stiffness here reduce that to ~0-2%; take 1%.",
+        "value": 1.0,
+        "unit": "%"
+      },
+      "main_risk": "Drag benefit is essentially unverified at ship Reynolds numbers and may be zero; the concept then only improves fouling release and durability over the parent.",
+      "novelty_vs_known": "Closest: the parent graded-modulus elastomer and Kramer/Choi compliant coatings. New: in-plane anisotropy by streamwise ribs (dermal-ridge analogue) that (a) targets the anisotropic compliance found beneficial in DNS, (b) arrests tearing of the soft layer, (c) mechanically anchors it; and an honest drag estimate that shows the slip contribution is nil.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (~0.3 mm, E ~ 1 MPa) at 7 m/s",
+      "inspiration_source": "Dolphin skin dermal ridges and papillae anchoring a soft, compliant epidermis",
+      "domain": "Structural Mechanics / Fluid-structure interaction",
+      "physical_mechanism": "Streamwise shear loads a soft layer whose motion in the spanwise direction is restrained by stiff ribs; the streamwise shear compliance C_x = t/G_soft is high while the spanwise compliance is ~(G_soft/G_rib)(pitch/t) lower. Steady model: 2D shear deformation w(y,z) of the soft layer between two ribs (anti-plane shear, Laplace equation G*(w_yy + w_zz) = 0) with a wall-shear traction at the top, clamped ribs at the sides and a clamped base, giving the mean surface compliance that controls fouling release and the rib stiffening effect. Drag is represented only by the estimate above.",
+      "parameters": [
+        {"name": "coating_thickness", "value": 0.002, "min_bound": 0.0008, "max_bound": 0.004, "justification": "Dolphin epidermis of a few mm; sprayable build."},
+        {"name": "rib_pitch", "value": 0.001, "min_bound": 0.0003, "max_bound": 0.005, "justification": "Dermal ridge spacing of dolphins is ~0.5-1 mm."},
+        {"name": "rib_height", "value": 0.0012, "min_bound": 0.0003, "max_bound": 0.0035, "justification": "Ribs reach ~60% into the soft layer, leaving a continuous soft top."},
+        {"name": "soft_shear_modulus", "value": 100000.0, "min_bound": 50000.0, "max_bound": 500000.0, "justification": "Foul-release silicone; >= 5e4 Pa to avoid hydroelastic divergence."},
+        {"name": "rib_shear_modulus", "value": 20000000.0, "min_bound": 2000000.0, "max_bound": 200000000.0, "justification": "Tough polyurethane ribs."},
+        {"name": "wall_shear_stress", "value": 18.0, "min_bound": 3.0, "max_bound": 80.0, "justification": "Cruising hull at 7 m/s."},
+        {"name": "adhesion_work_barnacle", "value": 0.05, "min_bound": 0.01, "max_bound": 0.3, "justification": "Barnacle cement on silicone."}
+      ]
+    },
+    {
+      "order_id": "r002-03",
+      "title": "Byssus-graded tie-layer against coating delamination",
+      "summary": "A 1 mm tie-layer between the epoxy anticorrosive primer and a soft silicone foul-release top whose modulus falls smoothly from ~1 GPa to ~1 MPa, copying the stiffness gradient of mussel byssus threads that avoids stress peaks where stiff meets soft. The gradient spreads the interfacial shear stress caused by hull bending, thermal mismatch and impacts, so the soft, biocide-free top stays bonded for many years.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "stress"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of peak interfacial shear stress at the edge of a coating defect under hull strain, versus a standard stepped tie-coat; drag benefit ~0%",
+        "formula": "Shear-lag: peak interface shear tau_max = E_c*eps*t_c*beta with beta = sqrt(G_i/(E_c*t_c*t_i)); grading the tie-layer spreads the transfer length 1/beta; for G_i effective reduced 4x and t_i 3x thicker, beta falls by sqrt(12) ~ 3.5, so tau_max falls ~70%. Drag versus a clean FR coating: 0% directly; indirectly keeps the smooth top intact (fewer delamination patches) - not counted.",
+        "value": 0.0,
+        "unit": "%"
+      },
+      "main_risk": "Most foul-release failures in service are mechanical damage from contact and poor surface preparation, not shear-lag delamination; the benefit may be marginal in practice and does nothing for drag.",
+      "novelty_vs_known": "Closest: commercial silicone tie-coats (single-step modulus transition) and functionally graded thermal barrier coatings. New: a continuous 3-decade modulus gradient designed by shear-lag theory, copied from byssus threads, specifically to protect a soft foul-release top.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release system with conventional epoxy primer + thin tie-coat + silicone top (stepped modulus)",
+      "inspiration_source": "Mussel (Mytilus) byssus thread with a distal-to-proximal stiffness gradient",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "When the steel hull strains (wave bending, eps ~ 3e-4 to 1e-3) or the coating is locally cut, load must transfer from the hull through the tie-layer into the topcoat; shear-lag theory gives an exponentially decaying interfacial shear with a peak at the free edge proportional to sqrt(G_i). A graded, thicker tie-layer lowers and spreads this peak, delaying debond growth. Steady model: 1D shear-lag ODE for the axial force/strain in the coating along the hull, d2u/dx2 = beta^2 (u - u_hull), with free edge and far-field conditions.",
+      "parameters": [
+        {"name": "hull_strain", "value": 0.0005, "min_bound": 0.0001, "max_bound": 0.002, "justification": "Wave-induced hull girder strains of merchant ships."},
+        {"name": "topcoat_modulus", "value": 1000000.0, "min_bound": 200000.0, "max_bound": 5000000.0, "justification": "Silicone foul-release top, E ~ 1 MPa."},
+        {"name": "topcoat_thickness", "value": 0.0004, "min_bound": 0.0001, "max_bound": 0.002, "justification": "Typical foul-release topcoat thickness."},
+        {"name": "tie_layer_shear_modulus", "value": 5000000.0, "min_bound": 500000.0, "max_bound": 500000000.0, "justification": "Effective shear modulus of the graded layer (harmonic mean of 1 GPa to 1 MPa gradient)."},
+        {"name": "tie_layer_thickness", "value": 0.001, "min_bound": 0.0001, "max_bound": 0.003, "justification": "Graded build of ~1 mm, vs ~0.1 mm for standard tie-coats."},
+        {"name": "defect_length", "value": 0.05, "min_bound": 0.005, "max_bound": 0.5, "justification": "Half-length of the coating segment adjacent to a cut or damage edge."}
+      ]
+    }
+  ]
+}

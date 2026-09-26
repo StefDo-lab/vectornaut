@@ -1,0 +1,126 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Slip length: Ybert et al. (2007) for posts, b/L = 0.325/sqrt(phi_s) - 0.44 = 1.028 - 0.44 = 0.59 -> b = 5.9 um, matches 6 um; b+ = 6/5.4 = 1.1. The pipeline may substitute simulation_coefficient for effective_slip_length; both are 6e-6 m. Net virtual-origin shift with the isotropic-slip penalty 0.35: 3.9 um -> expected gain b_net/(delta+b_net) = 3.9/98.9 = 3.9%. Meniscus stability: post size a = L*sqrt(phi_s) = 3.2 um, gap 6.8 um; Laplace breakthrough pressure ~ 2 gamma |cos theta_a| / gap = 2*0.072*0.5/6.8e-6 ~ 10.6 kPa. Turbulent wall pressure fluctuations p_rms ~ 2.5-3 tau_w = 125-150 Pa, peaks ~1 kPa: acceptable. Hydrostatic head varies 0-100 kPa over a 10 m draft, so a single 20 kPa supply overpressure cannot balance the whole hull: the manifold must be zoned by depth (every ~1 m, +-10 kPa), otherwise gas bubbles out near the waterline and the plastron floods at depth. Gas consumption by dissolution: k_L ~ 0.08 u_tau Sc^-2/3 = 0.08*0.221/63 = 2.8e-4 m/s, excess gas concentration ~0.015 m3/m3 per bar -> ~4e-6 m3/(s m2) at 1 bar excess, i.e. ~0.04 m3/s for 1e4 m2: small compressor duty. Structural: PDMS/ silica posts 3 um wide, ~5-10 um tall, fine under 50 Pa shear; membrane (ePTFE) mechanically fragile against abrasion and impacts; biofouling of the membrane pores is the main durability issue, not a safety issue. Baseline: same smooth FR wall with no gas (slip 0).",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "post_pitch",
+   "value": 1e-05
+  },
+  {
+   "name": "solid_fraction",
+   "value": 0.1
+  },
+  {
+   "name": "effective_slip_length",
+   "value": 6e-06
+  },
+  {
+   "name": "gas_supply_overpressure",
+   "value": 20000.0
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  },
+  {
+   "name": "spanwise_slip_penalty_factor",
+   "value": 0.35
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "slip_length_plus",
+   "value": 1.1
+  },
+  {
+   "name": "post_pitch_plus",
+   "value": 1.85
+  },
+  {
+   "name": "Laplace_pressure_over_p_rms",
+   "value": 80.0
+  },
+  {
+   "name": "hydrostatic_head_over_Laplace_pressure",
+   "value": 9.4
+  }
+ ],
+ "simulation_coefficient": 6e-06,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "post_pitch",
+   "solid_fraction",
+   "effective_slip_length",
+   "gas_supply_overpressure"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_slip_length",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull (no plastron)"
+}

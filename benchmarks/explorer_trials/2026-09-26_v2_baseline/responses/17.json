@@ -1,0 +1,50 @@
+{
+ "governing_equation": "d2u_dy2 = 0",
+ "boundary_conditions": [
+  "u(0) = ((compliance_equivalent_virtual_origin_shift * outer_shear_modulus_tuning_factor) / equivalent_layer_thickness) * du_dy(0)",
+  "u(1) = edge_velocity"
+ ],
+ "independent_variables": [
+  "y"
+ ],
+ "dependent_variables": [
+  "u"
+ ],
+ "parameters": [
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05,
+   "min_bound": 5e-05,
+   "max_bound": 0.0002,
+   "justification": "Laminar-equivalent wall layer chosen so that b/(delta+b) reproduces the turbulent result DR = 2*b+/U_b+: delta+ = U_b+/2 = 17.5 viscous units = 95 um. y is normalised by this thickness."
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9,
+   "min_bound": 1.0,
+   "max_bound": 8.0,
+   "justification": "Velocity at the top of the equivalent layer such that a no-slip wall carries the baseline shear: U_d = tau0*delta/mu = 50*9.5e-5/1.22e-3 = 3.9 m/s, held fixed (same outer flow)."
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122,
+   "min_bound": 0.0009,
+   "max_bound": 0.0016,
+   "justification": "Seawater at 15 C, converts du/dy into wall shear stress."
+  },
+  {
+   "name": "compliance_equivalent_virtual_origin_shift",
+   "value": 2e-06,
+   "min_bound": 0.0,
+   "max_bound": 6e-06,
+   "justification": "EMPIRICAL: a steady model cannot resolve fluid-structure interaction. Compliant-coating experiments (Choi et al. 1997; Fukagata et al. 2008 DNS) report 0-7% DR in tuned conditions; 2 um (Delta U+ ~0.37, ~2% DR) is a conservative ship-scale value, 0 is the honest lower bound."
+  },
+  {
+   "name": "outer_shear_modulus_tuning_factor",
+   "value": 1.0,
+   "min_bound": 0.0,
+   "max_bound": 1.0,
+   "justification": "Fraction of the tuned effect retained: 1 when c_t = sqrt(G/rho) ~ U/2 (G ~ 15 kPa at 15 kn), dropping toward 0 off-design."
+  }
+ ]
+}

@@ -1,0 +1,123 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Slip: for grooves infused with a lubricant more viscous than water (mu_o/mu_w = 3e-3/1.22e-3 = 2.5), the effective slip is strongly reduced relative to the gas-filled case (Schoenecker, Baier & Hardt 2014): b_LIS ~ b_gas/(1 + c mu_o/mu_w) with c ~ 1-2 for groove depth ~ pitch. b_gas (Philip, 20 um pitch, 90% open) = 11.8 um -> b_LIS ~ 11.8/(1+1.5*2.5) = 2.5-3.4 um. Adjusted effective_slip_length 4 um -> 3 um (b+ = 0.56); expected gain 3/98 = 3.1%. Lubricant budget: reservoir 1 mm = 1 L/m2; assumed turbulent shear depletion ~1 um/day (1 mL/m2/day) -> reservoir lasts ~2.7 years if the depletion rate holds; measured depletion in turbulent flow at tau_w ~50 Pa is uncertain by an order of magnitude (lubricant drains faster when not retained by capillarity). Total release ~10 L/day, ~3.6 m3/year per 1e4 m2 hull, continuously discharged into the sea; environmentally acceptable (readily biodegradable ester) lubricants exist (VGP 2013 EAL rules) but this is a continuous discharge. Capillary retention: Laplace pressure 2 gamma_ow/ w ~ 2*0.03/18e-6 = 3.3 kPa, larger than the shear stress on the film (50 Pa) but the film shear-drains along grooves. Structural: 1 mm porous reservoir + textured cap, mechanically soft; hydrostatic pressure balanced by pore connectivity. Baseline: smooth FR without lubricant (slip 0).",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "texture_pitch",
+   "value": 2e-05
+  },
+  {
+   "name": "lubricant_viscosity",
+   "value": 0.003
+  },
+  {
+   "name": "effective_slip_length",
+   "value": 3e-06
+  },
+  {
+   "name": "reservoir_thickness",
+   "value": 0.001
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "viscosity_ratio_oil_water",
+   "value": 2.5
+  },
+  {
+   "name": "slip_length_plus",
+   "value": 0.56
+  },
+  {
+   "name": "texture_pitch_plus",
+   "value": 3.7
+  },
+  {
+   "name": "reservoir_lifetime_years",
+   "value": 2.7
+  }
+ ],
+ "simulation_coefficient": 3e-06,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics / Tribology",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds",
+   "lubricant discharge must be reported and minimised"
+  ],
+  "design_variables": [
+   "texture_pitch",
+   "lubricant_viscosity",
+   "effective_slip_length",
+   "reservoir_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_slip_length",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull"
+}

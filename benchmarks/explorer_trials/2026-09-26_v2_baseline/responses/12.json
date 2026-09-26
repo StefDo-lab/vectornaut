@@ -1,0 +1,127 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Slip: Philip/ Lauga-Stone for streamwise ridges, L = 20 um, gas fraction 0.85: b_par = (L/pi) ln(sec(pi*0.85/2)) = 6.37 um * ln(4.28) = 9.3 um, b_perp ~ 4.6 um; net virtual-origin shift ~ b_par - 0.6 b_perp = 6.5 um, so the proposed 5 um net value is conservative. With 70% coverage: 3.5 um -> expected gain 3.5/98.5 = 3.6%. b+ = 0.93. Gas supply: H2 at 0.5 A/m2 = j/(2F) = 2.6e-6 mol/(s m2) = 6.3e-8 m3/(s m2) at 1 bar; plastron volume ~5e-6 m3/m2 -> refill ~80 s (at 10 m depth ~160 s). Energy: 1.5 W/m2 -> 15 kW for 1e4 m2 (0.15% of 10 MW propulsion). CRITICAL side effect (not modelled): the counter-electrode reaction in seawater at 0.5 A/m2 * 1e4 m2 = 5000 A is chlorine/hypochlorite evolution: 5000/(2*96485)*70.9 g/mol = 1.8 g/s = ~160 kg active chlorine per day at full duty (~16 kg/day at 10% duty). Typical ICCP currents on a coated hull are only 10-30 mA/m2 (100-300 A), so this is 20-50x more anodic product, i.e. an electrochemical biocide in practice. Cathodic current density 0.5 A/m2 also precipitates calcareous deposits (CaCO3, Mg(OH)2) at pH > 9.5 on the cathode mesh, which will clog the ridges over months. Laplace breakthrough ~2*0.072*0.5/17e-6 = 4.2 kPa (0.4 m head): the plastron is depth-limited without continuous regeneration. Structural: ridges fine under 50 Pa shear; the buried conductive mesh must not contact the steel (galvanic/ hydrogen embrittlement risk). Physically consistent, so audit passes, but the non-toxic requirement is at risk. Baseline: smooth FR hull (slip 0).",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "ridge_pitch",
+   "value": 2e-05
+  },
+  {
+   "name": "gas_fraction",
+   "value": 0.85
+  },
+  {
+   "name": "current_density",
+   "value": 0.5
+  },
+  {
+   "name": "effective_slip_length",
+   "value": 5e-06
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  },
+  {
+   "name": "plastron_coverage_fraction",
+   "value": 0.7
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "slip_length_plus",
+   "value": 0.93
+  },
+  {
+   "name": "ridge_pitch_plus",
+   "value": 3.7
+  },
+  {
+   "name": "plastron_refill_time_over_flowthrough_time",
+   "value": 0.4
+  },
+  {
+   "name": "Laplace_pressure_over_p_rms",
+   "value": 30.0
+  }
+ ],
+ "simulation_coefficient": 5e-06,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics / Electrochemistry",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds",
+   "anodic chlorine production must stay below regulatory discharge limits"
+  ],
+  "design_variables": [
+   "ridge_pitch",
+   "gas_fraction",
+   "current_density",
+   "effective_slip_length"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_slip_length",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull (no plastron)"
+}

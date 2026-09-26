@@ -1,0 +1,36 @@
+{
+ "governing_equation": "d2u_dx2 = (shear_lag_domain_length**2 * interlayer_shear_modulus / (lamella_modulus * lamella_thickness * interlayer_thickness)) * u",
+ "boundary_conditions": [
+  "du_dx(0) = -shear_lag_domain_length * fouling_shear_load * fouled_patch_length / (lamella_modulus * lamella_thickness)",
+  "u(1) = 0"
+ ],
+ "independent_variables": [
+  "x"
+ ],
+ "dependent_variables": [
+  "u"
+ ],
+ "parameters": [
+  {
+   "name": "interlayer_thickness",
+   "value": 5e-06,
+   "min_bound": 1e-06,
+   "max_bound": 2e-05,
+   "justification": "Thin weak interlayer between lamellae; sets interlayer shear stiffness k = G_i/h_i."
+  },
+  {
+   "name": "fouled_patch_length",
+   "value": 0.05,
+   "min_bound": 0.005,
+   "max_bound": 0.5,
+   "justification": "Streamwise length of a fouled patch whose accumulated drag loads the lamella edge (film force per width N0 = tau_f * L_patch)."
+  },
+  {
+   "name": "shear_lag_domain_length",
+   "value": 0.0003,
+   "min_bound": 0.0001,
+   "max_bound": 0.003,
+   "justification": "Length over which the lamella transfers its edge force into the interlayer; ~10 shear-lag decay lengths sqrt(E t h_i / G_i) = 32 um, so u(1)=0 is a far-field condition. x is normalised by this length."
+  }
+ ]
+}

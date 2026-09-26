@@ -1,0 +1,122 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Geometry: s = 80 um (s+ = 14.8), riblet height not given; assumed h = 0.5 s = 40 um (h+ = 7.4). Wavelength 1.5 mm -> lambda_x+ = 278, amplitude 100 um -> A+ = 18.5, crest slope 2 pi A/lambda = 0.42. The induced spanwise velocity at the riblet tips is W ~ u(y+~7)*slope -> W+ ~ 3, confined to y+ < ~10. Stationary spanwise-wave forcing is most effective at lambda_x+ ~ 1000-1250 with W+ ~ 12 and a Stokes layer penetrating to y+ ~ 10-20 (Quadrio et al. 2009); here both wavelength and amplitude are below optimum, so only a small increment over straight riblets can be expected, and experiments on sinusoidal riblets (Grueneberger et al. 2012; Kramer et al. 2010) show gains between -1 and +2 percentage points depending on setup. The increased effective spanwise exposure of meandering crests also raises h_perp. I therefore reduce effective_protrusion_difference from 5.5 um to 4.5 um (same as well-designed straight riblets, 0.056 s): expected gain 4.5/99.5 = 4.5%. Structural: silicone crests unchanged vs straight riblets; meandering improves crest robustness slightly (lateral support), but grooves still foul. Pipeline riblet formula not applicable here (no riblet_height parameter); simulation coefficient = protrusion difference.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "riblet_spacing",
+   "value": 8e-05
+  },
+  {
+   "name": "wave_length",
+   "value": 0.0015
+  },
+  {
+   "name": "wave_amplitude",
+   "value": 0.0001
+  },
+  {
+   "name": "effective_protrusion_difference",
+   "value": 4.5e-06
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "riblet_spacing_plus",
+   "value": 14.8
+  },
+  {
+   "name": "wavelength_plus",
+   "value": 278.0
+  },
+  {
+   "name": "amplitude_plus",
+   "value": 18.5
+  },
+  {
+   "name": "induced_spanwise_velocity_plus",
+   "value": 3.0
+  }
+ ],
+ "simulation_coefficient": 4.5e-06,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "riblet_spacing",
+   "wave_length",
+   "wave_amplitude",
+   "effective_protrusion_difference"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_protrusion_difference",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull (no riblets)"
+}

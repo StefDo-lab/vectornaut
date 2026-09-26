@@ -1,0 +1,10 @@
+{
+  "governing_equation": "d2w_dz2 = 0",
+  "boundary_conditions": [
+    "w(0) = 0",
+    "dw_dz(1) = wall_shear_stress * foundation_thickness / (foundation_shear_modulus * (1 + 2.5 * (bead_area_fraction * 2 * bead_diameter / (3 * foundation_thickness)) + 14.1 * (bead_area_fraction * 2 * bead_diameter / (3 * foundation_thickness))**2))"
+  ],
+  "independent_variables": ["z"],
+  "dependent_variables": ["w"],
+  "parameters": []
+}

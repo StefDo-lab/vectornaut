@@ -1,0 +1,55 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: shear-lag of a barnacle base plate (E_b t_b = 1e8*5e-4 = 5e4 N/m) bonded over its radius R to the coating through an interface of shear stiffness k (Pa/m); the hydrodynamic drag on the organism (tau_h*pi R^2) enters the base at its periphery as a line load F = tau_h R/2 = 0.5 N/m; interfacial shear = k u, peak at the edge x = 0. Analytical: tau_peak = F (lambda/R) coth(lambda), lambda^2 = k R^2/(E_b t_b). Design (hydration interface on hard PU, k = 1e10 Pa/m as proposed): lambda = 2.24, tau_peak = 0.5*447*1.02 = 229 Pa. Baseline: standard silicone foul-release film (G = 0.33 MPa, t = 0.3 mm) acting as the interface compliance, k = G/t = 1.1e9 Pa/m: lambda = 0.74, tau_peak = 118 Pa. RESULT: the design concentrates interfacial stress ~2x MORE than a standard silicone foul-release coating, i.e. a negative gain. Physical reason: a nm-thin layer on a hard substrate is elastically far stiffer than a 0.3 mm soft silicone film; k = 1e10 is already optimistic (an elastic hydration layer of G ~ 1e5-1e6 Pa over 5 nm gives 2e13-2e14 Pa/m). The only way the concept could work is true viscous sliding (hydration lubrication), which a steady elastic model cannot represent and which requires the fouler's cement not to penetrate or bind to the brush - cartilage works because both surfaces carry hydrated brushes, whereas barnacle cement is a cross-linked adhesive that displaces bound water. Parameters are physically possible; audit passed so that this honest negative result is recorded. Dimensionless: lambda (design) = 2.24, lambda (baseline) = 0.74, k_design/k_baseline = 9.1, hydrodynamic shear/typical release stress = 200/5e4 = 0.004.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "hydration_layer_thickness", "value": 5e-09},
+    {"name": "interface_shear_stiffness", "value": 10000000000.0},
+    {"name": "cement_modulus", "value": 100000000.0},
+    {"name": "base_plate_thickness", "value": 0.0005},
+    {"name": "base_radius", "value": 0.005},
+    {"name": "hydrodynamic_shear_on_organism", "value": 200.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ShearLagParameter_lambda_design", "value": 2.24},
+    {"name": "ShearLagParameter_lambda_baseline", "value": 0.74},
+    {"name": "InterfaceStiffnessRatio_design_over_baseline", "value": 9.1}
+  ],
+  "simulation_coefficient": 10000000000.0,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Tribology / Adhesion mechanics (shear-lag under a fouling organism)",
+    "independent_var": {"label": "Normalized distance from the base-plate edge", "unit": "-"},
+    "dependent_var": {"label": "Base-plate slip displacement", "unit": "m"},
+    "primary_metric": {"label": "Peak interfacial shear stress under the organism (design)"},
+    "reference_metric": {"label": "Peak interfacial shear stress under the organism (reference solver)"},
+    "performance_gain": {"label": "Peak interfacial shear reduction vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Peak interfacial shear under fouling (load sharing)",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak interfacial shear stress under the organism (design)",
+    "reference_metric": "Peak interfacial shear stress under the organism (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": [
+      "relative error between solvers < 1%",
+      "finite outputs",
+      "all parameters within audited bounds"
+    ],
+    "design_variables": ["interface_shear_stiffness", "hydration_layer_thickness"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "0",
+    "scale": "interface_shear_stiffness",
+    "unit": "Pa",
+    "label": "Peak interfacial shear stress"
+  },
+  "baseline_parameters": [
+    {"name": "interface_shear_stiffness", "value": 1100000000.0}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating (0.3 mm, G 0.33 MPa) as the interface compliance"
+}

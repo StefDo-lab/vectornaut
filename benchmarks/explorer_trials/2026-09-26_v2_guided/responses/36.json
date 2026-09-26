@@ -1,0 +1,126 @@
+{
+  "function_analysis": "Unchanged: lower mean wall shear at cruising speed versus a clean foul-release coating, biocide-free fouling control, 3-5 year durability, no large consumption, hull-scale application. The map shows that compliance-based concepts deliver fouling-release (stress) benefits, not friction benefits; the stress-governed cells are where honest simulated gains exist, and their main open issue is mechanical robustness of soft layers (cleaning brushes, fenders, debris).",
+  "requirements": [
+    {"name": "low_friction_drag", "criterion": "Reduces the mean wall shear stress / frictional resistance at cruising speed versus a clean, standard foul-release hull coating."},
+    {"name": "non_toxic_antifouling", "criterion": "Prevents fouling settlement or makes it release easily without releasing biocides, heavy metals or other toxic substances into the sea."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps its function and adhesion for at least 3-5 years in seawater (hydrolysis, abrasion, UV at the waterline, cleaning)."},
+    {"name": "low_consumption_operation", "criterion": "Needs no continuous supply of material or energy that is large compared with the fuel it saves, and no frequent reapplication."},
+    {"name": "hull_scale_applicability", "criterion": "Can be applied to large steel hull areas with dry-dock methods at a cost comparable to premium hull coatings."}
+  ],
+  "mechanism_classes_considered": [
+    "graded_stiffness (crust load spreading, armour over soft foundation)",
+    "interfacial_slip (hydration lubrication at the fouling/coating interface)"
+  ],
+  "analogues_considered": [
+    "Pack ice and nilas crust distributing point loads onto the slush below (ice-load spreading, Winkler/Pasternak foundation)",
+    "Hydration lubrication of articular cartilage and fish mucus (lubricin, zwitterionic brushes; friction coefficients 1e-3 to 1e-4)",
+    "Mussel byssus graded interphase",
+    "Scree and armoured river beds: coarse clasts embedded in fines, broadcast rather than laid",
+    "Anti-slip deck coatings with broadcast aggregate"
+  ],
+  "relevant_governing_quantities": ["wall_shear", "stress"],
+  "candidates": [
+    {
+      "order_id": "r005-01",
+      "title": "Pack-ice crust load spreading against brush damage",
+      "summary": "A 0.3 mm stiff, tough crust (G ~ 5 MPa, fibre-reinforced silicone-PU) over a 2.5 mm soft graded gel, dimensioned like sea-ice crust over slush so that it spreads concentrated point loads (cleaning-brush bristles, sand, debris edges, barnacle base edges) over a much larger gel area. The peak stress in the soft gel, which otherwise tears under in-water hull grooming, drops several-fold, while the gel keeps the coating compliant for fouling release.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "atmosphere_ocean"},
+        {"axis": "governing_quantity", "value": "stress"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of peak normal stress in the soft gel under a bristle point load, versus the uncrusted gel; drag change ~0%",
+        "formula": "Pasternak foundation: spreading length l = sqrt(G_c*t_c/k) with k = E_gel/t_gel = 1.8e5/2.5e-3 = 7.2e7 Pa/m, G_c t_c = 5e6*3e-4 = 1500 N/m -> l = 4.6 mm; a bristle line load over a width a = 0.3 mm is spread over ~2l = 9 mm -> peak gel stress down by ~2l/a ~ 30x (thin line load); for broad fender contacts (a >> l) no reduction. Friction versus a clean foul-release coating: 0%.",
+        "value": 0.0,
+        "unit": "%"
+      },
+      "main_risk": "A stiffer crust raises the surface stiffness felt by small foulers and by the peel front, eroding the fouling-release benefit of the gel; the concept only helps against point loads, not blunt fender impacts.",
+      "novelty_vs_known": "Closest: the nilas-crust elite (thin 0.15 mm, soft crust) and two-layer foul-release systems. New: the crust is dimensioned as a load-spreading plate by ice-mechanics (Pasternak) theory, specifically to make soft foul-release coatings survive in-water grooming, which is otherwise their main incompatibility.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "The same soft graded gel coating without load-spreading crust (and, for release, a standard clean silicone foul-release coating)",
+      "inspiration_source": "Sea-ice crust over slush distributing loads (ice-bearing capacity on a soft foundation)",
+      "domain": "Structural Mechanics",
+      "physical_mechanism": "A shear-stiff crust on an elastic foundation spreads a concentrated surface load: G_c t_c w'' - k w = -q(x), with the interface normal stress k*w. The crust stiffness sets the spreading length l = sqrt(G_c t_c/k); the peak gel stress falls roughly as a/(2l) for loads narrower than l. Steady model: 1D Pasternak ODE over a half-span with a load strip at the centre (source term) and decayed far field.",
+      "parameters": [
+        {"name": "crust_thickness", "value": 0.0003, "min_bound": 0.0001, "max_bound": 0.001, "justification": "Thin crust; thicker crusts spread better but stiffen the surface."},
+        {"name": "crust_shear_modulus", "value": 5000000.0, "min_bound": 500000.0, "max_bound": 50000000.0, "justification": "Fibre-reinforced silicone-PU crust."},
+        {"name": "gel_thickness", "value": 0.0025, "min_bound": 0.001, "max_bound": 0.005, "justification": "Soft compliant zone of the parent."},
+        {"name": "gel_youngs_modulus", "value": 180000.0, "min_bound": 60000.0, "max_bound": 1000000.0, "justification": "E = 3G for a gel of G = 60 kPa."},
+        {"name": "load_width", "value": 0.0003, "min_bound": 5e-05, "max_bound": 0.05, "justification": "Brush bristle or grit contact width; up to fender contact scales."},
+        {"name": "load_pressure", "value": 500000.0, "min_bound": 50000.0, "max_bound": 5000000.0, "justification": "Contact pressure under a bristle tip or debris edge."},
+        {"name": "half_span", "value": 0.02, "min_bound": 0.005, "max_bound": 0.1, "justification": "Modelled domain half-width, several spreading lengths."}
+      ]
+    },
+    {
+      "order_id": "r005-02",
+      "title": "Cartilage-style hydration-lubricated release interphase",
+      "summary": "A self-stratifying coating in which zwitterionic (sulfobetaine) block copolymers anchored in a byssus-like graded PU-silicone interphase form a ~50 nm hydration-lubrication layer at the surface, like lubricin on cartilage. Barnacle and mussel cement that lands on it sits on a water-bearing, sliding interface, so fouling slides off under a much lower shear stress; abraded brush chains are replaced from the bulk reservoir as the surface wears.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "interfacial_slip"},
+        {"axis": "length_scale", "value": "nm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "stress"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of the shear stress needed to slide adhered fouling off, versus a standard silicone foul-release coating; drag change ~0%",
+        "formula": "Barnacle shear release on silicone foul release ~0.05-0.1 MPa (ASTM D5618-type). A hydration-lubricated interface carries shear by the viscous hydration layer: tau = mu_eff*v/h with mu_eff ~ 1e3*mu_water (confined water) = 1 Pa s, h = 5e-9 m, creep speed v ~ 1e-6 m/s -> tau ~ 200 Pa (sliding), but cement penetrates part of the brush: take a 30-50% reduction of release stress as realistic; value 0 for friction.",
+        "value": 0.0,
+        "unit": "%"
+      },
+      "main_risk": "Fouling cements (DOPA, barnacle cement proteins) displace hydration water and bind to the brush itself, so the lubricated interface may never form under real adhesives; and the reservoir depletes within a few years of abrasion.",
+      "novelty_vs_known": "Closest: zwitterionic antifouling coatings (settlement resistance) and amphiphilic foul-release coatings. New: the brush is used as a hydration-lubricated slip interface to lower the release shear of already attached fouling (cartilage mechanism), combined with a byssus-graded, self-replenishing reservoir interphase for multi-year life.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (release shear of barnacles ~0.05-0.1 MPa)",
+      "inspiration_source": "Articular cartilage hydration lubrication (lubricin/phosphatidylcholine) and mussel byssus graded interphase",
+      "domain": "Tribology / Surface Mechanics",
+      "physical_mechanism": "Under a fouling organism's base, shear stress is transmitted through a nm hydration layer whose effective slip lowers the interfacial shear; the organism detaches by sliding once the hydrodynamic shear exceeds this low release stress. Steady model: shear transfer through the base of an adherend over a slipping interface (shear-lag with a slip-reduced interface stiffness), giving the peak interfacial shear for a given hydrodynamic load; lower interface stiffness means lower peak and longer transfer length.",
+      "parameters": [
+        {"name": "hydration_layer_thickness", "value": 5e-09, "min_bound": 1e-09, "max_bound": 5e-08, "justification": "Hydration layers of zwitterionic brushes are nm-thin."},
+        {"name": "interface_shear_stiffness", "value": 10000000000.0, "min_bound": 100000000.0, "max_bound": 1000000000000.0, "justification": "Shear stiffness per area of a lubricated interface (Pa/m), orders below a bonded silicone contact."},
+        {"name": "cement_modulus", "value": 100000000.0, "min_bound": 10000000.0, "max_bound": 1000000000.0, "justification": "Cured barnacle cement ~0.1 GPa."},
+        {"name": "base_plate_thickness", "value": 0.0005, "min_bound": 0.0001, "max_bound": 0.002, "justification": "Barnacle base plate thickness."},
+        {"name": "base_radius", "value": 0.005, "min_bound": 0.001, "max_bound": 0.015, "justification": "Barnacle base radius."},
+        {"name": "hydrodynamic_shear_on_organism", "value": 200.0, "min_bound": 20.0, "max_bound": 2000.0, "justification": "Drag on a barnacle at 7 m/s averaged over its base area."}
+      ]
+    },
+    {
+      "order_id": "r005-03",
+      "title": "Broadcast-scree silicone-capped armour coating",
+      "summary": "Instead of laid tiles, 1 mm hard ceramic beads are broadcast into a wet 1.5 mm soft silicone foundation (like anti-slip deck aggregate or scree embedded in fines) and overcoated with a 100 um smooth silicone foul-release skin. The beads carry fender, cleaning and debris loads and stop gouges at the skin depth; the fouler sees a low-energy silicone surface over a compliant foundation, fixing the elite's weak point (hard, high-adhesion tile surface) and its laborious tiling.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "geology"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Change of mean wall shear at 7 m/s versus a clean standard silicone foul-release coating (plus release stress as secondary benefit)",
+        "formula": "Overcoat levels bead waviness to amplitude ~5-10 um over 1-2 mm wavelength (slope < 1%): k+ ~ 1 -> hydraulically smooth -> friction change 0 +/- 0.5%. Release: C = t_f/G_f + t_skin/G_skin = 1.5e-3/2e5 + 1e-4/3.3e5 = 7.8e-9 m/Pa, w_a = 0.05 -> sigma_c = sqrt(0.1/7.8e-9) = 3.6 kPa vs 10.5 kPa (-65%), where the parent reached only -15%.",
+        "value": 0.0,
+        "unit": "%"
+      },
+      "main_risk": "Beads locally stiffen the surface where the skin is thin over a bead crest, creating hard spots that barnacles use as anchors, and bead waviness may exceed the hydraulically smooth limit if the overcoat is thin.",
+      "novelty_vs_known": "Closest: the desert-pavement elite (laid hard tiles, hard surface) and anti-slip deck coatings (exposed aggregate). New: broadcast, overcoated hard aggregate inside a soft foul-release system, so the load-bearing armour sits below a low-energy compliant skin and the whole system is sprayable/broadcast in a dry dock.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (~0.3 mm, E ~ 1 MPa) at 7 m/s",
+      "inspiration_source": "Scree and armoured sediment beds: coarse clasts embedded in fine, soft matrix",
+      "domain": "Structural Mechanics / Fluid Dynamics",
+      "physical_mechanism": "Hard beads embedded in a soft foundation form a discontinuous armour layer below the surface: blunt loads are carried bead-to-bead into the foundation, limiting indentation and gouge depth to about the skin thickness, while between contacts the compliance of the foundation plus skin sets the release stress. Flow sees a smooth, overcoated surface. Steady model: 1D shear deformation through foundation and skin in series (release compliance) or sublayer shear over the smooth wall.",
+      "parameters": [
+        {"name": "bead_diameter", "value": 0.001, "min_bound": 0.0003, "max_bound": 0.002, "justification": "Coarse aggregate that broadcasts evenly and stays below the foundation surface."},
+        {"name": "bead_area_fraction", "value": 0.5, "min_bound": 0.2, "max_bound": 0.7, "justification": "Broadcast coverage of the surface."},
+        {"name": "foundation_thickness", "value": 0.0015, "min_bound": 0.0008, "max_bound": 0.003, "justification": "Soft silicone foundation embedding the beads."},
+        {"name": "foundation_shear_modulus", "value": 200000.0, "min_bound": 50000.0, "max_bound": 1000000.0, "justification": "Foul-release grade silicone."},
+        {"name": "skin_thickness", "value": 0.0001, "min_bound": 5e-05, "max_bound": 0.0003, "justification": "Smooth silicone overcoat."},
+        {"name": "skin_shear_modulus", "value": 330000.0, "min_bound": 100000.0, "max_bound": 1000000.0, "justification": "Standard foul-release topcoat modulus."},
+        {"name": "adhesion_work_surface", "value": 0.05, "min_bound": 0.02, "max_bound": 0.3, "justification": "Silicone surface, as standard foul release."},
+        {"name": "wall_shear_stress", "value": 18.0, "min_bound": 3.0, "max_bound": 80.0, "justification": "Cruising hull at 7 m/s."}
+      ]
+    }
+  ]
+}

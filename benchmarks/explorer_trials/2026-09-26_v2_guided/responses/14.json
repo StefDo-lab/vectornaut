@@ -1,0 +1,62 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: anti-plane (streamwise) shear displacement w of the soft silicone between two streamwise ribs, x = spanwise coordinate normalized by rib_pitch, y = depth normalized by coating_thickness (base at 0, wetted surface at 1). Laplace equation in physical coordinates (1/p^2) w_xx + (1/t^2) w_yy = 0 is correct for a homogeneous soft layer. Simplification: ribs are treated as rigid and full height (clamped at x=0,1 for all y), whereas the proposal has ribs to 60% height; the model therefore overstates the stiffening (conservative for fouling release). Analytical series solution: mean surface compliance C = (t/G) * sum_odd 8/(n^2 pi^2) * tanh(n pi t/p)/(n pi t/p); for t/p = 2 this gives 0.136 t/G = 2.7e-9 m/Pa. IMPORTANT PHYSICAL FINDING: ribs aligned with the flow restrain streamwise shear displacement just as much as spanwise, because each rib is a stiff wall parallel to the displacement; the claimed 'streamwise compliant, spanwise stiff' anisotropy does not follow from streamwise ribs (it would need ribs that bend, e.g. thin inclined lamellae). The ribs reduce the parent's compliance ~2.3x (6.3e-9 -> 2.7e-9 m/Pa). Fouling release metric: sigma_c = sqrt(2 w_a / C). Baseline: standard silicone foul-release coating (t = 0.3 mm, G = 0.33 MPa) without ribs, represented by rib_pitch = 0.05 m (p >> t, side clamping negligible): C ~ 9.1e-10 m/Pa. Expected gain ~42% lower detachment stress, again a fouling-release gain, not a drag gain; the drag estimate (1%) is not modelled and the dynamic-slip argument in the proposal shows the slip contribution is ~1e-5 wall units. Dimensionless: t/p = 2, G_rib/G_soft = 200, surface strain tau/G = 1.8e-4, U/c_s = 7/9.5 = 0.74. Structural: stresses are tiny; rib-to-soft interfaces are potential debond sites but the keying improves tear arrest. Solver: 2D linear elliptic -> pinn (FDM/analytical reference).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "coating_thickness", "value": 0.002},
+    {"name": "rib_pitch", "value": 0.001},
+    {"name": "rib_height", "value": 0.0012},
+    {"name": "soft_shear_modulus", "value": 100000.0},
+    {"name": "rib_shear_modulus", "value": 20000000.0},
+    {"name": "wall_shear_stress", "value": 18.0},
+    {"name": "adhesion_work_barnacle", "value": 0.05}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ThicknessToPitchRatio", "value": 2.0},
+    {"name": "RibToSoftModulusRatio", "value": 200.0},
+    {"name": "SurfaceShearStrain", "value": 0.00018},
+    {"name": "ComplianceReductionFactorByRibs", "value": 0.136}
+  ],
+  "simulation_coefficient": 2.7e-09,
+  "solver_method": "pinn",
+  "ui_metadata": {
+    "domain_name": "Structural Mechanics / Fouling Release",
+    "independent_var": {"label": "Normalized spanwise position between ribs / normalized depth", "unit": "-"},
+    "dependent_var": {"label": "Streamwise shear displacement", "unit": "m"},
+    "primary_metric": {"label": "Critical fouling detachment stress (design)"},
+    "reference_metric": {"label": "Critical fouling detachment stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of fouling detachment stress vs standard foul-release coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Fouling detachment stress reduction",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouling detachment stress (design)",
+    "reference_metric": "Critical fouling detachment stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 10.0,
+    "hard_constraints": [
+      "relative error between solvers < 5%",
+      "finite outputs",
+      "all parameters within audited bounds",
+      "soft_shear_modulus >= 5e4 Pa (hydroelastic stability)",
+      "rib_height < coating_thickness (continuous soft top)"
+    ],
+    "design_variables": ["coating_thickness", "rib_pitch", "rib_height", "soft_shear_modulus"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "y=1",
+    "scale": "1/wall_shear_stress",
+    "unit": "Pa",
+    "label": "Critical fouling detachment stress",
+    "transform": "sqrt(2*adhesion_work_barnacle/m)"
+  },
+  "baseline_parameters": [
+    {"name": "coating_thickness", "value": 0.0003},
+    {"name": "soft_shear_modulus", "value": 330000.0},
+    {"name": "rib_pitch", "value": 0.05}
+  ],
+  "baseline_description": "Standard clean silicone foul-release coating, 0.3 mm, E ~ 1 MPa, no ribs"
+}

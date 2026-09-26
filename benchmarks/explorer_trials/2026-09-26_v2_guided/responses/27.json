@@ -1,0 +1,48 @@
+{
+  "reviews": [
+    {
+      "order_id": "r003-01",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "By the auditor's own energy balance the gel dissipates ~0.02% of near-wall turbulence production, so no measurable friction reduction; with U/c_s ~ 0.95 the risk of hydroelastic surface waves makes a drag increase as likely as a decrease.",
+      "key_assumption_issues": [
+        "No drag quantity was simulated; the field only gives surface compliance, and no baseline was simulated.",
+        "Quasi-static loading by p'_rms ignores the frequency dependence of the gel modulus (G rises with frequency, reducing compliance at 300 Hz).",
+        "The sea-ice analogy concerns long ocean waves at Hz frequencies, not kHz-range near-wall turbulence."
+      ],
+      "killer_risks": [
+        "Shear-wave speed ~7.4 m/s equals cruising speed: hydroelastic instability can roughen the surface and raise drag.",
+        "tan delta ~ 1 gels have very low tear and abrasion resistance; fender and cleaning damage within the first year.",
+        "3 mm silicone build is 5-8x the cost of standard foul release."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.05, "reason": "No credible friction reduction; possible increase via surface waves."},
+        {"name": "non_toxic_antifouling", "coverage": 0.7, "reason": "Biocide-free, very low release stress, but no settlement prevention."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.25, "reason": "Extremely soft lossy gel is mechanically fragile."},
+        {"name": "low_consumption_operation", "coverage": 0.85, "reason": "Passive; repairs at dockings."},
+        {"name": "hull_scale_applicability", "coverage": 0.35, "reason": "Sprayable in principle but thick, costly and hard to control."}
+      ]
+    },
+    {
+      "order_id": "r003-03",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "Flush tiles are at best hydraulically smooth, so friction equals the clean baseline; the 14.7% is a fouling-release stress reduction and it relies on a rigid-tile translation mode that barnacle bases spanning several tiles may not see.",
+      "key_assumption_issues": [
+        "Metric is fouling detachment stress, not drag.",
+        "Compliance modelled as uniform foundation shear under a rigid tile; tile rocking/peel at gaps, which is the claimed advantage, is not modelled.",
+        "Adhesion work of 0.3 J/m2 on tiles vs 0.05 on silicone is an assumed, influential input (gain sign depends on it)."
+      ],
+      "killer_risks": [
+        "Water ingress and cracks start at the tile gaps; tiles debond after thermal cycling.",
+        "Hard tile surfaces foul more strongly than silicone at low speeds, and release is only marginally easier than standard foul release.",
+        "Laying millions of tiles or laminating mosaic films over curved hull areas is slow and expensive."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.1, "reason": "No reduction; smoothness retained only if steps < 10 um."},
+        {"name": "non_toxic_antifouling", "coverage": 0.45, "reason": "Biocide-free but hard surfaces raise adhesion; only modest release benefit."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.6, "reason": "Hard tiles resist abrasion and impact; gaps and bonds are long-term weak points."},
+        {"name": "low_consumption_operation", "coverage": 0.9, "reason": "Passive, no consumption."},
+        {"name": "hull_scale_applicability", "coverage": 0.3, "reason": "Mosaic films on curved hulls are laborious and costly."}
+      ]
+    }
+  ]
+}

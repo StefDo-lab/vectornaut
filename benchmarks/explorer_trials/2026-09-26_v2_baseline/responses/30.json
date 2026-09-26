@@ -1,0 +1,134 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Slip lengths correct: Philip (1972)/ Lauga & Stone (2003) for L = 20 um, gas fraction 0.9: b_par = (L/pi) ln(sec(pi*0.9/2)) = 6.37 um * ln(6.39) = 11.8 um; b_perp = b_par/2 = 5.9 um. b_par+ = 2.2, b_perp+ = 1.1; net shift 11.8 - 0.6*5.9 = 8.3 um. CRITICAL pressure check: groove gap w = 0.9*20 um = 18 um; with an advancing angle of ~150 deg on the nanotextured ridges the Laplace breakthrough pressure is 2 gamma |cos theta| / w = 2*0.072*0.87/18e-6 = 7.0 kPa = 0.7 m water head. Below ~0.7 m depth the menisci are pushed into the grooves immediately (Cassie-Wenzel), and above it the gas dissolves into undersaturated, turbulent water within hours (mass-transfer coefficient ~3e-4 m/s). On a hull with 10 m draft at most ~5-7% of the wetted area can hold a passive plastron even briefly, and ~0% after days. I therefore adjust plastron_coverage_fraction from 0.7 to 0.05 (optimistic short-term value). Expected gain: 8.3*0.05 = 0.41 um -> 0.4%. The 0.7 value is only reachable with active gas replenishment (see membrane-fed or electrolytic variants). Structural: ridges 2 um wide, 20 um pitch, fine under 50 Pa; nano-texture wears quickly. Baseline: smooth FR (slip 0).",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "groove_pitch",
+   "value": 2e-05
+  },
+  {
+   "name": "gas_fraction",
+   "value": 0.9
+  },
+  {
+   "name": "longitudinal_slip_length",
+   "value": 1.18e-05
+  },
+  {
+   "name": "transverse_slip_length",
+   "value": 5.9e-06
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  },
+  {
+   "name": "spanwise_slip_penalty_coefficient",
+   "value": 0.6
+  },
+  {
+   "name": "plastron_coverage_fraction",
+   "value": 0.05
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "longitudinal_slip_plus",
+   "value": 2.2
+  },
+  {
+   "name": "transverse_slip_plus",
+   "value": 1.1
+  },
+  {
+   "name": "groove_pitch_plus",
+   "value": 3.7
+  },
+  {
+   "name": "breakthrough_head_over_draft",
+   "value": 0.07
+  }
+ ],
+ "simulation_coefficient": 1.18e-05,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "groove_pitch",
+   "gas_fraction",
+   "longitudinal_slip_length",
+   "transverse_slip_length"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "longitudinal_slip_length",
+   "value": 0.0
+  },
+  {
+   "name": "transverse_slip_length",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull"
+}

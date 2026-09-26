@@ -1,0 +1,128 @@
+{
+  "function_analysis": "A hull coating for this request must (F1) lower turbulent skin-friction drag, i.e. the mean wall shear stress at cruising speed (Re_L ~ 1e9, viscous unit nu/u_tau ~ 5 um at 7 m/s), relative to a clean state-of-the-art coating; (F2) keep the surface free of micro- and macrofouling or let fouling release under hydrodynamic or cleaning loads, without releasing biocides; (F3) survive several years of immersion in seawater (hydrolysis, osmotic blistering, UV at the waterline, abrasion by fenders and cleaning, cavitation near the propeller) while staying bonded to the anticorrosive primer; (F4) do so without continuous consumption of material or energy that eats the fuel saving; (F5) be applicable to 1e4 m^2 of steel hull in a dry dock at acceptable cost.",
+  "requirements": [
+    {"name": "low_friction_drag", "criterion": "Reduces the mean wall shear stress / frictional resistance at cruising speed versus a clean, standard foul-release hull coating."},
+    {"name": "non_toxic_antifouling", "criterion": "Prevents fouling settlement or makes it release easily without releasing biocides, heavy metals or other toxic substances into the sea."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps its function and adhesion for at least 3-5 years in seawater (hydrolysis, abrasion, UV at the waterline, cleaning)."},
+    {"name": "low_consumption_operation", "criterion": "Needs no continuous supply of material or energy that is large compared with the fuel it saves, and no frequent reapplication."},
+    {"name": "hull_scale_applicability", "criterion": "Can be applied to large steel hull areas with dry-dock methods at a cost comparable to premium hull coatings."}
+  ],
+  "mechanism_classes_considered": [
+    "interfacial_slip (hydrated brushes, slip layers)",
+    "flow_redirection (streamwise micro-grooves, scale-like protrusions)",
+    "trapped_gas_or_liquid (plastrons, infused lubricants)",
+    "porous_transport (exudation of lubricant or polymer through pores)",
+    "graded_stiffness (compliant, viscoelastic layers that damp near-wall fluctuations and ease fouling release)",
+    "electrostatic_field (charged surfaces repelling settling organisms)"
+  ],
+  "analogues_considered": [
+    "Dolphin and pilot-whale skin: soft, sloughing, viscoelastic epidermis over stiffer dermis",
+    "Hagfish and fish mucus: hydrated polymer layer that resists settlement",
+    "Swordfish head: oil gland with capillary pores that wet a textured skin with lubricant",
+    "Pufferfish and boxfish scales: rigid tiled armour",
+    "Zwitterionic cell membranes (phosphorylcholine) resisting protein adsorption",
+    "Foul-release silicones in shipping (Brady-Singer relation: release stress ~ sqrt(E*gamma/t))"
+  ],
+  "relevant_governing_quantities": ["wall_shear", "stress"],
+  "candidates": [
+    {
+      "order_id": "r001-01",
+      "title": "Dolphin-skin graded-modulus foul-release elastomer",
+      "summary": "A 2 mm silicone-polyurethane coating whose modulus rises from ~0.3 MPa at the wetted surface to ~5 MPa at the primer, inspired by the soft epidermis over stiff dermis of dolphin skin. The soft, thick top gives low fouling-release stress (Brady-Singer), while the viscoelastic gradient passively damps near-wall pressure fluctuations for a modest drag reduction.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "mm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of mean skin-friction (wall shear) at 7 m/s versus a clean standard silicone foul-release coating",
+        "formula": "Compliant-wall experiments (e.g. Choi et al. 1997, Fukagata 2008 simulations) give 0-7% when the wall's natural frequency matches the near-wall burst frequency f+ ~ 0.01 u_tau^2/nu ~ 360 Hz at u_tau=0.19 m/s; a 2 mm layer with G=0.1 MPa, rho=1100 has shear-wave resonance f = c_s/(4t) = sqrt(1e5/1100)/(4*0.002) ~ 1.2 kHz, i.e. same order but off-tuned; take ~3% as a realistic central value",
+        "value": 3.0,
+        "unit": "%"
+      },
+      "main_risk": "The compliant drag reduction is small and fragile (depends on tuning to speed); outside the design speed the layer can add drag via flutter or has no effect, leaving only the fouling-release benefit.",
+      "novelty_vs_known": "Closest: Kramer compliant coatings and commercial silicone foul-release coatings. New: a through-thickness modulus gradient that is designed jointly for (a) low Brady-Singer release stress at the surface and (b) a shear-wave resonance near the near-wall burst frequency, while the stiff base keeps cohesive strength and fender abrasion resistance.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating (smooth, ~0.3 mm, E ~ 1 MPa) at 7 m/s cruising speed",
+      "inspiration_source": "Dolphin skin: soft, highly hydrated epidermis over stiffer collagenous dermis with dermal ridges",
+      "domain": "Fluid-structure interaction / Structural Mechanics",
+      "physical_mechanism": "The wall shear of the turbulent boundary layer loads a layered viscoelastic solid; the soft surface deforms and dissipates energy of near-wall pressure and shear fluctuations, reducing effective momentum transfer (modelled as a reduced effective wall shear / small effective slip). The same soft, thick top layer lowers the critical stress to detach barnacles and algae, sigma_c ~ sqrt(2*w*E/(pi*a)) for thick layers and ~ sqrt(w*E/t) for thin ones, so fouling releases at moderate speed. Steady model: 1D shear deformation u(z) of a layer with modulus G(z) under wall shear tau, giving surface displacement and strain energy; and pull-off stress of an adherend on a graded layer.",
+      "parameters": [
+        {"name": "coating_thickness", "value": 0.002, "min_bound": 0.0005, "max_bound": 0.005, "justification": "Dolphin epidermis is a few mm thick; 2 mm is sprayable in 3-4 coats."},
+        {"name": "surface_shear_modulus", "value": 100000.0, "min_bound": 20000.0, "max_bound": 1000000.0, "justification": "Soft silicone top like foul-release coatings (E ~ 0.3 MPa, G ~ 0.1 MPa)."},
+        {"name": "base_shear_modulus", "value": 2000000.0, "min_bound": 300000.0, "max_bound": 20000000.0, "justification": "Tougher polyurethane-silicone base, like the dermis, for cohesion and abrasion resistance."},
+        {"name": "loss_tangent", "value": 0.3, "min_bound": 0.05, "max_bound": 1.0, "justification": "Viscoelastic damping of skin-like elastomers."},
+        {"name": "freestream_velocity", "value": 7.0, "min_bound": 3.0, "max_bound": 12.0, "justification": "Typical merchant ship cruising speed (~14 kn)."},
+        {"name": "wall_shear_stress", "value": 18.0, "min_bound": 3.0, "max_bound": 80.0, "justification": "tau = 0.5*rho*Cf*U^2 = 0.5*1025*0.0007*49 at Re ~ 1e9 (flat plate, local Cf ~ 7e-4 on the aft hull) up to higher values near the bow."},
+        {"name": "adhesion_work_barnacle", "value": 0.05, "min_bound": 0.01, "max_bound": 0.3, "justification": "Work of adhesion of barnacle cement to silicones (tens of mJ/m^2)."}
+      ]
+    },
+    {
+      "order_id": "r001-02",
+      "title": "Hagfish-mucus zwitterionic brush hydration skin",
+      "summary": "A covalently anchored polysulfobetaine brush network (~100 nm) on a hard fluoropolymer-free polyurethane topcoat, mimicking the tightly bound water of fish mucus and phosphorylcholine cell membranes. The hydration layer resists protein and spore adhesion without biocides and provides a small hydrodynamic slip.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "interfacial_slip"},
+        {"axis": "length_scale", "value": "nm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of mean wall shear at 7 m/s versus a clean standard foul-release coating",
+        "formula": "Turbulent drag reduction from streamwise slip scales roughly as DR ~ b+ / (b+ + ~5) for small b+ (Min & Kim 2004); brush slip length b ~ 50 nm, viscous unit nu/u_tau = 1e-6/0.19 ~ 5.3 um, b+ ~ 0.01 -> DR ~ 0.2%; add ~0.3% for staying free of microfouling slime longer than silicone within the first months (not counted in a clean-vs-clean comparison) -> ~0.3%",
+        "value": 0.3,
+        "unit": "%"
+      },
+      "main_risk": "Nanometre brushes are worn off by abrasion and hydrolysed within months in seawater, so neither the tiny slip nor the antifouling survives multi-year service.",
+      "novelty_vs_known": "Closest: zwitterionic antifouling coatings from academic labs (Jiang group) and hydrogel-based foul-release coatings (e.g. Hempel's hydrogel silicone). New: brushes grafted from a sacrificial-free, abrasion-tough polyurethane with a mm-scale texture that shields the brush in the troughs; the drag claim is honest and very small.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating at 7 m/s",
+      "inspiration_source": "Hagfish and fish mucus; phosphorylcholine head groups of cell membranes",
+      "domain": "Fluid Dynamics / Surface Chemistry",
+      "physical_mechanism": "A strongly hydrated zwitterionic brush binds water by ionic solvation; adsorbing proteins must displace this water (energy penalty), so conditioning films and spores do not stick. Hydrodynamically, the brush acts like a thin low-viscosity-contrast layer with an apparent Navier slip length b of tens of nanometres. Steady model: Couette/boundary-layer sublayer flow with a Navier slip boundary condition u = b du/dz at the wall; the wall shear reduction for fixed outer velocity follows directly.",
+      "parameters": [
+        {"name": "slip_length", "value": 5e-08, "min_bound": 1e-09, "max_bound": 5e-07, "justification": "Measured apparent slip lengths on hydrated brushes and hydrogels are nm to ~100 nm."},
+        {"name": "brush_thickness", "value": 1e-07, "min_bound": 2e-08, "max_bound": 5e-07, "justification": "Typical grafted-from polymer brush thickness."},
+        {"name": "viscous_sublayer_thickness", "value": 2.6e-05, "min_bound": 1e-05, "max_bound": 6e-05, "justification": "5 nu/u_tau with u_tau ~ 0.19 m/s."},
+        {"name": "friction_velocity", "value": 0.19, "min_bound": 0.1, "max_bound": 0.35, "justification": "u_tau = U*sqrt(Cf/2) at 7 m/s, Cf ~ 1.5e-3."},
+        {"name": "kinematic_viscosity", "value": 1.05e-06, "min_bound": 8e-07, "max_bound": 1.8e-06, "justification": "Seawater at 5-25 C."}
+      ]
+    },
+    {
+      "order_id": "r001-03",
+      "title": "Swordfish-gland micro-capillary oil-weeping skin",
+      "summary": "A 1 mm coating containing a network of 20 um capillaries fed from a hull-side reservoir that weeps a biodegradable, non-toxic ester oil through 5 um pores onto a micro-textured surface, copying the oil-producing gland and pores on the swordfish head. The oil film gives an interfacial slip layer and a non-stick surface for settling larvae.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "porous_transport"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "wall_shear"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Wall shear reduction at 7 m/s versus clean foul-release coating, and oil consumption",
+        "formula": "A lubricant film of thickness h_o and viscosity mu_o gives slip length b = h_o*(mu_w/mu_o - 1); for a 10 um film of ester oil mu_o = 10 mPa s: b ~ 10e-6*(1/10 - 1) < 0, i.e. no slip unless mu_o < mu_w; with a low-viscosity oil (mu_o ~ 1 mPa s) b ~ 0. The drag benefit therefore comes only from maintaining the micro-texture as a liquid-infused (not gas) surface -> about 0 to 2%. Oil loss: film shear-stripping velocity ~ tau*h/mu_o = 18*1e-5/1e-2 = 0.018 m/s, i.e. the film is swept away within seconds unless pinned; pinned-film loss of even 1 um per hour over 1e4 m^2 is 10 L/h.",
+        "value": 1.0,
+        "unit": "%"
+      },
+      "main_risk": "The oil is sheared off and must be continuously resupplied (litres per hour over a hull), which is both a consumption and a marine-pollution problem; with oil more viscous than water there is no slip gain at all.",
+      "novelty_vs_known": "Closest: liquid-infused slippery surfaces (SLIPS) and the swordfish gland study (Videler et al. 2016). New: active replenishment through an embedded capillary network instead of a finite infused reservoir; my own estimate shows the drag benefit is marginal, so the value lies mainly in fouling resistance.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Clean, standard silicone foul-release hull coating at 7 m/s",
+      "inspiration_source": "Swordfish (Xiphias gladius) head: oil gland connected by capillaries to pores in a textured skin",
+      "domain": "Fluid Dynamics / Porous Media",
+      "physical_mechanism": "Darcy flow of oil from a reservoir through a porous/capillary layer to the surface forms a thin lubricating film; the two-fluid Couette problem (oil film under seawater shear) gives the effective slip length b = h_o (mu_w/mu_o - 1). Steady model: 1D two-layer Couette flow plus Darcy supply, giving wall shear on the water side and the required oil flux to balance shear stripping.",
+      "parameters": [
+        {"name": "oil_film_thickness", "value": 1e-05, "min_bound": 1e-06, "max_bound": 5e-05, "justification": "Film thickness similar to the texture depth of the swordfish skin."},
+        {"name": "oil_viscosity", "value": 0.01, "min_bound": 0.0005, "max_bound": 0.1, "justification": "Biodegradable ester oils range 1-100 mPa s."},
+        {"name": "water_viscosity", "value": 0.00108, "min_bound": 0.0008, "max_bound": 0.0018, "justification": "Seawater dynamic viscosity at 15-20 C."},
+        {"name": "pore_diameter", "value": 5e-06, "min_bound": 1e-06, "max_bound": 2e-05, "justification": "Pore size on swordfish skin, a few um."},
+        {"name": "layer_permeability", "value": 1e-13, "min_bound": 1e-15, "max_bound": 1e-11, "justification": "Microporous polymer layer of 5 um pores and ~10% porosity."},
+        {"name": "wall_shear_stress", "value": 18.0, "min_bound": 3.0, "max_bound": 80.0, "justification": "Cruising ship hull at 7 m/s."}
+      ]
+    }
+  ]
+}

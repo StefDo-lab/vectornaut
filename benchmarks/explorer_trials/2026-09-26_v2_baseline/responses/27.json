@@ -1,0 +1,113 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Slip: measured hydrodynamic slip of water on smooth hydrophobic surfaces (incl. PDMS brushes) is 10-30 nm (Vinogradova, Bocquet & Charlaix); liquid-like brushes reduce contact-angle hysteresis (drop mobility) but not hydrodynamic slip by orders of magnitude. Adjusted effective_slip_length 5e-8 -> 2e-8 m; b+ = 0.004 -> expected gain 0.02%: no meaningful drag change. Pillar height 150 nm = 0.03 viscous units -> hydraulically smooth; nanopillars wet fully under hull pressure (Laplace pressure of a 20 nm gap would be ~MPa, but the brush-coated pillars are only mildly hydrophobic, so no stable nano-plastron is assumed). Structural: silica-siloxane pillars ~50 nm wide, aspect ratio ~3: bending under 50 Pa shear negligible (stress ~kPa vs GPa strength); risk is abrasion-induced fracture of the pillar array by sand/ cleaning, and fouling-conditioning films (proteins, dead cells) covering the pillars within days, which neutralises the mechano-bactericidal effect. The benefit is antifouling, not drag, and cannot be computed here. Baseline: smooth FR, slip 0.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "pillar_height",
+   "value": 1.5e-07
+  },
+  {
+   "name": "pillar_pitch",
+   "value": 1.7e-07
+  },
+  {
+   "name": "effective_slip_length",
+   "value": 2e-08
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "slip_length_plus",
+   "value": 0.0037
+  },
+  {
+   "name": "pillar_height_plus",
+   "value": 0.028
+  },
+  {
+   "name": "pillar_pitch_plus",
+   "value": 0.031
+  }
+ ],
+ "simulation_coefficient": 2e-08,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "pillar_height",
+   "pillar_pitch",
+   "effective_slip_length"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_slip_length",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull"
+}

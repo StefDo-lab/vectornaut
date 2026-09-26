@@ -1,0 +1,70 @@
+{
+  "reviews": [
+    {
+      "order_id": "r005-01",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "The crust does not change the wetted surface or near-wall flow, so friction versus a clean foul-release coating is unchanged; the 76% is a peak-gel-stress reduction relative to the parent, not a drag gain.",
+      "key_assumption_issues": [
+        "Baseline is the thin-crust parent, not a standard foul-release coating; against standard silicone the comparison would need strength, not stress.",
+        "Pasternak (shear-only) crust ignores crust bending and the Gaussian load idealisation of bristles; real bristles sweep and add tangential loads.",
+        "Only point loads benefit; blunt fender contacts, the most damaging events, are not reduced."
+      ],
+      "killer_risks": [
+        "Crust/gel delamination under sweeping brush tangential loads and impacts (gel cohesion < 0.1 MPa).",
+        "A 5 MPa fibre-reinforced crust stiffens the surface for peel, reducing fouling release for small foulers and slime.",
+        "Thick multi-layer silicone system is expensive."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.05, "reason": "No friction effect."},
+        {"name": "non_toxic_antifouling", "coverage": 0.6, "reason": "Biocide-free foul release, somewhat weaker release than the uncrusted gel."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.55, "reason": "Credible protection against grooming and grit; blunt impacts and delamination remain."},
+        {"name": "low_consumption_operation", "coverage": 0.85, "reason": "Passive; makes in-water cleaning possible without damage."},
+        {"name": "hull_scale_applicability", "coverage": 0.4, "reason": "Sprayable but thick, multi-layer and fibre-filled; costly."}
+      ]
+    },
+    {
+      "order_id": "r005-02",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "No effect on friction; and the concept's own simulation shows the nm layer on a hard substrate shares load worse than a soft silicone film, so even the fouling-release claim is doubtful.",
+      "key_assumption_issues": [
+        "Elastic interface stiffness 1e10 Pa/m is a free, optimistic parameter; an elastic nm hydration layer is orders of magnitude stiffer.",
+        "Hydration lubrication requires hydrated surfaces on both sides; barnacle and mussel cements displace bound water and bind to zwitterions.",
+        "The steady model cannot represent viscous sliding, the only mechanism by which the concept could work."
+      ],
+      "killer_risks": [
+        "Fouling adhesives bind through or displace the brush; release becomes worse than on silicone.",
+        "Brush reservoir depletes with abrasion within a few years; hydrolysis of anchors.",
+        "Hard PU base gives no compliance for release."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.0, "reason": "No friction effect."},
+        {"name": "non_toxic_antifouling", "coverage": 0.4, "reason": "Non-toxic, good against microfouling, likely poor release of hard macrofouling."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.3, "reason": "Self-replenishing reservoir helps but is finite; hydrolysis and abrasion."},
+        {"name": "low_consumption_operation", "coverage": 0.7, "reason": "Passive; the reservoir is consumed slowly and reapplication is likely at each docking."},
+        {"name": "hull_scale_applicability", "coverage": 0.55, "reason": "Sprayable self-stratifying additive; formulation risk."}
+      ]
+    },
+    {
+      "order_id": "r005-03",
+      "plausible_gain_pct": 0.0,
+      "plausible_gain_reasoning": "A levelled silicone overcoat is at best as smooth as standard foul release, so friction is unchanged (and bead waviness could add ~0.5-1% if levelling is poor); the 50% is a fouling-release stress reduction.",
+      "key_assumption_issues": [
+        "Metric is fouling detachment stress, not drag.",
+        "Guth-Gold stiffening and mean compliance average over bead crests, where compliance is ~2x lower and barnacles anchor.",
+        "Gouge protection by beads is asserted, not modelled."
+      ],
+      "killer_risks": [
+        "Thin skin over bead crests abrades first, exposing hard beads that foul and roughen the surface.",
+        "Poor levelling on a 1e4 m2 hull leaves waviness > 10 um, turning the coating into a rough surface.",
+        "Bead/silicone debonding and water ingress along beads after damage."
+      ],
+      "requirement_coverage": [
+        {"name": "low_friction_drag", "coverage": 0.1, "reason": "No reduction; smoothness at risk from bead waviness."},
+        {"name": "non_toxic_antifouling", "coverage": 0.65, "reason": "Biocide-free silicone surface with lower release stress than standard."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.55, "reason": "Aggregate improves resistance to blunt loads; crest wear and debonding remain."},
+        {"name": "low_consumption_operation", "coverage": 0.9, "reason": "Passive."},
+        {"name": "hull_scale_applicability", "coverage": 0.55, "reason": "Broadcast aggregate is an established dock technique; extra layers and QA of levelling add cost."}
+      ]
+    }
+  ]
+}

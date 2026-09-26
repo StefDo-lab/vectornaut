@@ -1,0 +1,9 @@
+{
+ "executive_summary": "Du strukturierst die Oberfläche mit längs ausgerichteten, nanotexturierten Mikrorillen (20 µm Abstand, 90 % Gasanteil) wie auf dem Reisblatt, damit Luft in den Rillen bleibt. Längsgerichtete Luftstreifen geben viel mehr Schlupf in Strömungsrichtung (11,8 µm) als quer (5,9 µm), was für turbulente Reibungsminderung günstig ist. Das Problem: die Menisken halten nur ~7 kPa, also 0,7 m Wassersäule; tiefer flutet das Luftpolster sofort, und oben löst es sich in Stunden auf. Mit realistischen 5 % bedeckter Fläche ergibt das Modell nur 0,4 % Gewinn gegenüber sauberem FR; das Potenzial von ~8 % gibt es nur mit aktiver Gasnachlieferung.",
+ "pros_and_cons": "Vorteile: günstige anisotrope Geometrie, giftfrei, keine Energie. Nachteile: passive Plastrons überleben am Rumpf nicht (Druck, Diffusion, Turbulenz, Tenside); Superhydrophobie geht durch Abrieb und Biofilm in Wochen verloren; nach dem Fluten wirken die Rillen wie Rauigkeit; ohne Gasnachlieferung ist das Konzept für Schiffe nicht tragfähig.",
+ "mechanical_limits": "Rippen 2 µm breit sind abriebempfindlich; die Nanotextur (für den hohen Kontaktwinkel) verschleißt noch schneller. Ausfallkriterien: Cassie-Wenzel-Übergang ab ~7 kPa Überdruck, Gasauflösung, Verlust der Hydrophobie durch Proteinfilme. Mechanische Last aus Wandschub unkritisch.",
+ "manufacturing_methods": "Heißprägen oder Laserstrukturierung fluorierter Polymere (FEP/ PFA-Folie), Nanotextur per Plasmaätzen oder Partikel-Beschichtung; Folie auf den Rumpf kleben.",
+ "cost_estimation": "Folie 50-100 €/m², Applikation 20-40 €/m²; bei 0,4 % Gewinn nicht wirtschaftlich.",
+ "validation_experiments": "1) Druckkammer mit Reflexionsmessung des Plastrons bei 0-100 kPa. 2) Taylor-Couette-Widerstand über 48 h in Seewasser. 3) Kombination mit Gaszufuhr testen (siehe Membran-Variante).",
+ "industry_partners": "Oberflächenforschung (Universität Bonn, KIT, TU Darmstadt), Fluorpolymer-Folienhersteller (Saint-Gobain, 3M)."
+}

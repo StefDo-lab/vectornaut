@@ -1,0 +1,113 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Slip length: reported hydrodynamic slip on hydrogels and hydrated polymer brushes is 10-100 nm (e.g. Bocquet & Charlaix review; soft-gel claims of microns are not reproduced under controlled conditions); 200 nm is optimistic. Adjusted effective_slip_length 2e-7 -> 1e-7 m. b+ = 1e-7/5.4e-6 = 0.019 -> expected gain 0.1/95.1 = 0.1%, i.e. no meaningful drag reduction against a clean FR hull; ridge spacing 0.3 um = 0.06 viscous units -> hydraulically smooth (k+ << 1), no roughness penalty. Any real benefit of this concept is fouling resistance (hydration barrier against protein/ diatom adhesion), which the flow model cannot capture. Structural/durability: 1 um zwitterionic hydrogel swollen in seawater has modulus ~10-100 kPa; abrasion under cleaning and sand is the main failure mode; anchoring in the 0.3 um ridges improves adhesion but the ridge tips are exposed. Osmotic swelling in seawater (0.6 M) is smaller than in fresh water for zwitterions (anti-polyelectrolyte effect), which is favourable. Baseline: smooth FR wall with zero slip.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "free_stream_velocity",
+   "value": 7.7
+  },
+  {
+   "name": "kinematic_viscosity",
+   "value": 1.19e-06
+  },
+  {
+   "name": "baseline_wall_shear_stress",
+   "value": 50.0
+  },
+  {
+   "name": "ridge_spacing",
+   "value": 3e-07
+  },
+  {
+   "name": "hydrogel_thickness",
+   "value": 1e-06
+  },
+  {
+   "name": "effective_slip_length",
+   "value": 1e-07
+  },
+  {
+   "name": "equivalent_layer_thickness",
+   "value": 9.5e-05
+  },
+  {
+   "name": "edge_velocity",
+   "value": 3.9
+  },
+  {
+   "name": "water_dynamic_viscosity",
+   "value": 0.00122
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "slip_length_plus",
+   "value": 0.019
+  },
+  {
+   "name": "ridge_spacing_plus",
+   "value": 0.056
+  },
+  {
+   "name": "hydrogel_thickness_plus",
+   "value": 0.19
+  }
+ ],
+ "simulation_coefficient": 1e-07,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Fluid Dynamics",
+  "independent_var": {
+   "label": "Normalised wall-layer coordinate y/delta",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Streamwise velocity",
+   "unit": "m/s"
+  },
+  "primary_metric": {
+   "label": "Wall shear stress"
+  },
+  "reference_metric": {
+   "label": "Analytical Wall shear stress"
+  },
+  "performance_gain": {
+   "label": "Skin-friction reduction vs clean FR hull"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Skin-friction drag reduction",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Wall shear stress",
+  "reference_metric": "Analytical Wall shear stress",
+  "lower_is_better": true,
+  "acceptance_threshold": 0.0,
+  "hard_constraints": [
+   "relative error between solvers < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "ridge_spacing",
+   "hydrogel_thickness",
+   "effective_slip_length"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "water_dynamic_viscosity/equivalent_layer_thickness",
+  "unit": "Pa",
+  "label": "Wall shear stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_slip_length",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "Clean smooth silicone foul-release hull"
+}
