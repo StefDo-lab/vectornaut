@@ -1,0 +1,372 @@
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Saharan Silver Ant Prismatic Silica-Alumina Radiative Facade Coating
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = -(1 - solar_reflectance) * solar_irradiance * coating_thickness / thermal_conductivity
+    Boundary Conditions: ['T(0) = ambient_temperature - (sky_window_emissivity * net_sky_radiation) / heat_transfer_coeff', 'T(1) = substrate_temperature']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['coating_thickness', 'prism_side_length', 'solar_reflectance', 'sky_window_emissivity', 'thermal_conductivity']
+    Formulator parameter change: solar_irradiance added (value=1000, bounds=[600, 1200])
+    Formulator parameter change: net_sky_radiation added (value=80, bounds=[40, 150])
+    Formulator parameter change: heat_transfer_coeff added (value=10, bounds=[4, 25])
+    Formulator parameter change: ambient_temperature added (value=313.15, bounds=[295, 330])
+    Formulator parameter change: substrate_temperature added (value=298.15, bounds=[290, 315])
+[+] Concept Mined & Formulated: Saharan Silver Ant Prismatic Silica-Alumina Radiative Facade Coating
+
+[*] Running Optimization Round 1 for Saharan Silver Ant Prismatic Silica-Alumina Radiative Facade Coating...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Saharan Silver Ant Prismatic Silica-Alumina Radiative Facade Coating successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Cyphochilus-Inspired Sintered Mesoporous Silica Facade Tile
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = 0
+    Boundary Conditions: ['T(0) = T_ambient + ((1 - solar_reflectance) * solar_irradiance - q_sky_net + (thermal_conductivity / tile_thickness) * dT_dx(0)) / h_ext', 'T(1) = T_interior']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['scattering_strand_diameter', 'porosity', 'tile_thickness', 'solar_reflectance', 'thermal_conductivity']
+    Formulator parameter change: h_ext added (value=12, bounds=[5, 25])
+    Formulator parameter change: T_ambient added (value=308.15, bounds=[295.15, 325.15])
+    Formulator parameter change: solar_irradiance added (value=800, bounds=[400, 1100])
+    Formulator parameter change: q_sky_net added (value=70, bounds=[20, 120])
+    Formulator parameter change: T_interior added (value=296.15, bounds=[290.15, 302.15])
+[+] Concept Mined & Formulated: Cyphochilus-Inspired Sintered Mesoporous Silica Facade Tile
+
+[*] Running Optimization Round 1 for Cyphochilus-Inspired Sintered Mesoporous Silica Facade Tile...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Cyphochilus-Inspired Sintered Mesoporous Silica Facade Tile successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Cactus-Ribbed Self-Shading Convective Ventilated Facade Shroud
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = (2.0 * effective_heat_transfer_coeff * rib_depth**2 / (thermal_conductivity * rib_thickness)) * (T - T_ambient)
+    Boundary Conditions: ['T(0) = T_wall', 'dT_dx(1) = solar_absorptance * solar_irradiance * rib_depth / thermal_conductivity']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['rib_depth', 'rib_pitch', 'chimney_height', 'effective_heat_transfer_coeff']
+    Formulator parameter change: thermal_conductivity added (value=1.2, bounds=[0.2, 2.5])
+    Formulator parameter change: rib_thickness added (value=0.015, bounds=[0.005, 0.04])
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[300, 325])
+    Formulator parameter change: T_wall added (value=297.15, bounds=[290, 305])
+    Formulator parameter change: solar_absorptance added (value=0.25, bounds=[0.15, 0.5])
+    Formulator parameter change: solar_irradiance added (value=800, bounds=[400, 1100])
+[+] Concept Mined & Formulated: Cactus-Ribbed Self-Shading Convective Ventilated Facade Shroud
+
+[*] Running Optimization Round 1 for Cactus-Ribbed Self-Shading Convective Ventilated Facade Shroud...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Cactus-Ribbed Self-Shading Convective Ventilated Facade Shroud successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+[explorer] round 1: r001-01 seed -> new_elite, r001-02 seed -> improved, r001-03 seed -> new_elite
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Stenocara-Structured Vitrified Silica Glaze for Soot-Resistant Radiative Cooling
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = 0
+    Boundary Conditions: ['T(0) = (h_exterior * T_ambient + (k_solid * (1.0 - porosity) / wall_thickness) * T_indoor + solar_irradiance * ((void_diameter / reference_void) + (capping_layer_thickness / reference_capping) * 0.02 + albedo_degradation_rate * service_years) - q_sky_rad) / (h_exterior + k_solid * (1.0 - porosity) / wall_thickness)', 'T(1) = T_indoor']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['void_diameter', 'capping_layer_thickness', 'porosity', 'albedo_degradation_rate']
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[293.15, 323.15])
+    Formulator parameter change: T_indoor added (value=297.15, bounds=[291.15, 301.15])
+    Formulator parameter change: solar_irradiance added (value=800, bounds=[400, 1200])
+    Formulator parameter change: q_sky_rad added (value=75, bounds=[30, 130])
+    Formulator parameter change: h_exterior added (value=15, bounds=[5, 35])
+    Formulator parameter change: wall_thickness added (value=0.2, bounds=[0.05, 0.5])
+    Formulator parameter change: k_solid added (value=1.2, bounds=[0.4, 2.5])
+    Formulator parameter change: service_years added (value=20, bounds=[1, 30])
+    Formulator parameter change: reference_void added (value=1e-05, bounds=[2e-06, 5e-05])
+    Formulator parameter change: reference_capping added (value=2e-06, bounds=[5e-07, 1e-05])
+[+] Concept Mined & Formulated: Stenocara-Structured Vitrified Silica Glaze for Soot-Resistant Radiative Cooling
+
+[*] Running Optimization Round 1 for Stenocara-Structured Vitrified Silica Glaze for Soot-Resistant Radiative Cooling...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Stenocara-Structured Vitrified Silica Glaze for Soot-Resistant Radiative Cooling successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Macro-Porous Macro-Termitary Bioclimatic Ventilated Facade Panel
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = (buoyancy_convection_factor * chimney_height / (channel_hydraulic_diameter * lattice_thermal_conductivity)) * (T - T_ambient)
+    Boundary Conditions: ['T(0) = T_exterior', 'T(1) = T_interior']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['channel_hydraulic_diameter', 'shading_fin_angle', 'lattice_thermal_conductivity', 'chimney_height']
+    Formulator parameter change: buoyancy_convection_factor added (value=0.25, bounds=[0.02, 2])
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[295.15, 325.15])
+    Formulator parameter change: T_exterior added (value=318.15, bounds=[300.15, 340.15])
+    Formulator parameter change: T_interior added (value=297.15, bounds=[290.15, 305.15])
+[+] Concept Mined & Formulated: Macro-Porous Macro-Termitary Bioclimatic Ventilated Facade Panel
+
+[*] Running Optimization Round 1 for Macro-Porous Macro-Termitary Bioclimatic Ventilated Facade Panel...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Macro-Porous Macro-Termitary Bioclimatic Ventilated Facade Panel successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Hermetically Sealed Closed-Cell Cyphochilus-Mimetic Sintered Alumina Tile
+
+[*] ModelFormulator output:
+    Governing: d2T_dz2 = -tile_thickness * (1 - solar_reflectance) * I_solar / (k_solid * (1 - closed_porosity))
+    Boundary Conditions: ['dT_dz(0) = tile_thickness * (h_ext * (T(0) - T_ambient) + h_rad * (T(0) - T_sky)) / (k_solid * (1 - closed_porosity))', 'T(1) = T_interior']
+    Independent Variables: ['z']
+    Dependent Variables: ['T']
+    Concept Parameters: ['mean_pore_diameter', 'closed_porosity', 'tile_thickness', 'surface_glaze_thickness']
+    Formulator parameter change: solar_reflectance added (value=0.965, bounds=[0.85, 0.99])
+    Formulator parameter change: I_solar added (value=1000, bounds=[600, 1200])
+    Formulator parameter change: k_solid added (value=18, bounds=[5, 35])
+    Formulator parameter change: h_ext added (value=15, bounds=[5, 30])
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[295.15, 328.15])
+    Formulator parameter change: h_rad added (value=5.5, bounds=[2, 10])
+    Formulator parameter change: T_sky added (value=283.15, bounds=[265.15, 300.15])
+    Formulator parameter change: T_interior added (value=297.15, bounds=[291.15, 303.15])
+[+] Concept Mined & Formulated: Hermetically Sealed Closed-Cell Cyphochilus-Mimetic Sintered Alumina Tile
+
+[*] Running Optimization Round 1 for Hermetically Sealed Closed-Cell Cyphochilus-Mimetic Sintered Alumina Tile...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Hermetically Sealed Closed-Cell Cyphochilus-Mimetic Sintered Alumina Tile successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+[explorer] round 2: r002-01 fill_gap -> new_elite, r002-02 combine -> new_elite, r002-03 refine -> improved
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Sphincterochila-Mimetic Calcitic Lamellar Sintered Radiative Cladding
+
+[*] ModelFormulator output:
+    Governing: d2T_dz2 = 0
+    Boundary Conditions: ['T(0) = T_ambient + ((1 - solar_reflectance) * solar_irradiance - thermal_emittance_sky_window * q_rad_sky + thermal_conductivity / tile_thickness * dT_dz(0)) / h_conv', 'T(1) = T_indoor']
+    Independent Variables: ['z']
+    Dependent Variables: ['T']
+    Concept Parameters: ['lamella_thickness', 'solar_reflectance', 'thermal_emittance_sky_window', 'thermal_conductivity', 'tile_thickness']
+    Formulator parameter change: solar_irradiance added (value=950, bounds=[200, 1200])
+    Formulator parameter change: q_rad_sky added (value=180, bounds=[50, 350])
+    Formulator parameter change: h_conv added (value=12, bounds=[2, 30])
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[280, 330])
+    Formulator parameter change: T_indoor added (value=298.15, bounds=[290, 305])
+[+] Concept Mined & Formulated: Sphincterochila-Mimetic Calcitic Lamellar Sintered Radiative Cladding
+
+[*] Running Optimization Round 1 for Sphincterochila-Mimetic Calcitic Lamellar Sintered Radiative Cladding...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Sphincterochila-Mimetic Calcitic Lamellar Sintered Radiative Cladding successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Coscinodiscus-Frustule-Templated Sintered Silica Radiative Facade Panel
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = 0
+    Boundary Conditions: ['dT_dx(0) = (h_ext * (T(0) - T_ambient) - solar_absorptance * solar_irradiance + sky_window_emissivity * net_sky_radiation) * panel_thickness / matrix_thermal_conductivity', 'T(1) = T_indoor']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['pore_diameter', 'pore_porosity', 'matrix_thermal_conductivity', 'solar_absorptance', 'sky_window_emissivity']
+    Formulator parameter change: panel_thickness added (value=0.05, bounds=[0.01, 0.2])
+    Formulator parameter change: T_ambient added (value=40, bounds=[25, 55])
+    Formulator parameter change: T_indoor added (value=24, bounds=[18, 28])
+    Formulator parameter change: solar_irradiance added (value=950, bounds=[500, 1200])
+    Formulator parameter change: net_sky_radiation added (value=120, bounds=[40, 160])
+    Formulator parameter change: h_ext added (value=15, bounds=[5, 30])
+[+] Concept Mined & Formulated: Coscinodiscus-Frustule-Templated Sintered Silica Radiative Facade Panel
+
+[*] Running Optimization Round 1 for Coscinodiscus-Frustule-Templated Sintered Silica Radiative Facade Panel...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Coscinodiscus-Frustule-Templated Sintered Silica Radiative Facade Panel successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Dudleya-Inspired Epicuticular Boehmite Platelet Photostabilized Glaze
+
+[*] ModelFormulator output:
+    Governing: d2T_dz2 = - (solar_irradiance * (1.0 - (base_solar_reflectance - photo_degradation_rate_constant * service_years + platelet_scattering_coeff * (platelet_diameter / platelet_thickness))) * glaze_coating_thickness**2 / (thermal_conductivity * uv_attenuation_depth)) * exp(-z * glaze_coating_thickness / uv_attenuation_depth)
+    Boundary Conditions: ['T(0) = T_ambient + thermal_conductivity * dT_dz(0) / (h_exterior * glaze_coating_thickness)', 'T(1) = T_interior - thermal_conductivity * wall_thermal_resistance * dT_dz(1) / glaze_coating_thickness']
+    Independent Variables: ['z']
+    Dependent Variables: ['T']
+    Concept Parameters: ['platelet_thickness', 'platelet_diameter', 'uv_attenuation_depth', 'photo_degradation_rate_constant', 'glaze_coating_thickness']
+    Formulator parameter change: solar_irradiance added (value=1000, bounds=[600, 1200])
+    Formulator parameter change: base_solar_reflectance added (value=0.85, bounds=[0.7, 0.95])
+    Formulator parameter change: service_years added (value=20, bounds=[1, 30])
+    Formulator parameter change: platelet_scattering_coeff added (value=0.008, bounds=[0.001, 0.025])
+    Formulator parameter change: thermal_conductivity added (value=1.2, bounds=[0.4, 2.5])
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[300.15, 325.15])
+    Formulator parameter change: h_exterior added (value=15, bounds=[5, 35])
+    Formulator parameter change: T_interior added (value=297.15, bounds=[293.15, 301.15])
+    Formulator parameter change: wall_thermal_resistance added (value=1.8, bounds=[0.5, 5])
+[+] Concept Mined & Formulated: Dudleya-Inspired Epicuticular Boehmite Platelet Photostabilized Glaze
+
+[*] Running Optimization Round 1 for Dudleya-Inspired Epicuticular Boehmite Platelet Photostabilized Glaze...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Dudleya-Inspired Epicuticular Boehmite Platelet Photostabilized Glaze successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+[explorer] round 3: r003-01 fill_gap -> new_elite, r003-02 diversify -> new_elite, r003-03 combine -> new_elite
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Moloch-Mimetic Sub-Micron Mesoporous Aluminosilicate Dew-Evaporative Tile
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = (tile_thickness * sorption_capacity * latent_heat_evap) / (thermal_conductivity * desorption_duration)
+    Boundary Conditions: ['T(0) = T_exterior', 'T(1) = T_interior']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['pore_diameter', 'sorption_capacity', 'latent_heat_evap', 'desorption_duration', 'thermal_conductivity', 'tile_thickness']
+    Formulator parameter change: T_exterior added (value=328.15, bounds=[300, 360])
+    Formulator parameter change: T_interior added (value=297.15, bounds=[285, 315])
+[+] Concept Mined & Formulated: Moloch-Mimetic Sub-Micron Mesoporous Aluminosilicate Dew-Evaporative Tile
+
+[*] Running Optimization Round 1 for Moloch-Mimetic Sub-Micron Mesoporous Aluminosilicate Dew-Evaporative Tile...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Moloch-Mimetic Sub-Micron Mesoporous Aluminosilicate Dew-Evaporative Tile successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Sphincterochila-Epiphragm-Mimetic Sub-Micron Knudsen Gas Transport Cladding
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = 0
+    Boundary Conditions: ['dT_dx(0) = (exterior_convective_htc * cladding_thickness * (T(0) - T_ambient_exterior) - solar_absorptance * solar_irradiance * cladding_thickness) / ((1.0 - porosity) * solid_matrix_conductivity + porosity * knudsen_suppression_factor * bulk_air_conductivity)', 'dT_dx(1) = -interior_convective_htc * cladding_thickness * (T(1) - T_interior) / ((1.0 - porosity) * solid_matrix_conductivity + porosity * knudsen_suppression_factor * bulk_air_conductivity)']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['pore_diameter', 'cladding_thickness', 'solid_matrix_conductivity', 'porosity', 'knudsen_suppression_factor', 'exterior_convective_htc']
+    Formulator parameter change: bulk_air_conductivity added (value=0.026, bounds=[0.02, 0.035])
+    Formulator parameter change: solar_irradiance added (value=800, bounds=[500, 1200])
+    Formulator parameter change: solar_absorptance added (value=0.2, bounds=[0.1, 0.4])
+    Formulator parameter change: T_ambient_exterior added (value=318.15, bounds=[300, 330])
+    Formulator parameter change: interior_convective_htc added (value=8, bounds=[4, 15])
+    Formulator parameter change: T_interior added (value=297.15, bounds=[290, 305])
+[+] Concept Mined & Formulated: Sphincterochila-Epiphragm-Mimetic Sub-Micron Knudsen Gas Transport Cladding
+
+[*] Running Optimization Round 1 for Sphincterochila-Epiphragm-Mimetic Sub-Micron Knudsen Gas Transport Cladding...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Sphincterochila-Epiphragm-Mimetic Sub-Micron Knudsen Gas Transport Cladding successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Cotyledon-Mimetic Shingled Zinc-Aluminate Spinel Vitrified Radiative Glaze
+
+[*] ModelFormulator output:
+    Governing: d2T_dx2 = 0
+    Boundary Conditions: ['T(0) = T_ambient + (1 - aged_reflectance_20yr) * solar_irradiance / h_exterior + (k_wall / (h_exterior * wall_thickness)) * dT_dx(0)', 'T(1) = T_indoor']
+    Independent Variables: ['x']
+    Dependent Variables: ['T']
+    Concept Parameters: ['platelet_diameter', 'platelet_thickness', 'matrix_hardness_mohs', 'optical_bandgap', 'initial_solar_reflectance', 'aged_reflectance_20yr', 'glaze_layer_thickness']
+    Formulator parameter change: solar_irradiance added (value=1000, bounds=[600, 1200])
+    Formulator parameter change: T_ambient added (value=315.15, bounds=[295, 330])
+    Formulator parameter change: T_indoor added (value=297.15, bounds=[290, 305])
+    Formulator parameter change: h_exterior added (value=20, bounds=[10, 40])
+    Formulator parameter change: k_wall added (value=0.8, bounds=[0.2, 2])
+    Formulator parameter change: wall_thickness added (value=0.2, bounds=[0.1, 0.5])
+[+] Concept Mined & Formulated: Cotyledon-Mimetic Shingled Zinc-Aluminate Spinel Vitrified Radiative Glaze
+
+[*] Running Optimization Round 1 for Cotyledon-Mimetic Shingled Zinc-Aluminate Spinel Vitrified Radiative Glaze...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Cotyledon-Mimetic Shingled Zinc-Aluminate Spinel Vitrified Radiative Glaze successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+[explorer] round 4: r004-01 fill_gap -> new_elite, r004-02 diversify -> new_elite, r004-03 refine -> improved
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Antheraea-Cocoon-Mimetic Sintered Mullite Microfiber Radiative Veil
+
+[*] ModelFormulator output:
+    Governing: d2T_dz2 = - (1 - solar_reflectance) * solar_irradiance * extinction_coefficient * layer_thickness**2 * exp(-extinction_coefficient * layer_thickness * z) / effective_thermal_conductivity
+    Boundary Conditions: ['dT_dz(0) = layer_thickness * (h_exterior * (T(0) - T_ambient) + atmospheric_window_emissivity * net_sky_flux) / effective_thermal_conductivity', 'T(1) = T_interior']
+    Independent Variables: ['z']
+    Dependent Variables: ['T']
+    Concept Parameters: ['fiber_diameter', 'fiber_hollow_fraction', 'solar_reflectance', 'atmospheric_window_emissivity', 'effective_thermal_conductivity']
+    Formulator parameter change: layer_thickness added (value=0.02, bounds=[0.005, 0.05])
+    Formulator parameter change: solar_irradiance added (value=1000, bounds=[600, 1200])
+    Formulator parameter change: extinction_coefficient added (value=5000, bounds=[1000, 20000])
+    Formulator parameter change: h_exterior added (value=10, bounds=[4, 25])
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[295, 325])
+    Formulator parameter change: net_sky_flux added (value=75, bounds=[40, 120])
+    Formulator parameter change: T_interior added (value=297.15, bounds=[290, 305])
+[+] Concept Mined & Formulated: Antheraea-Cocoon-Mimetic Sintered Mullite Microfiber Radiative Veil
+
+[*] Running Optimization Round 1 for Antheraea-Cocoon-Mimetic Sintered Mullite Microfiber Radiative Veil...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Antheraea-Cocoon-Mimetic Sintered Mullite Microfiber Radiative Veil successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Tillandsia-Trichome-Mimetic Sintered Calcite-Silica Lamellar Glaze
+
+[*] ModelFormulator output:
+    Governing: d2T_dz2 = 0
+    Boundary Conditions: ['T(0) = T_in', 'dT_dz(1) = (L_wall / k_wall) * ((1 - solar_reflectivity) * I_sol - (convective_heat_transfer_coeff + 4 * thermal_emissivity_sky_window * sigma_sb * T_amb**3) * (T(1) - T_amb) - thermal_emissivity_sky_window * (sigma_sb * T_amb**4 - I_sky))']
+    Independent Variables: ['z']
+    Dependent Variables: ['T']
+    Concept Parameters: ['lamella_thickness', 'interlamellar_gap', 'solar_reflectivity', 'thermal_emissivity_sky_window', 'convective_heat_transfer_coeff']
+    Formulator parameter change: T_in added (value=297.15, bounds=[290, 305])
+    Formulator parameter change: T_amb added (value=311.15, bounds=[295, 325])
+    Formulator parameter change: I_sol added (value=900, bounds=[500, 1200])
+    Formulator parameter change: I_sky added (value=420, bounds=[300, 550])
+    Formulator parameter change: sigma_sb added (value=5.67037e-08, bounds=[5.67e-08, 5.671e-08])
+    Formulator parameter change: L_wall added (value=0.2, bounds=[0.1, 0.5])
+    Formulator parameter change: k_wall added (value=1, bounds=[0.2, 2.5])
+[+] Concept Mined & Formulated: Tillandsia-Trichome-Mimetic Sintered Calcite-Silica Lamellar Glaze
+
+[*] Running Optimization Round 1 for Tillandsia-Trichome-Mimetic Sintered Calcite-Silica Lamellar Glaze...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Tillandsia-Trichome-Mimetic Sintered Calcite-Silica Lamellar Glaze successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+
+[*] Starting Concept Attempt 1...
+[*] Evaluating supplied concept: Sealed Triceratium-Frustule Silica-Aerogel Composite Facade Panel
+
+[*] ModelFormulator output:
+    Governing: d2T_dz2 = 0
+    Boundary Conditions: ['dT_dz(0) = (aerogel_backing_thickness / aerogel_thermal_conductivity) * (h_exterior * (T(0) - T_ambient) + sky_window_emittance * net_sky_radiation - (1 - solar_reflectance_aged) * solar_irradiance)', 'T(1) = T_interior']
+    Independent Variables: ['z']
+    Dependent Variables: ['T']
+    Concept Parameters: ['frustule_submicron_pore_diameter', 'quartz_seal_thickness', 'aerogel_backing_thickness', 'aerogel_thermal_conductivity', 'solar_reflectance_aged', 'sky_window_emittance']
+    Formulator parameter change: h_exterior added (value=12, bounds=[5, 35])
+    Formulator parameter change: T_ambient added (value=313.15, bounds=[293.15, 328.15])
+    Formulator parameter change: solar_irradiance added (value=800, bounds=[300, 1100])
+    Formulator parameter change: net_sky_radiation added (value=80, bounds=[20, 140])
+    Formulator parameter change: T_interior added (value=297.15, bounds=[291.15, 303.15])
+[+] Concept Mined & Formulated: Sealed Triceratium-Frustule Silica-Aerogel Composite Facade Panel
+
+[*] Running Optimization Round 1 for Sealed Triceratium-Frustule Silica-Aerogel Composite Facade Panel...
+[*] Reached max optimization rounds limit for this concept.
+[+] Concept Sealed Triceratium-Frustule Silica-Aerogel Composite Facade Panel successfully optimized!
+[*] Generating Practical & Commercial Synthesis Report...
+[+] Synthesis report generated successfully.
+[explorer] round 5: r005-01 diversify -> new_elite, r005-02 combine -> new_elite, r005-03 refine -> not_better
+{
+  "status": "complete",
+  "profile": "materials",
+  "run_id": "run-001",
+  "rounds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "archive": "/tmp/claude-0/-home-user-vectornaut/6d94a234-0063-56c5-b9d5-7a9e3882a427/scratchpad/gemini_facade2/explorer/materials/archive.json",
+  "elites": 11,
+  "entries": 15,
+  "reports": {
+    "round": "/tmp/claude-0/-home-user-vectornaut/6d94a234-0063-56c5-b9d5-7a9e3882a427/scratchpad/gemini_facade2/explorer/materials/reports/round_005.md",
+    "map": "/tmp/claude-0/-home-user-vectornaut/6d94a234-0063-56c5-b9d5-7a9e3882a427/scratchpad/gemini_facade2/explorer/materials/reports/map.md",
+    "export": "/tmp/claude-0/-home-user-vectornaut/6d94a234-0063-56c5-b9d5-7a9e3882a427/scratchpad/gemini_facade2/explorer/materials/reports/archive_export.json"
+  }
+}
+[model usage] gemini-3.8-flash: 55 calls, 147105 prompt, 79910 output, 361871 thinking tokens
