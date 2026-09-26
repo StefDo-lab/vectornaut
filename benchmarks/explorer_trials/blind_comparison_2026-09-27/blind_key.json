@@ -1,0 +1,50 @@
+{
+ "H1": [
+  "direct",
+  2
+ ],
+ "H2": [
+  "explorer",
+  1
+ ],
+ "H3": [
+  "direct",
+  1
+ ],
+ "H4": [
+  "explorer",
+  3
+ ],
+ "H5": [
+  "direct",
+  3
+ ],
+ "H6": [
+  "explorer",
+  2
+ ],
+ "F1": [
+  "explorer",
+  2
+ ],
+ "F2": [
+  "direct",
+  1
+ ],
+ "F3": [
+  "explorer",
+  1
+ ],
+ "F4": [
+  "direct",
+  3
+ ],
+ "F5": [
+  "explorer",
+  3
+ ],
+ "F6": [
+  "direct",
+  2
+ ]
+}
