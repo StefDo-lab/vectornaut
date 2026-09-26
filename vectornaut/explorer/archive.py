@@ -11,8 +11,16 @@ Layout of ``archive.json``::
                                         "proposal density" map
     targets      {cell_key: count}      how often a search order aimed at a cell/pattern
     infeasible   {pattern_key: {...}}   cells or patterns reported as impossible
+    request_analysis                    requirements extracted from the query (fixed once set)
+                                        and the relevant values of "relevance axes"
     rounds       [round log]            orders, outcomes and strategy yield per round
     round_counter, next_entry
+
+Elites are compared by evidence first, then score: an entry's ``score_breakdown`` may carry
+an ``evidence_rank`` (materials: 2 = simulated, 1 = estimated, 0 = estimated after an
+implausible simulation). A lower-ranked entry never replaces a higher-ranked elite, and a
+higher-ranked entry replaces a lower-ranked one regardless of score. Entries without a rank
+(business) all rank equal, so only the score decides.
 
 Writes are atomic (temp file + ``os.replace``). Entry ids are sequential and the file is
 written with sorted keys, so the same inputs give the same file except for timestamps
@@ -23,12 +31,12 @@ import math
 import os
 import tempfile
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Mapping, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from vectornaut.explorer.descriptors import DescriptorSpace
 from vectornaut.storage import data_path
 
-ARCHIVE_VERSION = 1
+ARCHIVE_VERSION = 2
 
 # Entry statuses.
 EVALUATED = "evaluated"          # scored; may be an elite
@@ -47,6 +55,19 @@ def default_archive_path(profile: str, name: Optional[str] = None) -> str:
     if name:
         return data_path("explorer", profile, name, "archive.json")
     return data_path("explorer", profile, "archive.json")
+
+
+def evidence_rank(entry: Mapping[str, Any]) -> int:
+    """Evidence rank of an entry (0 when the profile does not rank evidence)."""
+    try:
+        return int((entry.get("score_breakdown") or {}).get("evidence_rank") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def rank_key(entry: Mapping[str, Any]) -> tuple:
+    """(evidence rank, score): the larger key is the better entry."""
+    return (evidence_rank(entry), float(entry.get("score") or 0.0))
 
 
 def _utc_now() -> str:
@@ -86,6 +107,7 @@ class Archive:
             "proposals": {},
             "targets": {},
             "infeasible": {},
+            "request_analysis": {"requirements": [], "requirements_round": None, "relevant": {}},
             "rounds": [],
             "round_counter": 0,
             "next_entry": 1,
@@ -116,7 +138,10 @@ class Archive:
                     "Use a new archive name."
                 )
             base = archive._empty()
+            analysis = dict(base["request_analysis"])
             base.update(data)
+            analysis.update(base.get("request_analysis") or {})
+            base["request_analysis"] = analysis
             archive.data = base
         return archive
 
@@ -191,6 +216,100 @@ class Archive:
         scores = [entry["score"] for entry in self.elite_entries() if entry.get("score") is not None]
         return (min(scores), max(scores)) if scores else None
 
+    def ranked_elites(self) -> List[Dict[str, Any]]:
+        """Elites best first: evidence rank, then score, then id."""
+        return sorted(self.elite_entries(), key=lambda e: (-evidence_rank(e), -float(e.get("score") or 0.0), e["id"]))
+
+    # ---- request analysis ----------------------------------------------
+    @property
+    def request_analysis(self) -> Dict[str, Any]:
+        return self.data["request_analysis"]
+
+    @property
+    def requirements(self) -> List[Dict[str, str]]:
+        return list(self.request_analysis.get("requirements") or [])
+
+    def set_requirements(self, requirements: Sequence[Mapping[str, Any]], round_no: int) -> bool:
+        """
+        Stores the requirement list once (the first non-empty one), so the scores of later
+        rounds stay comparable. Returns True if the list was stored now.
+        """
+        if self.requirements:
+            return False
+        cleaned, seen = [], set()
+        for item in requirements or []:
+            name = str(item.get("name") or "").strip()
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            cleaned.append({"name": name, "criterion": str(item.get("criterion") or "").strip()})
+        if not cleaned:
+            return False
+        self.request_analysis["requirements"] = cleaned
+        self.request_analysis["requirements_round"] = round_no
+        return True
+
+    def declare_relevance_axes(self, axes: Sequence[str]) -> None:
+        """Axes whose values must be relevant to the request (materials: governing_quantity)."""
+        relevant = self.request_analysis.setdefault("relevant", {})
+        for name in axes or ():
+            relevant.setdefault(name, [])
+
+    def relevance_axes(self) -> List[str]:
+        relevant = self.request_analysis.get("relevant") or {}
+        return [name for name in self.space.names if name in relevant]
+
+    def add_relevant_values(self, axis: str, values: Sequence[str]) -> List[str]:
+        """Adds already validated values to an axis' relevant set; returns the new ones."""
+        stored = self.request_analysis.setdefault("relevant", {}).setdefault(axis, [])
+        added = []
+        for value in values or ():
+            if value not in stored:
+                stored.append(value)
+                added.append(value)
+        stored.sort(key=self.space.axis(axis).index)
+        return added
+
+    def relevant_values(self, axis: str) -> Optional[List[str]]:
+        """
+        Relevant values of a relevance axis: those named by the generator's function analysis
+        plus those held by elites. None if the axis is not a relevance axis; an empty list if
+        nothing is known yet.
+        """
+        relevant = self.request_analysis.get("relevant") or {}
+        if axis not in relevant:
+            return None
+        values = set(relevant.get(axis) or [])
+        values.update(e["descriptors"][axis] for e in self.elite_entries())
+        return sorted(values, key=self.space.axis(axis).index)
+
+    def is_relevant(self, cell: Mapping[str, str]) -> bool:
+        """False if the cell uses a value of a relevance axis that is known to be irrelevant.
+        While nothing is known about an axis, every value counts as relevant here."""
+        for axis in self.relevance_axes():
+            if axis not in cell:
+                continue
+            values = self.relevant_values(axis)
+            if values and cell[axis] not in values:
+                return False
+        return True
+
+    # ---- proposal statistics per axis value -----------------------------
+    def value_counts(self, axis: str) -> Dict[str, int]:
+        """Proposals (placed candidates of any status) per value of one axis."""
+        counts = {value: 0 for value in self.space.axis(axis).values}
+        for key, count in self.data["proposals"].items():
+            value = self.space.parse_key(key).get(axis)
+            if value in counts:
+                counts[value] += int(count)
+        return counts
+
+    def axis_concentration(self, axis: str) -> float:
+        """Share of all proposals held by the most common value of an axis (0 if none yet)."""
+        counts = self.value_counts(axis)
+        total = sum(counts.values())
+        return max(counts.values()) / total if total else 0.0
+
     # ---- updates ------------------------------------------------------
     def register_query(self, query: str) -> None:
         if query and query not in self.data["queries"]:
@@ -235,7 +354,8 @@ class Archive:
         """
         Records one candidate. Returns the stored entry; ``entry["outcome"]`` says
         whether it became a new elite, improved a cell, or neither. An elite is only
-        replaced by a strictly higher score (ties keep the older entry).
+        replaced by stronger evidence or, at equal evidence rank, by a strictly higher score
+        (ties keep the older entry).
         """
         entry_id = f"e{int(self.data['next_entry']):05d}"
         self.data["next_entry"] = int(self.data["next_entry"]) + 1
@@ -283,7 +403,7 @@ class Archive:
             if current is None:
                 entry["outcome"] = NEW_ELITE
                 self.elites[cell_key] = entry_id
-            elif entry["score"] > float(current.get("score") or 0.0):
+            elif rank_key(entry) > rank_key(current):
                 entry["outcome"] = IMPROVED
                 entry["replaced"] = current_id
                 self.elites[cell_key] = entry_id

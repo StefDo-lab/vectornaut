@@ -6,8 +6,10 @@ Explorer loop and command line.
     python -m vectornaut.explorer --profile business  --query "..." --rounds 3 --batch 6 --seed 7
 
 Each round: schedule search orders from the archive -> generate one candidate per order
-(one model call) -> evaluate -> update the archive -> write a round report, the cumulative
-map report (map.md) and a JSON export. The archive persists across runs under
+(one model call, which also extracts the request's requirements and relevant values) ->
+evaluate (materials: pipeline per candidate + one critic call; business: unit economics +
+one critic call) -> update the archive -> write a round report, the cumulative map report
+(map.md) and a JSON export. The archive persists across runs under
 VECTORNAUT_DATA_DIR/explorer/<profile>/archive.json (or .../<profile>/<name>/ with --archive).
 
 Live mode needs GEMINI_API_KEY (or an injected client, e.g. vectornaut.llm_replay --explorer).
@@ -84,10 +86,24 @@ class ExplorerRunner:
                 f"The archive {self.archive.path} was built for the query {known[0]!r}. Scores for a different "
                 "request are not comparable: use --archive NAME for a separate map, or --allow-new-query to mix."
             )
+        self.archive.declare_relevance_axes(getattr(profile, "relevance_axes", ()) or ())
         self.out_dir = os.path.abspath(out_dir or os.path.join(self.archive.directory, "reports"))
         self.generator = CandidateGenerator(profile, client=client, mock=mock)
         self.ctx = EvaluationContext(query=self.query, mock=mock, epochs=epochs, opt_rounds=opt_rounds,
-                                     use_critic=use_critic, verbose=verbose)
+                                     use_critic=use_critic, verbose=verbose, requirements=self.archive.requirements)
+
+    def _update_request_analysis(self, notes: Mapping[str, Any], round_no: int) -> Dict[str, Any]:
+        """Stores the first requirement list and the relevant values named by the generator."""
+        archive = self.archive
+        stored = archive.set_requirements(notes.get("requirements") or [], round_no)
+        added: Dict[str, List[str]] = {}
+        for axis, values in sorted((notes.get("relevant_values") or {}).items()):
+            if axis in archive.relevance_axes():
+                new = archive.add_relevant_values(axis, values)
+                if new:
+                    added[axis] = new
+        self.ctx.requirements = archive.requirements
+        return {"requirements_stored": stored, "relevant_added": added}
 
     # ------------------------------------------------------------------
     def run_round(self, batch: int, run_id: str) -> Dict[str, Any]:
@@ -102,6 +118,7 @@ class ExplorerRunner:
                 archive.count_target(order["target"])
 
         generation = self.generator.generate(self.query, orders, archive)
+        analysis_update = self._update_request_analysis(generation.batch_notes, round_no)
         prepared: List[PreparedCandidate] = []
         for item in generation.items:
             if item.status == OK:
@@ -119,6 +136,7 @@ class ExplorerRunner:
                 "rationale": order["rationale"], "parent_ids": order["parent_ids"],
                 "trend": (order.get("context") or {}).get("trend"), "item_status": item.status,
                 "entry_id": None, "entry_status": None, "outcome": None, "on_target": None, "score": None,
+                "evidence_tier": None, "flags": [], "requirement_coverage": None,
                 "title": getattr(item.candidate, "title", None) if item.candidate is not None else None,
                 "note": "; ".join(item.issues)[:300],
             }
@@ -150,13 +168,17 @@ class ExplorerRunner:
                 if result.reason:
                     log["note"] = result.reason[:300]
             if entry is not None:
+                breakdown = entry.get("score_breakdown") or {}
                 log.update({"entry_id": entry["id"], "entry_status": entry["status"], "outcome": entry["outcome"],
-                            "on_target": entry["on_target"], "score": entry["score"]})
+                            "on_target": entry["on_target"], "score": entry["score"],
+                            "evidence_tier": breakdown.get("evidence_tier"), "flags": list(breakdown.get("flags") or []),
+                            "requirement_coverage": breakdown.get("requirement_coverage")})
             order_logs.append(log)
 
         record = {
             "round": round_no, "run_id": run_id, "seed": self.seed, "query": self.query, "mock": self.mock,
             "orders": order_logs, "batch_notes": generation.batch_notes, "unmatched": generation.unmatched,
+            "request_analysis_update": analysis_update,
             "started_at": started, "finished_at": archive.clock(),
         }
         archive.log_round(record)
@@ -217,14 +239,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch", type=int, default=6, help="Search orders (= candidates) per round")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--strategy-weights", default=None,
-                        help="e.g. refine=0.25,fill_gap=0.3,extrapolate=0.2,combine=0.15,explore=0.1")
+                        help="e.g. refine=0.2,fill_gap=0.25,extrapolate=0.15,combine=0.15,diversify=0.15,explore=0.1")
     parser.add_argument("--mock", action="store_true", help="Deterministic fake generator and mock evaluation, offline")
     parser.add_argument("--out", default=None, help="Report folder (default: <archive folder>/reports)")
     parser.add_argument("--archive", default=None, help="Separate archive name under explorer/<profile>/<name>/")
     parser.add_argument("--allow-new-query", action="store_true", help="Add a different query to an existing archive")
     parser.add_argument("--epochs", type=int, default=40, help="PINN epochs per materials evaluation")
     parser.add_argument("--opt-rounds", type=int, default=1, help="Pipeline optimization rounds per materials candidate")
-    parser.add_argument("--no-critic", action="store_true", help="Business: skip the critic call")
+    parser.add_argument("--no-critic", action="store_true",
+                        help="Skip the critic call (materials: no plausible-gain check, requirements unrated)")
     parser.add_argument("--min-slope", type=float, default=StrategyConfig.min_slope,
                         help="Smallest score change per ordinal step that counts as a trend")
     parser.add_argument("--verbose", action="store_true", help="Show pipeline output")

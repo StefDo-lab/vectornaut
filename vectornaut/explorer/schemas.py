@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Response schemas of the explorer's model calls (generator and business critic).
+Response schemas of the explorer's model calls (generator, business critic, materials critic).
 
 Like the pipeline schemas in ``vectornaut.config`` they avoid free-form dicts (Gemini
 response schemas handle lists of objects better), so descriptors are a list of
@@ -39,6 +39,7 @@ class CandidateBase(BaseModel):
 
 
 class MaterialsCandidate(CandidateBase):
+    baseline: str = Field(default="", description="The baseline your back_of_envelope estimate compares against, stated explicitly (default: the conventional state-of-the-art solution for the request, e.g. a standard clean hull coating, not a fouled or untreated hull)")
     inspiration_source: str = Field(default="", description="The natural or technical system the idea is borrowed from")
     domain: str = Field(default="", description="Scientific domain, e.g. Fluid Dynamics, Thermodynamics, Structural Mechanics")
     physical_mechanism: str = Field(default="", description="The physical mechanism and how it maps onto the request")
@@ -64,13 +65,20 @@ class BusinessCandidate(CandidateBase):
     input_assumptions: str = Field(default="", description="One sentence per input on where the estimate comes from")
 
 
+class Requirement(BaseModel):
+    name: str = Field(description="Short snake_case name of the requirement, e.g. 'low_friction_drag'")
+    criterion: str = Field(default="", description="One line: when a concept meets this requirement")
+
+
 class ExplorerCandidateBatch(BaseModel):
     function_analysis: str = Field(default="", description="Step 1: the functions the request needs, independent of any solution")
+    requirements: List[Requirement] = Field(default_factory=list, description="Step 1: every explicit or clearly implied requirement of the request (3-6), each with a short name and a one-line criterion")
     mechanism_classes_considered: List[str] = Field(default_factory=list, description="Step 2: mechanism classes that could deliver those functions")
     analogues_considered: List[str] = Field(default_factory=list, description="Step 3: analogues from distant fields that were considered")
 
 
 class MaterialsCandidateBatch(ExplorerCandidateBatch):
+    relevant_governing_quantities: List[str] = Field(default_factory=list, description="Step 1: the governing_quantity tokens (from the vocabulary) that measure a benefit the request actually asks for")
     candidates: List[MaterialsCandidate] = Field(default_factory=list, description="Step 4: exactly one candidate per search order")
 
 
@@ -88,3 +96,22 @@ class CriticReview(BaseModel):
 
 class CriticBatch(BaseModel):
     reviews: List[CriticReview] = Field(default_factory=list, description="Exactly one review per candidate")
+
+
+class RequirementRating(BaseModel):
+    name: str = Field(description="Requirement name, exactly as listed")
+    coverage: float = Field(description="How well the concept meets the requirement: 0 = not at all or contradicts it, 1 = fully")
+    reason: str = Field(default="", description="One line: why")
+
+
+class MaterialsCriticReview(BaseModel):
+    order_id: str = Field(description="order_id of the reviewed candidate")
+    plausible_gain_pct: Optional[float] = Field(default=None, description="Your best estimate of the real-world improvement of the request's main benefit, in percent, against the conventional state-of-the-art baseline; null if it cannot be estimated")
+    plausible_gain_reasoning: str = Field(default="", description="One or two sentences: how you arrived at plausible_gain_pct")
+    key_assumption_issues: List[str] = Field(default_factory=list, description="Modelling choices that drive the simulated gain (free parameters, gap sizes, laminar models of turbulent flow, missing losses), most important first")
+    killer_risks: List[str] = Field(default_factory=list, description="Risks that could make the concept unworkable in practice, most severe first")
+    requirement_coverage: List[RequirementRating] = Field(default_factory=list, description="One rating per listed requirement")
+
+
+class MaterialsCriticBatch(BaseModel):
+    reviews: List[MaterialsCriticReview] = Field(default_factory=list, description="Exactly one review per candidate")

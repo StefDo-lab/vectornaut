@@ -48,10 +48,11 @@ CLIENT_MODULES = (
     "vectornaut.script_generator",
     "vectornaut.test_generator",
 )
-# Explorer modules that obtain a client through get_client() (generator and business critic).
+# Explorer modules that obtain a client through get_client() (generator, business and materials critic).
 EXPLORER_CLIENT_MODULES = (
     "vectornaut.explorer.generator",
     "vectornaut.explorer.profiles.business",
+    "vectornaut.explorer.profiles.materials",
 )
 
 

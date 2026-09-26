@@ -9,7 +9,11 @@ the model report that a target cell cannot contain a working concept.
 
 ``check_batch`` matches candidates to orders and applies the deterministic checks:
 descriptor vocabulary, required fields, finite numbers, duplicate titles, and the
-profile's own sanity checks.
+profile's own sanity checks. It also reads the request analysis of step 1 (requirements,
+relevant values of relevance axes) and validates it against the vocabulary.
+
+Order contexts are shortened field by field (``compact_context``), so the JSON in the
+prompt always stays valid and the key fields (ids, titles, scores, main risks) survive.
 """
 import json
 import math
@@ -29,7 +33,16 @@ REJECTED = "rejected"
 TARGET_INFEASIBLE = "target_infeasible"
 
 MAX_EXCLUDED_TITLES = 30
-MAX_CONTEXT_CHARS = 1200
+MAX_CONTEXT_CHARS = 2000
+# Fields kept longer when the context is shortened (never dropped).
+KEY_FIELDS = ("id", "title", "score", "basis", "evidence_tier", "flags", "requirement_coverage", "main_risk",
+              "differs_in", "neighbour_value", "gap_value")
+KEY_FIELD_MIN_CHARS = 160
+# Tried in this order until the JSON fits; below the last step long text is dropped.
+STRING_LIMITS = (400, 240, 160, 100, 60)
+LIST_LIMIT = 8
+DROPPABLE_FIELDS = ("summary", "points", "cell")
+ELLIPSIS = "…"
 
 
 @dataclass
@@ -49,9 +62,54 @@ class GenerationResult:
     unmatched: List[str]
 
 
+def _shorten(value: Any, limit: int, key: Optional[str] = None, drop: Sequence[str] = (),
+             key_min: int = KEY_FIELD_MIN_CHARS) -> Any:
+    """Recursively shortens strings (key fields keep at least ``key_min`` characters) and long lists."""
+    if isinstance(value, str):
+        cap = max(limit, key_min) if key in KEY_FIELDS else limit
+        return value if len(value) <= cap else value[: max(cap - 1, 1)].rstrip() + ELLIPSIS
+    if isinstance(value, Mapping):
+        return {k: _shorten(v, limit, key=str(k), drop=drop, key_min=key_min) for k, v in value.items() if k not in drop}
+    if isinstance(value, (list, tuple)):
+        items = [_shorten(v, limit, key=key, drop=drop, key_min=key_min) for v in list(value)[:LIST_LIMIT]]
+        if len(value) > LIST_LIMIT:
+            items.append(f"{ELLIPSIS} {len(value) - LIST_LIMIT} more")
+        return items
+    if isinstance(value, float) and math.isfinite(value):
+        return round(value, 4)
+    return value
+
+
+def compact_context(value: Any, limit: int = MAX_CONTEXT_CHARS) -> str:
+    """
+    JSON text of an order context of at most ``limit`` characters where possible. Long text
+    fields are cut per field (with an ellipsis), then droppable fields (summary, trend points,
+    cell descriptions) are removed; the result is always valid JSON and key fields are kept.
+    """
+    def dump(obj: Any) -> str:
+        return json.dumps(obj, ensure_ascii=False, default=str)
+
+    text = dump(value)
+    if len(text) <= limit:
+        return text
+    for string_limit in STRING_LIMITS:
+        text = dump(_shorten(value, string_limit))
+        if len(text) <= limit:
+            return text
+    for count in range(1, len(DROPPABLE_FIELDS) + 1):
+        text = dump(_shorten(value, STRING_LIMITS[-1], drop=DROPPABLE_FIELDS[:count]))
+        if len(text) <= limit:
+            return text
+    # Last resort: shorter key fields too (they are never dropped).
+    for key_min in (100, 60, 40):
+        text = dump(_shorten(value, 40, drop=DROPPABLE_FIELDS, key_min=key_min))
+        if len(text) <= limit:
+            return text
+    return text
+
+
 def _compact(value: Any, limit: int = MAX_CONTEXT_CHARS) -> str:
-    text = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
-    return text if len(text) <= limit else text[: limit - 3] + "..."
+    return compact_context(value, limit)
 
 
 def neighbourhood_titles(archive: Archive, orders: Sequence[Mapping[str, Any]], limit: int = MAX_EXCLUDED_TITLES) -> List[str]:
@@ -100,6 +158,20 @@ def build_prompt(profile: ExplorerProfile, query: str, orders: Sequence[Mapping[
     excluded = neighbourhood_titles(archive, orders)
     excluded_text = "\n".join(f"- {title}" for title in excluded) or "- (none yet)"
     textbook_text = "\n".join(f"- {item}" for item in profile.textbook_solutions) or "- (none)"
+    requirements = archive.requirements
+    if requirements:
+        requirements_text = (
+            "REQUIREMENTS OF THE REQUEST (fixed for this map; a critic rates every candidate against each of them,\n"
+            "and requirement coverage counts as much as the simulated benefit; repeat them in `requirements`):\n"
+            + "\n".join(f"- {r['name']}: {r['criterion']}" for r in requirements)
+        )
+    else:
+        requirements_text = (
+            "REQUIREMENTS OF THE REQUEST: not extracted yet. In step 1, list every explicit or clearly implied\n"
+            "requirement in `requirements` (3-6 items: short snake_case name + one-line criterion). A critic\n"
+            "will rate every candidate against them, and coverage counts as much as the simulated benefit."
+        )
+    analysis_text = profile.analysis_instructions(archive)
 
     return f"""You are the Explorer of Vectornaut. Vectornaut keeps a map of the idea space for a request:
 every concept is placed in one cell of a fixed grid of descriptor axes, and the best concept
@@ -118,14 +190,16 @@ THE MAP (closed vocabulary: use exactly these axis names and value tokens):
 {space.vocabulary_text()}
 
 WORK IN FOUR STEPS
-1. Function analysis (function_analysis): which functions must a solution to the request
-   deliver, independent of any particular solution?
+1. Function analysis (function_analysis, requirements): which functions must a solution to the
+   request deliver, independent of any particular solution, and which requirements must it meet?
 2. Mechanism classes (mechanism_classes_considered): which classes of mechanism can deliver
    those functions?
 3. Analogue search (analogues_considered): where in distant fields (biology, geology,
    atmosphere/ocean, other technologies, other industries) is each mechanism already at work?
 4. Candidates (candidates): for each search order, one concept that fits its target cell.
 
+{requirements_text}
+{analysis_text}
 SEARCH ORDERS (answer each with exactly one candidate carrying the same order_id):
 {orders_text}
 
@@ -260,8 +334,17 @@ def check_batch(profile: ExplorerProfile, orders: Sequence[Mapping[str, Any]], b
 
     notes = {
         "function_analysis": getattr(batch, "function_analysis", "") or "",
+        "requirements": [
+            {"name": str(getattr(r, "name", "") or "").strip(), "criterion": str(getattr(r, "criterion", "") or "").strip()}
+            for r in (getattr(batch, "requirements", None) or []) if str(getattr(r, "name", "") or "").strip()
+        ],
         "mechanism_classes_considered": list(getattr(batch, "mechanism_classes_considered", []) or []),
         "analogues_considered": list(getattr(batch, "analogues_considered", []) or []),
     }
+    relevant, dropped = profile.relevant_values_from_batch(batch)
+    if relevant or dropped:
+        notes["relevant_values"] = relevant
+    if dropped:
+        notes["relevant_values_rejected"] = dropped
     return GenerationResult(items=[by_order[o["order_id"]] for o in orders], prompt=prompt,
                             batch_notes=notes, unmatched=unmatched)

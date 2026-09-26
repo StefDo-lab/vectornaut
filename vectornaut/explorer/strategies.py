@@ -11,42 +11,55 @@ for a given ``random.Random``. An order is a JSON-friendly dict::
 
 Strategies
 - refine:      mutate an elite inside its own cell.
-- fill_gap:    empty cells at distance 1 from elites, ranked by neighbour score and
-               low proposal density.
-- extrapolate: along an ordinal axis, fit the score trend over elites (holding the other
-               axes fixed, or marginalised) and target one step beyond the explored edge
-               in the improving direction. No trend or end of scale -> no order.
-- combine:     two elites far apart in descriptor space -> a cell mixing their descriptors.
-- explore:     a random cell nobody has proposed or targeted yet (small-probability fallback).
+- fill_gap:    empty cells at distance 1 from elites, ranked by neighbour score, elite
+               neighbours along different axes, under-explored axis values and low
+               proposal density.
+- extrapolate: along an ordinal axis, fit the score trend over elites of the top evidence
+               tier (holding the other axes fixed, or marginalised; at least
+               ``min_trend_points`` points and r^2 >= ``min_r2``) and target one step beyond
+               the explored edge in the improving direction. No trend or end of scale -> no order.
+- combine:     two elites far apart in descriptor space -> a cell mixing their descriptors
+               (under-explored mixtures first).
+- diversify:   the least-proposed value of the least diverse axis, one step from an elite.
+- explore:     a random cell nobody has proposed or targeted yet, restricted to relevant
+               values of the relevance axes (materials: governing_quantity) and weighted
+               towards rare values on the other axes.
 - seed:        no target; samples where the model proposes ideas by itself (cold start).
+
+"Under-explored" is measured per axis value: ``concentration(axis) / (1 + proposals with
+that value)``, where concentration is the share of proposals held by the axis' most
+common value. A value nobody proposed on an axis where every proposal shares one value
+scores 1; a value on a well-mixed axis scores little.
 """
 import math
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
-from vectornaut.explorer.archive import Archive
+from vectornaut.explorer.archive import Archive, evidence_rank
 from vectornaut.explorer.descriptors import DescriptorSpace
 
 REFINE = "refine"
 FILL_GAP = "fill_gap"
 EXTRAPOLATE = "extrapolate"
 COMBINE = "combine"
+DIVERSIFY = "diversify"
 EXPLORE = "explore"
 SEED = "seed"
 
-STRATEGIES = (REFINE, FILL_GAP, EXTRAPOLATE, COMBINE, EXPLORE, SEED)
+STRATEGIES = (REFINE, FILL_GAP, EXTRAPOLATE, COMBINE, DIVERSIFY, EXPLORE, SEED)
 DEFAULT_WEIGHTS: Dict[str, float] = {
-    REFINE: 0.25,
-    FILL_GAP: 0.30,
-    EXTRAPOLATE: 0.20,
+    REFINE: 0.20,
+    FILL_GAP: 0.25,
+    EXTRAPOLATE: 0.15,
     COMBINE: 0.15,
+    DIVERSIFY: 0.15,
     EXPLORE: 0.10,
 }
 # Strategies claim cells in this order within a batch (so a gap is not also a combine target).
-PROCESSING_ORDER = (EXTRAPOLATE, FILL_GAP, COMBINE, REFINE, EXPLORE, SEED)
+PROCESSING_ORDER = (EXTRAPOLATE, FILL_GAP, DIVERSIFY, COMBINE, REFINE, EXPLORE, SEED)
 # Slots a strategy could not use go to these, in this order.
-FALLBACK_ORDER = (FILL_GAP, REFINE, EXTRAPOLATE, COMBINE, EXPLORE, SEED)
+FALLBACK_ORDER = (FILL_GAP, DIVERSIFY, REFINE, EXTRAPOLATE, COMBINE, EXPLORE, SEED)
 
 
 @dataclass
@@ -55,9 +68,17 @@ class StrategyConfig:
     min_slope: float = 1.0
     # Priority lost per log(1 + earlier attempts) in a gap cell.
     density_penalty: float = 0.2
-    # Bonus per additional elite neighbour of a gap (up to 3).
+    # Bonus per additional axis along which a gap has elite neighbours (up to 3), and for
+    # a gap bracketed by elites on both sides of an ordinal axis. Several elites that
+    # differ from the gap on the *same* nominal axis earn nothing extra.
     neighbour_bonus: float = 0.05
+    # Weight of the under-exploration term of the changed axis value (0..1) in gap and
+    # combine ranking.
+    rarity_bonus: float = 0.25
     max_context_elites: int = 3
+    # Trend fits need this many points (same evidence tier) and at least this r^2.
+    min_trend_points: int = 3
+    min_r2: float = 0.5
 
 
 def parse_weights(spec: Optional[str]) -> Dict[str, float]:
@@ -87,18 +108,49 @@ def parse_weights(spec: Optional[str]) -> Dict[str, float]:
 # ---------------------------------------------------------------------------
 
 def entry_summary(space: DescriptorSpace, entry: Mapping[str, Any]) -> Dict[str, Any]:
+    """Compact view of an entry for order contexts (key fields first)."""
     concept = entry.get("concept") or {}
     summary = concept.get("summary") or concept.get("physical_mechanism") or concept.get("value_proposition") or ""
     breakdown = entry.get("score_breakdown") or {}
-    return {
+    result: Dict[str, Any] = {
         "id": entry.get("id"),
         "title": entry.get("title"),
-        "cell": space.describe(entry.get("descriptors") or {}),
         "score": entry.get("score"),
         "basis": breakdown.get("basis"),
-        "summary": str(summary)[:300],
-        "main_risk": concept.get("main_risk"),
     }
+    if breakdown.get("evidence_tier"):
+        result["evidence_tier"] = breakdown["evidence_tier"]
+    if breakdown.get("flags"):
+        result["flags"] = list(breakdown["flags"])
+    if breakdown.get("requirement_coverage") is not None:
+        result["requirement_coverage"] = breakdown["requirement_coverage"]
+    result["main_risk"] = concept.get("main_risk")
+    result["cell"] = space.describe(entry.get("descriptors") or {})
+    result["summary"] = str(summary)[:300]
+    return result
+
+
+def trend_eligible(entry: Mapping[str, Any]) -> bool:
+    """Only simulated (or unranked) scores feed trends; estimates and implausible gains do not."""
+    breakdown = entry.get("score_breakdown") or {}
+    tier = breakdown.get("evidence_tier")
+    if tier not in (None, "simulated"):
+        return False
+    return "implausible_gain" not in (breakdown.get("flags") or [])
+
+
+class ExplorationStats:
+    """Proposal counts per axis value and per-axis concentration (see module docstring)."""
+
+    def __init__(self, archive: Archive):
+        self.counts = {axis.name: archive.value_counts(axis.name) for axis in archive.space.axes}
+        self.concentration = {}
+        for name, counts in self.counts.items():
+            total = sum(counts.values())
+            self.concentration[name] = max(counts.values()) / total if total else 0.0
+
+    def under_exploration(self, axis: str, value: str) -> float:
+        return self.concentration[axis] / (1.0 + self.counts[axis].get(value, 0))
 
 
 def _weakest_component(entry: Mapping[str, Any]) -> Optional[str]:
@@ -182,6 +234,15 @@ def refine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConfi
         focus = f"its weakest score component is '{weakest}'" if weakest else "improve its score"
         if risk:
             focus += f"; its stated main risk is: {risk}"
+        breakdown = elite.get("score_breakdown") or {}
+        critic = breakdown.get("critic") or {}
+        issues = list(critic.get("key_assumption_issues") or []) + list(critic.get("killer_risks") or [])
+        if issues:
+            focus += f"; the critic's main objection is: {issues[0]}"
+        weak_reqs = [r["name"] for r in breakdown.get("requirements") or []
+                     if isinstance(r.get("coverage"), (int, float)) and r["coverage"] < 0.5]
+        if weak_reqs:
+            focus += f"; weakly covered requirements: {', '.join(weak_reqs)}"
         orders.append(_make_order(
             space, REFINE, elite["descriptors"],
             context={"elite": entry_summary(space, elite), "times_refined": refined[elite["id"]]},
@@ -209,22 +270,34 @@ def gap_candidates(archive: Archive, taken: Iterable[str] = (), config: Optional
             changed = space.differing_axes(elite["descriptors"], cell)[0]
             neighbours[key].append((elite, changed))
             cells[key] = cell
+    stats = ExplorationStats(archive)
     ranked = []
     for key, items in neighbours.items():
         cell = cells[key]
-        if archive.is_infeasible(cell):
+        if archive.is_infeasible(cell) or not archive.is_relevant(cell):
             continue
         scores = sorted((float(e.get("score") or 0.0) for e, _ in items), reverse=True)
         attempts = _attempts(archive, cell)
+        changed_axes = sorted({axis for _, axis in items}, key=space.names.index)
+        bracketed = 0
+        for name in changed_axes:
+            axis = space.axis(name)
+            if axis.is_ordinal:
+                sides = {axis.index(e["descriptors"][name]) > axis.index(cell[name]) for e, a in items if a == name}
+                bracketed += 1 if len(sides) == 2 else 0
+        breadth = min(len(changed_axes) - 1 + bracketed, 3)
+        exploration = max(stats.under_exploration(name, cell[name]) for name in changed_axes)
         priority = (
             scores[0] / 100.0
-            + config.neighbour_bonus * min(len(items) - 1, 3)
+            + config.neighbour_bonus * breadth
+            + config.rarity_bonus * exploration
             - config.density_penalty * math.log1p(attempts)
         )
         ranked.append({
             "cell": cell, "key": key, "priority": round(priority, 6), "best_neighbour_score": scores[0],
             "neighbours": sorted(items, key=lambda item: (-float(item[0].get("score") or 0.0), item[0]["id"])),
             "attempts": attempts, "proposals": archive.proposal_count(cell),
+            "changed_axes": changed_axes, "exploration": round(exploration, 6),
         })
     ranked.sort(key=lambda item: (-item["priority"], item["key"]))
     return ranked
@@ -246,6 +319,7 @@ def fill_gap(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCon
                 ],
                 "proposals_here": gap["proposals"],
                 "attempts_here": gap["attempts"],
+                "under_exploration": gap["exploration"],
                 "priority": gap["priority"],
             },
             rationale=(
@@ -262,14 +336,15 @@ def fill_gap(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCon
 def find_trends(archive: Archive, config: Optional[StrategyConfig] = None, taken: Iterable[str] = ()) -> List[Dict[str, Any]]:
     """
     Score trends along every ordinal axis. Returns every fitted trend with a status:
-    'proposed' (usable target), 'flat', 'peaked', 'scale_end', 'infeasible' or 'taken'. Slice
-    trends (other axes held fixed) come first, then marginal ones; within each, the
-    steepest well-fitting trend first.
+    'proposed' (usable target), 'too_few_points', 'flat', 'peaked', 'poor_fit', 'scale_end',
+    'infeasible' or 'taken'. Only elites of one evidence tier are fitted (simulated or
+    unranked scores; estimates never form a trend). Slice trends (other axes held fixed)
+    come first, then marginal ones; within each, the steepest well-fitting trend first.
     """
     config = config or StrategyConfig()
     space = archive.space
     taken = set(taken)
-    elites = [e for e in archive.elite_entries() if e.get("score") is not None]
+    elites = [e for e in archive.elite_entries() if e.get("score") is not None and trend_eligible(e)]
     trends: List[Dict[str, Any]] = []
 
     def _trend(axis, mode, fixed, points, target_extra):
@@ -284,6 +359,9 @@ def find_trends(archive: Archive, config: Optional[StrategyConfig] = None, taken
             "direction": "increasing" if slope > 0 else "decreasing",
             "edge": None, "next": None, "target": None, "status": "proposed",
         }
+        if len(points) < config.min_trend_points:
+            record["status"] = "too_few_points"
+            return record
         if abs(slope) < config.min_slope:
             record["status"] = "flat"
             return record
@@ -295,6 +373,9 @@ def find_trends(archive: Archive, config: Optional[StrategyConfig] = None, taken
         edge_pair = (ys[-2], ys[-1]) if step > 0 else (ys[1], ys[0])
         if edge_pair[1] < edge_pair[0]:
             record["status"] = "peaked"
+            return record
+        if r2 < config.min_r2:
+            record["status"] = "poor_fit"
             return record
         next_idx = edge_idx + step
         if not 0 <= next_idx < len(values):
@@ -405,6 +486,7 @@ def combine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
 
     orders = []
     used = set(taken)
+    stats = ExplorationStats(archive)
     for distance, _, a, b in pairs:
         if len(orders) >= n:
             break
@@ -420,6 +502,8 @@ def combine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
             options.append((space.cell_key(child), child, take))
         options.sort(key=lambda o: o[0])
         rng.shuffle(options)
+        # Stable sort: mixtures with under-explored values first, random among equals.
+        options.sort(key=lambda o: -sum(stats.under_exploration(name, o[1][name]) for name in diff))
         choice = None
         for key, child, take in options:
             if key in used or key in archive.elites or archive.is_infeasible(child):
@@ -446,29 +530,127 @@ def combine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
     return orders
 
 
+def _relevance_filter(archive: Archive) -> Optional[Dict[str, Set[str]]]:
+    """Allowed values per relevance axis; None if a relevance axis has no known values yet."""
+    allowed: Dict[str, Set[str]] = {}
+    for axis in archive.relevance_axes():
+        values = archive.relevant_values(axis)
+        if not values:
+            return None
+        allowed[axis] = set(values)
+    return allowed
+
+
 def explore(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConfig) -> List[Dict[str, Any]]:
+    """
+    A random never-proposed, never-targeted cell. On relevance axes only relevant values are
+    used (none known yet -> no explore order, e.g. at cold start before the first function
+    analysis); on the other axes rare values are preferred (weight = product of
+    1 / (1 + proposals with that value)).
+    """
     space = archive.space
     if n <= 0:
         return []
-    unvisited = []
+    allowed = _relevance_filter(archive)
+    if allowed is None:
+        return []
+    stats = ExplorationStats(archive)
+    free_axes = [name for name in space.names if name not in allowed]
+    unvisited, weights = [], []
     for cell in space.all_cells():
+        if any(cell[axis] not in values for axis, values in allowed.items()):
+            continue
         key = space.cell_key(cell)
         if key in taken or archive.data["proposals"].get(key) or archive.data["targets"].get(key):
             continue
         if archive.is_infeasible(cell):
             continue
+        weight = 1.0
+        for name in free_axes:
+            weight /= 1.0 + stats.counts[name].get(cell[name], 0)
         unvisited.append(cell)
-    picks = rng.sample(unvisited, min(n, len(unvisited)))
+        weights.append(weight)
+    total = len(unvisited)
+    picks = []
+    while unvisited and len(picks) < n:
+        idx = _weighted_pick(rng, unvisited, weights)
+        picks.append(unvisited.pop(idx))
+        weights.pop(idx)
+    scope = "" if not allowed else " among relevant " + "; ".join(
+        f"{axis} in ({', '.join(sorted(values, key=space.axis(axis).index))})" for axis, values in allowed.items())
     return [
         _make_order(
-            space, EXPLORE, cell, context={"unvisited_cells": len(unvisited)},
+            space, EXPLORE, cell, context={"unvisited_cells": total, "relevant": {k: sorted(v) for k, v in allowed.items()}},
             rationale=(
-                f"Random unexplored cell ({len(unvisited)} of {space.size} cells have never been proposed or targeted). "
-                "Try an honest concept here; if the combination cannot work, say so and why."
+                f"Random unexplored cell{scope} ({total} candidate cells have never been proposed or targeted; rare "
+                "axis values are preferred). Try an honest concept here; if the combination cannot work, say so and why."
             ),
         )
         for cell in picks
     ]
+
+
+def diversify(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConfig) -> List[Dict[str, Any]]:
+    """
+    Least diverse axis first (highest proposal concentration): its least-proposed allowed
+    value, placed one change away from the best elite (for ordinal axes: the elite closest
+    in steps). One order per axis and pass.
+    """
+    space = archive.space
+    elites = archive.ranked_elites()
+    if n <= 0 or not elites:
+        return []
+    stats = ExplorationStats(archive)
+    allowed = _relevance_filter(archive) or {}
+    axes = sorted(space.names, key=lambda name: (-stats.concentration[name], space.names.index(name)))
+    orders: List[Dict[str, Any]] = []
+    used = set(taken)
+    progress = True
+    while progress and len(orders) < n:
+        progress = False
+        for name in axes:
+            if len(orders) >= n:
+                break
+            axis = space.axis(name)
+            values = [v for v in axis.values if name not in allowed or v in allowed[name]]
+            rng.shuffle(values)
+            values.sort(key=lambda v: stats.counts[name].get(v, 0))
+            choice = None
+            for value in values:
+                near = sorted(
+                    (e for e in elites if e["descriptors"][name] != value),
+                    key=lambda e: (abs(axis.index(e["descriptors"][name]) - axis.index(value)) if axis.is_ordinal else 0,
+                                   -evidence_rank(e), -float(e.get("score") or 0.0), e["id"]),
+                )
+                for elite in near:
+                    target = dict(elite["descriptors"])
+                    target[name] = value
+                    key = space.cell_key(target)
+                    if key in used or key in archive.elites or archive.is_infeasible(target):
+                        continue
+                    choice = (value, elite, target, key)
+                    break
+                if choice:
+                    break
+            if choice is None:
+                continue
+            value, elite, target, key = choice
+            used.add(key)
+            progress = True
+            count = stats.counts[name].get(value, 0)
+            share = 100.0 * stats.concentration[name]
+            orders.append(_make_order(
+                space, DIVERSIFY, target,
+                context={"elite": entry_summary(space, elite), "axis": name, "value": value,
+                         "proposals_with_value": count, "axis_concentration": round(stats.concentration[name], 4)},
+                rationale=(
+                    f"The archive is least diverse along {name}: {share:.0f} % of all proposals share one value, and "
+                    f"{name}={value} has {count} proposal(s). Keep the other descriptors of elite '{elite.get('title')}' "
+                    f"and find a concept that really works with {name}={value} (not a relabelled copy)."
+                ),
+                parent_ids=[elite["id"]],
+            ))
+    return orders
 
 
 def seed(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConfig) -> List[Dict[str, Any]]:
@@ -490,6 +672,7 @@ STRATEGY_FUNCS: Dict[str, Callable[..., List[Dict[str, Any]]]] = {
     FILL_GAP: fill_gap,
     EXTRAPOLATE: extrapolate,
     COMBINE: combine,
+    DIVERSIFY: diversify,
     EXPLORE: explore,
     SEED: seed,
 }
@@ -532,7 +715,8 @@ def schedule(
 ) -> List[Dict[str, Any]]:
     """
     One batch of orders. Without elites (cold start) only 'seed' and 'explore' can
-    work, so the batch is seeds plus the explore share. Slots a strategy cannot fill
+    work, so the batch is seeds plus the explore share (explore yields nothing while the
+    relevant values of a relevance axis are unknown; its slot then becomes a seed). Slots a strategy cannot fill
     (no trend, no gap, ...) fall back in FALLBACK_ORDER; 'seed' always succeeds.
     """
     config = config or StrategyConfig()

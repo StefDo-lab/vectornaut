@@ -36,6 +36,8 @@ class EvaluationContext:
     use_critic: bool = True
     verbose: bool = False
     critic_client: Any = None
+    # The request's requirements ({name, criterion}), fixed per archive (see Archive.set_requirements).
+    requirements: List[Dict[str, str]] = field(default_factory=list)
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -55,6 +57,9 @@ class ExplorerProfile:
     report_axes: Tuple[str, str]
     batch_schema: Type[BaseModel]
     textbook_solutions: Sequence[str] = ()
+    # Axes whose values must be relevant to the request; explore/fill_gap/diversify only use
+    # relevant values (from the generator's function analysis plus the values of elites).
+    relevance_axes: Tuple[str, ...] = ()
 
     # ---- prompt text --------------------------------------------------
     def domain_brief(self) -> str:
@@ -65,6 +70,14 @@ class ExplorerProfile:
 
     def candidate_instructions(self) -> str:
         raise NotImplementedError
+
+    def analysis_instructions(self, archive: Any) -> str:
+        """Extra step-1 instructions (e.g. which values of a relevance axis matter)."""
+        return ""
+
+    def relevant_values_from_batch(self, batch: Any) -> Tuple[Dict[str, List[str]], List[str]]:
+        """Relevant values per relevance axis named in a generator batch, and rejected tokens."""
+        return {}, []
 
     # ---- candidates ---------------------------------------------------
     def concept_payload(self, candidate: Any) -> Dict[str, Any]:
