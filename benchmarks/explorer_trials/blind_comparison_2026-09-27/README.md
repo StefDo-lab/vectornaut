@@ -26,3 +26,21 @@ Novelty scores: the explorer's best concept tied (hull H2 = H3 = 3) or led (faca
 2. Allow candidates outside the literal request scope when the analysis shows the lever is elsewhere (e.g. windows vs walls), flagged as scope extensions.
 3. Use the evaluator as a filter against physically wrong ideas rather than as the ranking signal when its models are this simple.
 4. Seed the map with a careful direct answer and use the explorer to push novelty around it.
+
+## Three-way blind comparison, facade (9 candidates)
+
+Adds the top 3 of the live Gemini explorer run (`../2026-09-27_facade_gemini_live`). "First experiment" sections were removed from all nine because the Gemini candidates have none. Fresh reviewer; key in `blind9_key.json`; review in `facade9_review.md`.
+
+| Rank | Label | Source | Concept |
+|---|---|---|---|
+| 1 | C5 | direct (Claude) | ventilated louver screen |
+| 2 | C7 | explorer (Claude role-play) | sealed glass micro-cells under a glaze |
+| 3 | C1 | direct (Claude) | silicate super-white paint |
+| 4 | C8 | direct (Claude) | micro-louver double glazing |
+| 5 | C4 | explorer (Claude role-play) | beetle-scale porous silicate coat |
+| 6 | C3 | explorer (Gemini live) | sealed closed-pore alumina tile |
+| 7 | C9 | explorer (Claude role-play) | UV-paced self-chalking topcoat |
+| 8 | C2 | explorer (Gemini live) | Tillandsia calcite-silica lamellar glaze |
+| 9 | C6 | explorer (Gemini live) | desert-snail carbonate cladding |
+
+Mean rank: direct 2.7, Claude explorer 4.7, Gemini explorer 7.7. The reviewer flagged C3/C7 as the same idea (sealed scattering voids under a glaze) — found independently by the Claude and Gemini explorer runs. Gemini's two carbonate concepts fail on basic processing chemistry (calcite/aragonite decompose or transform at firing temperatures), which Gemini's own critic did not catch; its critic was far more lenient than the Claude role-play critic.
