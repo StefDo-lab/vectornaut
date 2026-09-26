@@ -15,6 +15,14 @@ def _is_transient_model_error(exc: Exception) -> bool:
     """Server errors (5xx) and rate limits (429) are worth retrying; other client errors are not."""
     from google.genai import errors
 
+    try:
+        import anthropic
+
+        if isinstance(exc, (anthropic.InternalServerError, anthropic.RateLimitError, anthropic.APIConnectionError)):
+            return True
+    except ImportError:
+        pass
+
     if isinstance(exc, errors.ServerError):
         return True
     if isinstance(exc, errors.ClientError):
@@ -79,6 +87,67 @@ def _parse_streamed_text(text: str, schema: Any) -> Any:
     return json.loads(text)
 
 
+# ------------------------------------------------------------------
+# Claude (Anthropic) adapter: stages whose model name starts with "claude-"
+# are sent to the Anthropic Messages API instead of Gemini.
+# ------------------------------------------------------------------
+
+ANTHROPIC_API_BASE_URL = "https://api.anthropic.com"
+_THINKING_TO_EFFORT = {"minimal": "low", "low": "low", "medium": "medium", "high": "high"}
+
+
+def _is_claude_model(model: Optional[str]) -> bool:
+    return bool(model) and str(model).startswith("claude-")
+
+
+def _anthropic_client():
+    import anthropic
+
+    # Always target the public API explicitly: ANTHROPIC_BASE_URL may point at another service
+    # (e.g. the host running this process). A key injected by the environment's proxy works with
+    # any placeholder value.
+    api_key = os.environ.get("VECTORNAUT_ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or "injected-by-environment"
+    return anthropic.Anthropic(api_key=api_key, base_url=ANTHROPIC_API_BASE_URL, max_retries=4)
+
+
+def _effort_from_config(config: Any) -> str:
+    thinking = getattr(config, "thinking_config", None) if config is not None else None
+    level = getattr(thinking, "thinking_level", None) if thinking is not None else None
+    level = str(getattr(level, "value", level) or "").lower()
+    return _THINKING_TO_EFFORT.get(level, "high")
+
+
+def _generate_with_claude(model: str, contents: Any, config: Any, client_factory=None) -> "_StreamedResponse":
+    """Streams one Claude request and returns a Gemini-like response (text, parsed, usage_metadata)."""
+    from types import SimpleNamespace
+
+    client = (client_factory or _anthropic_client)()
+    prompt = contents if isinstance(contents, str) else json.dumps(contents, ensure_ascii=False, default=str)
+    schema = getattr(config, "response_schema", None) if config is not None else None
+    kwargs = {
+        "model": model,
+        "max_tokens": 64000,
+        "thinking": {"type": "adaptive"},
+        "output_config": {"effort": _effort_from_config(config)},
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if isinstance(schema, type):
+        kwargs["output_format"] = schema
+    with client.messages.stream(**kwargs) as stream:
+        message = stream.get_final_message()
+    if getattr(message, "stop_reason", None) == "refusal":
+        raise RuntimeError(f"Claude declined the request ({getattr(message, 'stop_details', None)})")
+    text = "".join(getattr(b, "text", "") for b in message.content if getattr(b, "type", None) == "text")
+    usage = getattr(message, "usage", None)
+    usage_metadata = SimpleNamespace(
+        prompt_token_count=int(getattr(usage, "input_tokens", 0) or 0),
+        candidates_token_count=int(getattr(usage, "output_tokens", 0) or 0),
+        thoughts_token_count=0,  # Claude bills thinking as output; it is included in output_tokens
+    )
+    return _StreamedResponse(text=text, parsed=_parse_streamed_text(text, schema),
+                             usage_metadata=usage_metadata, candidates=None)
+
+
 class _RetryingModels:
     """
     Wraps client.models: generate_content retries transient failures with exponential backoff.
@@ -123,7 +192,9 @@ class _RetryingModels:
         model = kwargs.get("model") or (args[0] if args else None)
         for attempt in range(self._retries + 1):
             try:
-                if self._stream and hasattr(self._models, "generate_content_stream"):
+                if _is_claude_model(model):
+                    response = _generate_with_claude(model, kwargs.get("contents"), kwargs.get("config"))
+                elif self._stream and hasattr(self._models, "generate_content_stream"):
                     response = self._generate_streamed(model, kwargs.get("contents"), kwargs.get("config"))
                 else:
                     response = self._models.generate_content(*args, **kwargs)
