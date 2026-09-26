@@ -79,5 +79,44 @@ class ModelRetryTest(unittest.TestCase):
         config.MODEL_USAGE.pop("usage-test-model", None)
 
 
+class StreamingTest(unittest.TestCase):
+    def test_stream_drops_thoughts_and_parses_schema(self):
+        from google.genai import types
+        from pydantic import BaseModel
+
+        class Out(BaseModel):
+            value: int
+
+        def part(text, thought=False):
+            return SimpleNamespace(text=text, thought=thought)
+
+        def chunk(*parts, usage=None):
+            return SimpleNamespace(candidates=[SimpleNamespace(content=SimpleNamespace(parts=list(parts)))],
+                                   usage_metadata=usage)
+
+        seen = {}
+
+        class _Models:
+            def generate_content_stream(self, model, contents, config):
+                seen["config"] = config
+                yield chunk(part("thinking about it", thought=True))
+                yield chunk(part('{"val'))
+                yield chunk(part('ue": 42}'), usage=SimpleNamespace(prompt_token_count=1, candidates_token_count=2,
+                                                                     thoughts_token_count=3))
+
+        wrapped = _RetryingModels(_Models(), retries=0, base_delay=0, stream=True)
+        config = types.GenerateContentConfig(response_mime_type="application/json", response_schema=Out,
+                                             thinking_config=types.ThinkingConfig(thinking_level="high"))
+        response = wrapped.generate_content(model="stream-test-model", contents="x", config=config)
+
+        self.assertEqual(response.parsed, Out(value=42))
+        self.assertEqual(response.text, '{"value": 42}')
+        self.assertTrue(seen["config"].thinking_config.include_thoughts)
+        self.assertEqual(str(seen["config"].thinking_config.thinking_level).split(".")[-1].lower(), "high")
+        self.assertIsNone(config.thinking_config.include_thoughts)  # caller's config untouched
+        config_module = __import__("vectornaut.config", fromlist=["MODEL_USAGE"])
+        config_module.MODEL_USAGE.pop("stream-test-model", None)
+
+
 if __name__ == "__main__":
     unittest.main()

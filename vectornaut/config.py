@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
@@ -48,23 +49,85 @@ if os.environ.get("VECTORNAUT_LOG_USAGE", "").strip().lower() in ("1", "true", "
     atexit.register(_print_usage_summary)
 
 
-class _RetryingModels:
-    """Wraps client.models so generate_content retries transient failures with exponential backoff."""
+class _StreamedResponse:
+    """Minimal stand-in for GenerateContentResponse assembled from a stream."""
 
-    def __init__(self, models: Any, retries: int, base_delay: float, sleep=None):
+    def __init__(self, text: str, parsed: Any, usage_metadata: Any, candidates: Any):
+        self.text = text
+        self.parsed = parsed
+        self.usage_metadata = usage_metadata
+        self.candidates = candidates
+
+
+def _streaming_config(config: Any) -> Any:
+    """Copy of the request config that also streams thought summaries (keeps long requests alive)."""
+    from google.genai import types
+
+    if config is None:
+        return types.GenerateContentConfig(thinking_config=types.ThinkingConfig(include_thoughts=True))
+    thinking = getattr(config, "thinking_config", None)
+    thinking = (thinking.model_copy(update={"include_thoughts": True}) if thinking is not None
+                else types.ThinkingConfig(include_thoughts=True))
+    return config.model_copy(update={"thinking_config": thinking})
+
+
+def _parse_streamed_text(text: str, schema: Any) -> Any:
+    if schema is None or not text.strip():
+        return None
+    if isinstance(schema, type) and hasattr(schema, "model_validate_json"):
+        return schema.model_validate_json(text)
+    return json.loads(text)
+
+
+class _RetryingModels:
+    """
+    Wraps client.models: generate_content retries transient failures with exponential backoff.
+    With streaming enabled (default; VECTORNAUT_MODEL_STREAM=0 disables it) the request is sent via
+    generate_content_stream with thought summaries included, so data flows while the model thinks.
+    Some egress proxies cut requests that stay silent for ~30 s, which long-thinking calls exceed.
+    Thought parts are dropped; the answer text is parsed into the request's response_schema.
+    """
+
+    def __init__(self, models: Any, retries: int, base_delay: float, sleep=None, stream: bool = False):
         self._models = models
         self._retries = retries
         self._base_delay = base_delay
         self._sleep = sleep
+        self._stream = stream
+
+    def _generate_streamed(self, model: Any, contents: Any, config: Any) -> _StreamedResponse:
+        text_parts = []
+        last = None
+        for chunk in self._models.generate_content_stream(model=model, contents=contents, config=_streaming_config(config)):
+            last = chunk
+            candidates = getattr(chunk, "candidates", None) or []
+            content = getattr(candidates[0], "content", None) if candidates else None
+            for part in (getattr(content, "parts", None) or []):
+                if getattr(part, "thought", False):
+                    continue
+                if getattr(part, "text", None):
+                    text_parts.append(part.text)
+        text = "".join(text_parts)
+        schema = getattr(config, "response_schema", None) if config is not None else None
+        return _StreamedResponse(
+            text=text,
+            parsed=_parse_streamed_text(text, schema),
+            usage_metadata=getattr(last, "usage_metadata", None),
+            candidates=getattr(last, "candidates", None),
+        )
 
     def generate_content(self, *args, **kwargs):
         import time
 
         sleep = self._sleep or time.sleep
+        model = kwargs.get("model") or (args[0] if args else None)
         for attempt in range(self._retries + 1):
             try:
-                response = self._models.generate_content(*args, **kwargs)
-                _record_usage(kwargs.get("model") or (args[0] if args else None), response)
+                if self._stream and hasattr(self._models, "generate_content_stream"):
+                    response = self._generate_streamed(model, kwargs.get("contents"), kwargs.get("config"))
+                else:
+                    response = self._models.generate_content(*args, **kwargs)
+                _record_usage(model, response)
                 return response
             except Exception as exc:
                 if attempt >= self._retries or not _is_transient_model_error(exc):
@@ -78,9 +141,9 @@ class _RetryingModels:
 
 
 class _RetryingClient:
-    def __init__(self, client: Any, retries: int, base_delay: float):
+    def __init__(self, client: Any, retries: int, base_delay: float, stream: bool = True):
         self._client = client
-        self.models = _RetryingModels(client.models, retries, base_delay)
+        self.models = _RetryingModels(client.models, retries, base_delay, stream=stream)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._client, name)
@@ -116,7 +179,8 @@ def get_client():
         base_delay = max(0.0, float(os.environ.get("VECTORNAUT_MODEL_RETRY_DELAY_S", "2")))
     except ValueError:
         base_delay = 2.0
-    return _RetryingClient(client, retries, base_delay)
+    stream = os.environ.get("VECTORNAUT_MODEL_STREAM", "1").strip().lower() not in ("0", "false", "no")
+    return _RetryingClient(client, retries, base_delay, stream=stream)
 
 # ==========================================
 # Per-stage model / thinking configuration
