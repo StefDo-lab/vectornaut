@@ -68,7 +68,7 @@ The benchmark cases live in `benchmarks/eval_cases.json`. They cover known-good,
 
 ## Answering Model Calls by Hand
 
-`python -m vectornaut.llm_replay --session <dir> --query "<prompt>"` runs the pipeline in live mode but answers every model call from `<dir>/responses/NN.json` instead of Gemini. Each run stops at the first unanswered call and writes its full prompt and expected JSON schema to `<dir>/requests/NN_<Schema>.md`; write the answer and run the same command again. When all calls are answered the result lands in `<dir>/result.json` and `<dir>/report.md`. This is useful for testing the live code path without an API key, for reproducing a model answer that broke something, or for letting another model play Gemini's role.
+`python -m vectornaut.llm_replay --session <dir> --query "<prompt>"` runs the pipeline in live mode but answers every model call from `<dir>/responses/NN.json` instead of Gemini. Each run stops at the first unanswered call and writes its full prompt and expected JSON schema to `<dir>/requests/NN_<Schema>.md`; write the answer and run the same command again. When all calls are answered the result lands in `<dir>/result.json` and `<dir>/report.md`. This is useful for testing the live code path without an API key, for reproducing a model answer that broke something, or for letting another model play Gemini's role. Analytical solves are memoised in `<dir>/solver_memo` (see `VECTORNAUT_SOLVER_MEMO_DIR` in `docs/OPERATIONS.md`; `--no-solver-memo` turns it off), so reruns do not repeat expensive symbolic solves.
 
 ## AI Model Comparison
 

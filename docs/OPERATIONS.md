@@ -20,7 +20,13 @@ VECTORNAUT_DATA_DIR=.
 VECTORNAUT_MAX_EPOCHS=1000
 VECTORNAUT_MAX_OPTIMIZATION_ROUNDS=10
 VECTORNAUT_SCRIPT_TIMEOUT_SECONDS=60
+VECTORNAUT_SYMBOLIC_TIMEOUT_S=20
+VECTORNAUT_SOLVER_MEMO_DIR=
 ```
+
+`VECTORNAUT_SYMBOLIC_TIMEOUT_S` is the time budget of one analytical (SymPy) solve of a 1D problem (default 20 s; `0` = no limit, solved in-process). The symbolic solve runs in a worker process that is terminated when it runs over; the SciPy BVP solution is then used and `solver_note` says so (`analytical: symbolic solve exceeded the time budget ...`). After a timeout for the design, the baseline of the same equation is solved with SciPy directly. When the auditor asks for a PINN, the SciPy solution is its reference and no symbolic solve is attempted; for `scipy` the analytical solution stays the independent reference (under the budget). The recorded case: an exponential source with two Robin boundary conditions in the facade-cooling explorer run, where `sp.solve` ran ~20 minutes.
+
+`VECTORNAUT_SOLVER_MEMO_DIR` (off by default) memoises analytical solves on disk: results, deterministic failures and timeouts, keyed by equation, boundary conditions, symbols, parameter values, domain, SymPy version and the solver source. A memoised timeout is reused only while the budget is not larger. `python -m vectornaut.llm_replay` sets it to `<session>/solver_memo` (turn off with `--no-solver-memo`), so replays do not repeat expensive symbolic solves.
 
 If `GEMINI_API_KEY` is missing, `/api/run` falls back to mock mode unless the lower-level live model call is explicitly reached.
 

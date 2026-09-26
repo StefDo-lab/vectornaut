@@ -7,11 +7,12 @@ solver -> validator -> optimizer -> synthesizer) via ``PipelineRunRequest.concep
 re-mining disabled (``max_concept_attempts=1``) so that exactly this concept is judged.
 A critic call per batch (``get_model_name("critic")``) then sees each candidate's concept,
 formulation, audited parameters, metric, baseline, simulated gain and own estimate, together
-with the map's objective and conventional baseline, and returns two numbers (the plausible
-benefit on the candidate's own simulated quantity and the plausible contribution to the
-objective), flags (relabelled analogue, non-conventional baseline, irrelevant quantity),
-assumption issues, killer risks and a 0..1 rating per requirement of the request. The score
-combines them (see "scoring" below).
+with the map's objective and conventional baseline, and returns three numbers (the plausible
+benefit on the candidate's own simulated quantity, the plausible contribution to the objective,
+and the contribution a conventional measure with the same physical effect would make), flags
+(relabelled analogue, non-conventional baseline, irrelevant quantity, proxy by construction),
+assumption issues, killer risks and a 0..1 rating per requirement of the request (must or nice).
+The score combines them with an objective scale set per archive (see "scoring" below).
 """
 import contextlib
 import io
@@ -22,7 +23,7 @@ import zlib
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from vectornaut.config import MinerConceptOutput, ParameterProposal, get_client, get_model_name, get_thinking_config
-from vectornaut.explorer.archive import EVALUATED, FAILED, INFEASIBLE, TIE_EPSILON
+from vectornaut.explorer.archive import EVALUATED, FAILED, INFEASIBLE, MUST, TIE_EPSILON, normalize_priority
 from vectornaut.explorer.descriptors import NOMINAL, ORDINAL, Axis, DescriptorSpace, normalize_token
 from vectornaut.explorer.profiles.base import (
     EvaluationContext,
@@ -83,17 +84,25 @@ MATERIALS_SPACE = DescriptorSpace([
 # scoring
 # ---------------------------------------------------------------------------
 #
-#   score = 100 * gate * (W_OBJ * objective_score + W_SIM * simulated_score + W_REQ * requirement_coverage)
-#           * relabel_factor
+#   score = 100 * gate * (W_OBJ * objective_score + W_SIM * simulated_score + W_REQ * requirement_score)
+#           * relabel_factor * baseline_factor * must_factor
 #   gate  = validator_score * (1.0 pass | 0.8 warn | 0 fail or missing)
-#   objective_score = (1 - exp(-objective_gain_pct / OBJECTIVE_SCALE_PCT)) * d     (0 for gains <= 0)
+#   objective_score = (1 - exp(-objective_gain_pct / S)) * d                       (0 for gains <= 0)
 #       objective_gain_pct: the critic's plausible contribution to the stated OBJECTIVE against the
-#       stated BASELINE (without a critic: the candidate's own estimate);
+#       stated BASELINE minus the gain of a conventional measure with the same physical effect
+#       (critic's conventional_equivalent_gain_pct, e.g. equal-R insulation), floored at 0
+#       (without a critic: the candidate's own estimate);
 #       d = 1 if a critic judged it next to a relevant simulation, else ESTIMATE_DISCOUNT
+#       S = the archive's objective scale (see objective_scale_for): TARGET_SCALE_FACTOR * the
+#       stated target gain, else ADAPTIVE_SCALE_FACTOR * the median positive critic objective gain
+#       of the archive (bounded), else OBJECTIVE_SCALE_PCT
 #   simulated_score = 1 - exp(-simulated_benefit_pct / SIM_SCALE_PCT)             (0 for gains <= 0)
 #       only if the simulated gain is usable AND the simulated quantity is relevant to the
 #       request; simulated_benefit_pct = min(simulated gain, critic's plausible simulated benefit)
 #       whenever the critic gave one; 0 if the critic calls the gain a proxy by construction
+#   requirement_score = (1 - MUST_MIN_WEIGHT) * mean(all ratings) + MUST_MIN_WEIGHT * min(must ratings)
+#   must_factor = 1 - MUST_GATE_MAX_PENALTY * max(0, (MUST_GATE_THRESHOLD - min must) / MUST_GATE_THRESHOLD)
+#   baseline_factor = BASELINE_FACTOR if the critic says the baseline is not the conventional one
 #   relabel_factor = RELABEL_FACTOR if the critic calls the concept a relabelled analogue, else 1
 #   estimated tier: score <= ESTIMATED_SCORE_CAP
 #
@@ -101,20 +110,34 @@ MATERIALS_SPACE = DescriptorSpace([
 # relevant quantity); otherwise "estimated". An estimate that replaced an implausible simulated
 # gain ranks lowest (see archive.rank_key).
 #
-# Saturation scales: a gain of SCALE percent scores 1 - 1/e. Why these constants (archive
-# version 4, chosen on the v3 role-play of the hull-coating query): the critic's objective gains
-# were 0.3-1.5 % (time-averaged drag), its plausible simulated benefits 25-80 %. With the version-3
-# constants (objective scale 10 %, weights 0.35 / 0.15 / 0.5, the higher simulated number used
-# when simulation and critic were within 50 % of each other) a 1 % objective gain was worth 3.3
-# points while the simulated term saturated at 14-15 points above ~50 %, so the ranking followed
-# the requirement-coverage ratings (0.42-0.50, a few points of rating noise) and proxies such as a
-# leaching flux against an oil-containing baseline. With an objective scale of 2 % a gain of
-# 0.5 / 1.0 / 1.5 % scores 0.22 / 0.39 / 0.53, i.e. 10 / 18 / 24 points at W_OBJ = 0.45: the
-# objective separates the concepts, the simulated term (at most 10 points, the lower of simulation
-# and critic) keeps the simulation evidence, and requirement coverage keeps the hard constraints.
-# Re-scoring the v3 archive this way ranks the compliance-release concepts (critic objective gain
-# 1-1.5 %) first and the leaching proxies (0.5-0.8 %) below them (docs/EXPLORER.md).
+# Objective scale (archive version 5). A gain of S percent scores 1 - 1/e = 0.63. Version 4 used a
+# fixed S = 2 %, chosen on the hull-coating role-play (critic objective gains 0.3-1.5 % of
+# time-averaged drag). In the facade-cooling role-play the gains were 3-35 % of the heat load and
+# all scored ~45 of 45 objective points, so the ranking fell to requirement-rating noise and an
+# insulation concept in disguise ranked first. S is therefore set per archive and recomputed after
+# every round (all entries are then re-scored, so scores stay comparable within a map):
+#   - a stated target gain T (generator's target_gain_pct): S = T / 2, so reaching the target scores
+#     0.86 (bounded to TARGET_SCALE_MIN_PCT..OBJECTIVE_SCALE_MAX_PCT);
+#   - else, with at least ADAPTIVE_MIN_POINTS positive critic objective gains (net of the conventional
+#     equivalent) in the archive: S = 2 * median, bounded to OBJECTIVE_SCALE_PCT..OBJECTIVE_SCALE_MAX_PCT,
+#     so the archive's typical gain scores 0.39 (as 1 % did at S = 2 % for the hull), rounded to two
+#     significant digits; the hull archive (median 0.8 %) stays at the floor of 2 %;
+#   - else OBJECTIVE_SCALE_PCT.
+# With S = 2 % a gain of 0.5 / 1.0 / 1.5 % scores 0.22 / 0.39 / 0.53, i.e. 10 / 18 / 24 points at
+# W_OBJ = 0.45 (the version-4 hull reasoning: the objective separates the concepts, the simulated term
+# at most 10 points and never above the critic, requirement coverage keeps the hard constraints).
+#
+# Requirements (version 5): the facade baseline ranked a cork cladding (bionic rating 0.15) first
+# for a "bionisch" request, because a plain mean let the objective and the other ratings average the
+# violated requirement away. Requirements are 'must' (default: explicitly stated in the request) or
+# 'nice'; the weakest must-requirement enters the requirement score and, below MUST_GATE_THRESHOLD,
+# scales the whole score down (0.15 -> x0.75, 0 -> x0.5).
 OBJECTIVE_SCALE_PCT = 2.0
+OBJECTIVE_SCALE_MAX_PCT = 50.0
+TARGET_SCALE_FACTOR = 0.5
+TARGET_SCALE_MIN_PCT = 0.5
+ADAPTIVE_SCALE_FACTOR = 2.0
+ADAPTIVE_MIN_POINTS = 3
 SIM_SCALE_PCT = 20.0
 W_OBJ = 0.45
 W_SIM = 0.10
@@ -125,6 +148,15 @@ ESTIMATE_DISCOUNT = 0.5
 ESTIMATED_SCORE_CAP = 50.0
 # A concept the critic calls a relabelled analogue (same physics as its parent, new origin label).
 RELABEL_FACTOR = 0.5
+# The gain is not measured against the conventional solution (critic: baseline_conventional false).
+BASELINE_FACTOR = 0.8
+# Must-requirements: weight of the weakest one in the requirement score, and the soft gate below
+# MUST_GATE_THRESHOLD (linear down to 1 - MUST_GATE_MAX_PENALTY at a rating of 0).
+MUST_MIN_WEIGHT = 0.5
+MUST_GATE_THRESHOLD = 0.3
+MUST_GATE_MAX_PENALTY = 0.5
+# The conventional equivalent covers at least this share of the plausible objective gain.
+MOSTLY_CONVENTIONAL_SHARE = 0.5
 # Requirement coverage used when no critic rated the candidate.
 REQ_UNRATED_DEFAULT = 0.5
 # A simulated gain beyond this (in percent, absolute) is treated as an artefact (the
@@ -143,6 +175,11 @@ TIER_ESTIMATED = "estimated"
 EVIDENCE_RANK = {TIER_SIMULATED: 2, TIER_ESTIMATED: 1}
 IMPLAUSIBLE_RANK = 0
 
+# Sources of the objective scale.
+SCALE_DEFAULT = "default"
+SCALE_TARGET = "target"
+SCALE_ARCHIVE = "archive"
+
 # Flags stored in score_breakdown["flags"].
 FLAG_IMPLAUSIBLE = "implausible_gain"
 FLAG_SENSITIVE = "model_assumption_sensitive"
@@ -153,11 +190,15 @@ FLAG_OBJECTIVE_MISSING = "objective_gain_missing"
 FLAG_RELABELLED = "relabelled_analogue"
 FLAG_BASELINE_NOT_CONVENTIONAL = "baseline_not_conventional"
 FLAG_PROXY = "proxy_by_construction"
+FLAG_MOSTLY_CONVENTIONAL = "mostly_conventional_effect"
+FLAG_MUST_UNMET = "must_requirement_unmet"
 FLAG_REQ_UNRATED = "requirements_unrated"
 FLAG_REQ_PARTIAL = "requirements_partially_rated"
 FLAG_CRITIC_MISSING = "critic_missing"
 FLAG_CRITIC_FAILED = "critic_failed"
 FLAG_BASELINE_UNSTATED = "baseline_unstated"
+# Flags recomputed on every re-scoring (the others come from the evaluation and stay).
+_RESCORED_FLAGS = (FLAG_SENSITIVE, FLAG_MOSTLY_CONVENTIONAL, FLAG_MUST_UNMET)
 
 # Words in the request or its requirements that ask for a biological model (bionic, bio-inspired,
 # biomimetic; German: bionisch, Bionik). Then only biological inspiration origins are preferred
@@ -182,17 +223,52 @@ def saturating(gain_pct: Optional[float], scale: float = SIM_SCALE_PCT) -> float
     return 1.0 - math.exp(-gain_pct / scale)
 
 
-def score_formula() -> str:
+def _two_digits(value: float) -> float:
+    return float(f"{value:.2g}")
+
+
+def objective_scale_for(target_gain_pct: Optional[float], gains: Sequence[float]) -> Tuple[float, str, str]:
+    """
+    (scale in percent, source, detail) of the objective term: from a stated target gain T
+    (S = TARGET_SCALE_FACTOR * T), else from the positive critic objective gains of the archive
+    (S = ADAPTIVE_SCALE_FACTOR * median, at least OBJECTIVE_SCALE_PCT), else OBJECTIVE_SCALE_PCT.
+    Bounded above by OBJECTIVE_SCALE_MAX_PCT and rounded to two significant digits.
+    """
+    target = finite(target_gain_pct)
+    if target is not None and target > 0:
+        raw = TARGET_SCALE_FACTOR * target
+        scale = _two_digits(min(max(raw, TARGET_SCALE_MIN_PCT), OBJECTIVE_SCALE_MAX_PCT))
+        return scale, SCALE_TARGET, (f"stated target gain {target:g} % x {TARGET_SCALE_FACTOR:g} "
+                                     f"(reaching the target scores {saturating(target, scale):.2f})")
+    positive = sorted(g for g in (finite(v) for v in gains or ()) if g is not None and g > 0)
+    if len(positive) >= ADAPTIVE_MIN_POINTS:
+        n = len(positive)
+        median = positive[n // 2] if n % 2 else 0.5 * (positive[n // 2 - 1] + positive[n // 2])
+        raw = ADAPTIVE_SCALE_FACTOR * median
+        scale = _two_digits(min(max(raw, OBJECTIVE_SCALE_PCT), OBJECTIVE_SCALE_MAX_PCT))
+        bound = "" if scale == _two_digits(raw) else f", bounded to {OBJECTIVE_SCALE_PCT:g}..{OBJECTIVE_SCALE_MAX_PCT:g} %"
+        return scale, SCALE_ARCHIVE, (f"{ADAPTIVE_SCALE_FACTOR:g} x median {median:.3g} % of {n} positive critic "
+                                      f"objective gains (net of the conventional equivalent){bound}")
+    return OBJECTIVE_SCALE_PCT, SCALE_DEFAULT, (f"default: fewer than {ADAPTIVE_MIN_POINTS} positive critic objective "
+                                                "gains and no stated target")
+
+
+def score_formula(scale: float = OBJECTIVE_SCALE_PCT, source: str = SCALE_DEFAULT) -> str:
     """The formula as applied, generated from the constants (so it matches the code)."""
     return (
         f"score = 100 * gate * ({W_OBJ:g} * objective_score + {W_SIM:g} * simulated_score + "
-        f"{W_REQ:g} * requirement_coverage) * relabel_factor; "
+        f"{W_REQ:g} * requirement_score) * relabel_factor * baseline_factor * must_factor; "
         "gate = validator_score * (1 pass / 0.8 warn / 0 fail); "
-        f"objective_score = (1 - exp(-objective_gain_pct / {OBJECTIVE_SCALE_PCT:g})) * d, d = 1 if a critic judged "
-        f"the objective next to a relevant simulation, else {ESTIMATE_DISCOUNT:g}; "
+        f"objective_score = (1 - exp(-objective_gain_pct / {scale:g})) * d with the objective scale {scale:g} % "
+        f"({source}), objective_gain_pct = critic's plausible objective gain minus its conventional-equivalent gain "
+        f"(floored at 0), d = 1 if a critic judged the objective next to a relevant simulation, else "
+        f"{ESTIMATE_DISCOUNT:g}; "
         f"simulated_score = 1 - exp(-simulated_benefit_pct / {SIM_SCALE_PCT:g}) if the simulated quantity is relevant, "
         "else 0, simulated_benefit_pct = min(simulated, critic) when the critic gave a number, 0 for a proxy by "
-        f"construction; relabel_factor = {RELABEL_FACTOR:g} for a relabelled analogue, else 1; "
+        f"construction; requirement_score = {1 - MUST_MIN_WEIGHT:g} * mean + {MUST_MIN_WEIGHT:g} * min over must "
+        f"requirements; must_factor = 1 - {MUST_GATE_MAX_PENALTY:g} * max(0, ({MUST_GATE_THRESHOLD:g} - min must) / "
+        f"{MUST_GATE_THRESHOLD:g}); baseline_factor = {BASELINE_FACTOR:g} if the baseline is not the conventional one; "
+        f"relabel_factor = {RELABEL_FACTOR:g} for a relabelled analogue, else 1; "
         f"estimated tier capped at {ESTIMATED_SCORE_CAP:g}"
     )
 
@@ -213,14 +289,54 @@ def simulated_benefit_used(simulated: float, critic_sim: Optional[float]) -> Tup
     return simulated, f"simulation (not above the critic{note})", sensitive
 
 
-def combine_score(tier: str, gate: float, relabel_factor: float, simulated_benefit: Optional[float],
-                  objective_gain: Optional[float], discount: float, coverage: float) -> Dict[str, Any]:
-    """The numeric part of the score (shared by scoring and the archive-version-3 re-scoring)."""
+def net_objective_gain(plausible: Optional[float], conventional: Optional[float]) -> Tuple[Optional[float], bool]:
+    """
+    (objective gain beyond the conventional equivalent, mostly conventional?). The gain a
+    conventional measure with the same physical effect would give (e.g. equal-R insulation) is
+    subtracted from a positive plausible gain, floored at 0; 'mostly conventional' when it covers
+    at least MOSTLY_CONVENTIONAL_SHARE of the plausible gain. Without a conventional value the
+    plausible gain counts as it is.
+    """
+    if plausible is None or conventional is None or plausible <= 0:
+        return plausible, False
+    conventional = max(conventional, 0.0)
+    return max(0.0, plausible - conventional), conventional >= MOSTLY_CONVENTIONAL_SHARE * plausible
+
+
+def requirement_terms(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
+    """
+    Mean coverage (unrated rows count REQ_UNRATED_DEFAULT), the weakest must-requirement, the
+    requirement score (soft minimum) and the must factor (soft gate) for rows {name, coverage,
+    priority}. Rows without a priority are must-requirements.
+    """
+    if not rows:
+        return {"coverage": REQ_UNRATED_DEFAULT, "must_min": None, "score": REQ_UNRATED_DEFAULT, "must_factor": 1.0,
+                "must_unmet": []}
+    values = [(r.get("coverage") if finite(r.get("coverage")) is not None else REQ_UNRATED_DEFAULT, r) for r in rows]
+    mean = sum(v for v, _ in values) / len(values)
+    must = [(v, r) for v, r in values if normalize_priority(r.get("priority")) == MUST]
+    if not must:
+        return {"coverage": mean, "must_min": None, "score": mean, "must_factor": 1.0, "must_unmet": []}
+    must_min = min(v for v, _ in must)
+    score = (1.0 - MUST_MIN_WEIGHT) * mean + MUST_MIN_WEIGHT * must_min
+    shortfall = max(0.0, (MUST_GATE_THRESHOLD - must_min) / MUST_GATE_THRESHOLD)
+    unmet = [r.get("name") for v, r in must if v < MUST_GATE_THRESHOLD]
+    return {"coverage": mean, "must_min": must_min, "score": score,
+            "must_factor": 1.0 - MUST_GATE_MAX_PENALTY * shortfall, "must_unmet": unmet}
+
+
+def combine_score(tier: str, gate: float, factor: float, simulated_benefit: Optional[float],
+                  objective_gain: Optional[float], discount: float, requirement_score: float,
+                  objective_scale: float = OBJECTIVE_SCALE_PCT) -> Dict[str, Any]:
+    """
+    The numeric part of the score (shared by scoring and re-scoring). ``factor`` is the product
+    relabel_factor * baseline_factor * must_factor.
+    """
     simulated_score = saturating(simulated_benefit, SIM_SCALE_PCT)
-    objective_score = saturating(objective_gain, OBJECTIVE_SCALE_PCT) * discount
-    scale = 100.0 * gate * relabel_factor
+    objective_score = saturating(objective_gain, objective_scale) * discount
+    scale = 100.0 * gate * factor
     contributions = {"objective": scale * W_OBJ * objective_score, "simulated": scale * W_SIM * simulated_score,
-                     "requirements": scale * W_REQ * coverage}
+                     "requirements": scale * W_REQ * requirement_score}
     score = sum(contributions.values())
     capped = False
     if tier == TIER_ESTIMATED and score > ESTIMATED_SCORE_CAP:
@@ -228,7 +344,7 @@ def combine_score(tier: str, gate: float, relabel_factor: float, simulated_benef
     return {
         "score": round(score, 4), "capped": capped,
         "components": {"gate": round(gate, 6), "objective_score": round(objective_score, 6),
-                       "simulated_score": round(simulated_score, 6), "requirement_coverage": round(coverage, 6)},
+                       "simulated_score": round(simulated_score, 6), "requirement_score": round(requirement_score, 6)},
         "contributions": {k: round(v, 4) for k, v in contributions.items()},
     }
 
@@ -237,13 +353,12 @@ def tiebreak_values(critic_obj: Optional[float], killer_risks: Sequence[Any],
                     simulated_benefit: Optional[float], critic_present: bool) -> Optional[List[Optional[float]]]:
     """
     Tie-break key stored as score_breakdown['tiebreak'] (archive.tiebreak_key): higher critic
-    objective gain, then fewer killer risks, then higher simulated benefit used. None without a
-    critic review (no tie-break then).
+    objective gain (net of the conventional equivalent), then fewer killer risks, then higher
+    simulated benefit used. None without a critic review (no tie-break then).
     """
     if not critic_present:
         return None
     return [critic_obj, -float(len(killer_risks or [])), simulated_benefit]
-
 
 def _raw_simulated_gain(simulator: Mapping[str, Any]) -> tuple:
     """(raw value as reported, basis label, declared unavailable?)."""
@@ -337,12 +452,17 @@ def _descriptor(candidate: Any, axis: str) -> Optional[str]:
     return None
 
 
+def _priorities(requirements: Optional[Sequence[Mapping[str, Any]]]) -> Dict[str, str]:
+    return {normalize_token(r.get("name", "")): normalize_priority(r.get("priority")) for r in requirements or ()}
+
+
 def requirement_coverage(requirements: Sequence[Mapping[str, Any]], review: Any) -> Dict[str, Any]:
     """
-    Mean critic coverage (0..1) over the stored requirements. Requirements the critic did
-    not rate count REQ_UNRATED_DEFAULT; without any rating the coverage is
-    REQ_UNRATED_DEFAULT and the entry is flagged. Without a stored list, the critic's own
-    ratings are averaged.
+    Critic coverage (0..1) per stored requirement, with its priority ('must' or 'nice'), and the
+    requirement terms (``requirement_terms``): mean, weakest must-requirement, requirement score
+    and must factor. Requirements the critic did not rate count REQ_UNRATED_DEFAULT; without any
+    rating the coverage is REQ_UNRATED_DEFAULT and the entry is flagged. Without a stored list,
+    the critic's own ratings are used (all 'must').
     """
     ratings: Dict[str, Dict[str, Any]] = {}
     for rating in (getattr(review, "requirement_coverage", None) or []) if review is not None else []:
@@ -351,25 +471,27 @@ def requirement_coverage(requirements: Sequence[Mapping[str, Any]], review: Any)
         if not name or value is None:
             continue
         ratings.setdefault(normalize_token(name), {"name": name, "coverage": max(0.0, min(1.0, value)),
-                                                   "reason": getattr(rating, "reason", "") or ""})
+                                                   "reason": getattr(rating, "reason", "") or "", "priority": MUST})
     flags: List[str] = []
     rows: List[Dict[str, Any]] = []
     if requirements:
         for req in requirements:
             found = ratings.get(normalize_token(req.get("name", "")))
             rows.append({"name": req.get("name"), "coverage": found["coverage"] if found else None,
-                         "reason": found["reason"] if found else ""})
+                         "reason": found["reason"] if found else "", "priority": normalize_priority(req.get("priority"))})
     else:
         rows = [dict(r) for r in ratings.values()]
     rated = [r["coverage"] for r in rows if r["coverage"] is not None]
     if not rated:
         flags.append(FLAG_REQ_UNRATED)
-        coverage = REQ_UNRATED_DEFAULT
+        terms = requirement_terms([])
     else:
         if len(rated) < len(rows):
             flags.append(FLAG_REQ_PARTIAL)
-        coverage = sum(r["coverage"] if r["coverage"] is not None else REQ_UNRATED_DEFAULT for r in rows) / len(rows)
-    return {"coverage": coverage, "rows": rows, "flags": flags}
+        terms = requirement_terms(rows)
+        if terms["must_unmet"]:
+            flags.append(FLAG_MUST_UNMET)
+    return {"coverage": terms["coverage"], "rows": rows, "flags": flags, "terms": terms}
 
 
 def quantity_relevance(quantity: Optional[str], relevant_quantities: Optional[Sequence[str]],
@@ -391,17 +513,66 @@ def quantity_relevance(quantity: Optional[str], relevant_quantities: Optional[Se
     return True, "no relevance information (counted as relevant)"
 
 
+def _objective_terms(critic_obj: Optional[float], conventional: Optional[float],
+                     estimate: Optional[float]) -> Tuple[Optional[float], str, List[str]]:
+    """(objective gain used, source, flags): the critic's gain net of the conventional equivalent, else the estimate."""
+    if critic_obj is not None:
+        net, mostly = net_objective_gain(critic_obj, conventional)
+        if conventional is None or critic_obj <= 0:
+            return net, "critic", []
+        source = f"critic, net of the conventional equivalent ({critic_obj:g} - {max(conventional, 0.0):g} %)"
+        return net, source, [FLAG_MOSTLY_CONVENTIONAL] if mostly else []
+    if estimate is not None:
+        return estimate, "candidate estimate (not checked by a critic)", [FLAG_OBJECTIVE_UNCHECKED]
+    return None, "none", [FLAG_OBJECTIVE_MISSING]
+
+
+def _finish_breakdown(breakdown: Dict[str, Any], *, tier: str, gate: float, relabel_factor: float,
+                      baseline_conventional: bool, req_terms: Mapping[str, Any], sim_used: Optional[float],
+                      obj_used: Optional[float], discount: float, objective_scale: float, scale_source: str,
+                      critic_obj_net: Optional[float], killer_risks: Sequence[Any], critic_present: bool) -> float:
+    """Applies the factors and the formula to a breakdown (in place) and returns the score."""
+    baseline_factor = BASELINE_FACTOR if not baseline_conventional else 1.0
+    must_factor = float(req_terms.get("must_factor") if req_terms.get("must_factor") is not None else 1.0)
+    combined = combine_score(tier, gate, relabel_factor * baseline_factor * must_factor, sim_used, obj_used, discount,
+                             float(req_terms["score"]), objective_scale)
+    breakdown.update({
+        "formula": score_formula(objective_scale, scale_source),
+        "weights": {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ},
+        "scales_pct": {"objective": objective_scale, "simulated": SIM_SCALE_PCT},
+        "objective_scale_source": scale_source,
+        "components": combined["components"],
+        "objective_discount": discount,
+        "relabel_factor": relabel_factor,
+        "baseline_factor": baseline_factor,
+        "must_factor": round(must_factor, 6),
+        "contributions": combined["contributions"],
+        "capped": combined["capped"],
+        "requirement_coverage": round(float(req_terms["coverage"]), 4),
+        "requirement_score": round(float(req_terms["score"]), 4),
+        "must_min_coverage": None if req_terms.get("must_min") is None else round(float(req_terms["must_min"]), 4),
+        "objective_gain_pct": obj_used,
+        "simulated_benefit_used_pct": sim_used,
+        "tiebreak": tiebreak_values(critic_obj_net, killer_risks, sim_used, critic_present),
+    })
+    return combined["score"]
+
+
 def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any = None,
                           requirements: Sequence[Mapping[str, Any]] = (), critic_status: Optional[str] = None,
                           relevant_quantities: Optional[Sequence[str]] = None,
-                          governing_quantity: Optional[str] = None) -> EvaluationResult:
+                          governing_quantity: Optional[str] = None,
+                          objective_scale_pct: Optional[float] = None,
+                          objective_scale_source: str = SCALE_DEFAULT) -> EvaluationResult:
     """
     Scores one pipeline result (0..100, formula in ``score_formula``). ``review`` is the
     materials critic's review (MaterialsCriticReview) or None; ``critic_status`` is
     'missing' / 'failed' when a critic was asked but gave nothing for this candidate.
     ``relevant_quantities`` are the governing quantities the function analysis named;
-    ``governing_quantity`` defaults to the candidate's own descriptor.
+    ``governing_quantity`` defaults to the candidate's own descriptor. ``objective_scale_pct``
+    is the archive's objective scale (default OBJECTIVE_SCALE_PCT).
     """
+    scale = finite(objective_scale_pct) or OBJECTIVE_SCALE_PCT
     simulator = result.get("simulator") or {}
     validation = result.get("validation") or {}
     v_status = str(validation.get("status") or "")
@@ -413,6 +584,7 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
     estimate, estimate_unit = _estimate_pct(candidate)
     critic_sim = finite(getattr(review, "plausible_simulated_benefit_pct", None)) if review is not None else None
     critic_obj = finite(getattr(review, "plausible_objective_gain_pct", None)) if review is not None else None
+    conventional = finite(getattr(review, "conventional_equivalent_gain_pct", None)) if review is not None else None
     quantity = governing_quantity or _descriptor(candidate, "governing_quantity")
     relevant, relevance_reason = quantity_relevance(quantity, relevant_quantities, review)
 
@@ -441,16 +613,11 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
         if proxy:
             flags.append(FLAG_PROXY)
 
-    # Objective component: the critic's contribution to the stated objective (else the candidate's estimate).
-    if critic_obj is not None:
-        obj_used, obj_source = critic_obj, "critic"
-    elif estimate is not None:
-        obj_used, obj_source = estimate, "candidate estimate (not checked by a critic)"
-        flags.append(FLAG_OBJECTIVE_UNCHECKED)
-    else:
-        obj_used, obj_source = None, "none"
-        flags.append(FLAG_OBJECTIVE_MISSING)
-    discount = 1.0 if (tier == TIER_SIMULATED and obj_source == "critic") else ESTIMATE_DISCOUNT
+    # Objective component: the critic's contribution to the stated objective beyond what a
+    # conventional measure with the same physical effect gives (else the candidate's estimate).
+    obj_used, obj_source, obj_flags = _objective_terms(critic_obj, conventional, estimate)
+    flags.extend(obj_flags)
+    discount = 1.0 if (tier == TIER_SIMULATED and critic_obj is not None) else ESTIMATE_DISCOUNT
 
     req = requirement_coverage(requirements, review)
     flags.extend(req["flags"])
@@ -465,10 +632,10 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
     relabel_factor = RELABEL_FACTOR if relabelled else 1.0
     if relabelled:
         flags.append(FLAG_RELABELLED)
-    if review is not None and getattr(review, "baseline_conventional", None) is False:
+    baseline_conventional = not (review is not None and getattr(review, "baseline_conventional", None) is False)
+    if not baseline_conventional:
         flags.append(FLAG_BASELINE_NOT_CONVENTIONAL)
 
-    combined = combine_score(tier, gate, relabel_factor, sim_used, obj_used, discount, req["coverage"])
     rank = EVIDENCE_RANK[tier]
     if tier == TIER_ESTIMATED and FLAG_IMPLAUSIBLE in flags:
         rank = IMPLAUSIBLE_RANK
@@ -478,6 +645,7 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
         critic_block = {
             "plausible_simulated_benefit_pct": critic_sim,
             "plausible_objective_gain_pct": critic_obj,
+            "conventional_equivalent_gain_pct": conventional,
             "plausible_gain_reasoning": getattr(review, "plausible_gain_reasoning", "") or "",
             "simulated_quantity_relevant": getattr(review, "simulated_quantity_relevant", None),
             "relabelled_analogue": relabelled,
@@ -489,32 +657,20 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
             "key_assumption_issues": list(getattr(review, "key_assumption_issues", None) or []),
             "killer_risks": list(getattr(review, "killer_risks", None) or []),
         }
-    breakdown = {
+    breakdown: Dict[str, Any] = {
         "basis": basis,
         "evidence_tier": tier,
         "evidence_rank": rank,
         "flags": flags,
-        "formula": score_formula(),
-        "weights": {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ},
-        "scales_pct": {"objective": OBJECTIVE_SCALE_PCT, "simulated": SIM_SCALE_PCT},
-        "components": combined["components"],
-        "objective_discount": discount,
-        "relabel_factor": relabel_factor,
-        "contributions": combined["contributions"],
-        "capped": combined["capped"],
-        "tiebreak": tiebreak_values(critic_obj, (critic_block or {}).get("killer_risks") or [], sim_used,
-                                    review is not None),
-        "requirement_coverage": round(req["coverage"], 4),
         "requirements": req["rows"],
-        "objective_gain_pct": obj_used,
         "objective_gain_source": obj_source,
         "critic_objective_gain_pct": critic_obj,
+        "conventional_equivalent_gain_pct": conventional,
         "estimated_gain_pct": estimate,
         "estimate_unit": estimate_unit,
         "estimate_baseline": baseline or None,
         "simulated_gain_pct": sim["raw_gain"],
         "performance_gain_pct": sim["usable_gain"],
-        "simulated_benefit_used_pct": sim_used,
         "simulated_benefit_source": sim_source,
         "critic_simulated_benefit_pct": critic_sim,
         "simulated_quantity": quantity,
@@ -531,23 +687,35 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
         "primary_metric_value": finite(simulator.get("primary_metric_value")),
         "is_mock": bool(result.get("is_mock")),
     }
-    return EvaluationResult(status=EVALUATED, score=combined["score"], breakdown=breakdown)
+    critic_net = obj_used if critic_obj is not None else None
+    score = _finish_breakdown(
+        breakdown, tier=tier, gate=gate, relabel_factor=relabel_factor, baseline_conventional=baseline_conventional,
+        req_terms=req["terms"], sim_used=sim_used, obj_used=obj_used, discount=discount, objective_scale=scale,
+        scale_source=objective_scale_source, critic_obj_net=critic_net,
+        killer_risks=(critic_block or {}).get("killer_risks") or [], critic_present=review is not None)
+    return EvaluationResult(status=EVALUATED, score=score, breakdown=breakdown)
 
 
-def rescore_breakdown(breakdown: Mapping[str, Any]) -> Optional[Tuple[float, Dict[str, Any]]]:
+def rescore_breakdown(breakdown: Mapping[str, Any], requirements: Optional[Sequence[Mapping[str, Any]]] = None,
+                      objective_scale_pct: Optional[float] = None,
+                      objective_scale_source: str = SCALE_DEFAULT) -> Optional[Tuple[float, Dict[str, Any]]]:
     """
-    Re-scores a stored archive-version-3 breakdown with the current constants (migration to
-    version 4). Everything the formula needs is in the breakdown: tier, gate, relabel factor,
-    the usable simulated gain, the critic's two numbers, the objective gain used, its discount
-    and the requirement coverage. Returns (score, new breakdown) or None if the breakdown has no
-    tier (not a materials score). The proxy flag did not exist in version 3 and counts as False.
+    Re-scores a stored breakdown (archive version 3, 4 or 5) with the current constants and the
+    given objective scale. Everything the formula needs is in the breakdown: tier, gate, relabel
+    factor, the usable simulated gain, the critic's numbers (the conventional-equivalent gain did
+    not exist before version 5 and counts as absent), the objective gain or estimate, its discount,
+    the baseline flag and the requirement ratings; the priorities come from ``requirements`` (the
+    archive's stored list; missing priorities count as 'must'). Returns (score, new breakdown) or
+    None if the breakdown has no tier (not a materials score). The proxy flag did not exist in
+    version 3 and counts as False.
     """
     tier = breakdown.get("evidence_tier")
     components = breakdown.get("components") or {}
     if tier not in EVIDENCE_RANK or "gate" not in components:
         return None
+    scale = finite(objective_scale_pct) or OBJECTIVE_SCALE_PCT
     new = dict(breakdown)
-    flags = [f for f in (breakdown.get("flags") or []) if f != FLAG_SENSITIVE]
+    flags = [f for f in (breakdown.get("flags") or []) if f not in _RESCORED_FLAGS]
     critic = dict(breakdown.get("critic") or {})
     critic_sim = finite(breakdown.get("critic_simulated_benefit_pct"))
     proxy = bool(critic.get("proxy_by_construction"))
@@ -559,28 +727,95 @@ def rescore_breakdown(breakdown: Mapping[str, Any]) -> Optional[Tuple[float, Dic
             flags.append(FLAG_SENSITIVE)
         if proxy:
             sim_used, sim_source = None, "none (the critic calls the simulated gain a proxy by construction)"
+    critic_obj = finite(breakdown.get("critic_objective_gain_pct"))
+    conventional = finite(critic.get("conventional_equivalent_gain_pct"))
+    if conventional is None:
+        conventional = finite(breakdown.get("conventional_equivalent_gain_pct"))
+    if critic_obj is not None:
+        obj_used, obj_source, obj_flags = _objective_terms(critic_obj, conventional, None)
+        flags.extend(f for f in obj_flags if f not in flags)
+    else:
+        obj_used, obj_source = finite(breakdown.get("objective_gain_pct")), breakdown.get("objective_gain_source")
+    priorities = _priorities(requirements)
+    rows = []
+    for row in breakdown.get("requirements") or []:
+        row = dict(row)
+        row["priority"] = priorities.get(normalize_token(row.get("name") or ""),
+                                         normalize_priority(row.get("priority")))
+        rows.append(row)
+    if rows and any(finite(r.get("coverage")) is not None for r in rows):
+        terms = requirement_terms(rows)
+        if terms["must_unmet"]:
+            flags.append(FLAG_MUST_UNMET)
+    else:
+        coverage = finite(breakdown.get("requirement_coverage"))
+        coverage = REQ_UNRATED_DEFAULT if coverage is None else coverage
+        terms = {"coverage": coverage, "must_min": None, "score": coverage, "must_factor": 1.0}
     gate = float(components.get("gate") or 0.0)
     relabel = float(breakdown.get("relabel_factor") or 1.0)
     discount = float(breakdown.get("objective_discount") or ESTIMATE_DISCOUNT)
-    coverage = float(breakdown.get("requirement_coverage") if breakdown.get("requirement_coverage") is not None
-                     else REQ_UNRATED_DEFAULT)
-    combined = combine_score(tier, gate, relabel, sim_used, finite(breakdown.get("objective_gain_pct")), discount,
-                             coverage)
-    new.update({
-        "flags": flags,
-        "formula": score_formula(),
-        "weights": {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ},
-        "scales_pct": {"objective": OBJECTIVE_SCALE_PCT, "simulated": SIM_SCALE_PCT},
-        "components": combined["components"],
-        "contributions": combined["contributions"],
-        "capped": combined["capped"],
-        "simulated_benefit_used_pct": sim_used,
-        "simulated_benefit_source": sim_source,
-        "tiebreak": tiebreak_values(finite(breakdown.get("critic_objective_gain_pct")), critic.get("killer_risks") or [],
-                                    sim_used, bool(breakdown.get("critic"))),
-    })
-    return combined["score"], new
+    baseline_conventional = not (FLAG_BASELINE_NOT_CONVENTIONAL in flags or critic.get("baseline_conventional") is False)
+    if not baseline_conventional and FLAG_BASELINE_NOT_CONVENTIONAL not in flags:
+        flags.append(FLAG_BASELINE_NOT_CONVENTIONAL)
+    new.update({"flags": flags, "requirements": rows, "simulated_benefit_source": sim_source,
+                "objective_gain_source": obj_source, "conventional_equivalent_gain_pct": conventional})
+    score = _finish_breakdown(
+        new, tier=tier, gate=gate, relabel_factor=relabel, baseline_conventional=baseline_conventional,
+        req_terms=terms, sim_used=sim_used, obj_used=obj_used, discount=discount, objective_scale=scale,
+        scale_source=objective_scale_source, critic_obj_net=obj_used if critic_obj is not None else None,
+        killer_risks=critic.get("killer_risks") or [], critic_present=bool(breakdown.get("critic")))
+    return score, new
 
+
+def archive_objective_gains(archive: Any) -> List[float]:
+    """The critic's objective gains (net of the conventional equivalent) of every evaluated materials entry."""
+    gains = []
+    for entry_id in sorted(archive.entries):
+        entry = archive.entries[entry_id]
+        breakdown = entry.get("score_breakdown") or {}
+        if entry.get("status") != EVALUATED or breakdown.get("evidence_tier") not in EVIDENCE_RANK:
+            continue
+        critic_obj = finite(breakdown.get("critic_objective_gain_pct"))
+        if critic_obj is None:
+            continue
+        conventional = finite((breakdown.get("critic") or {}).get("conventional_equivalent_gain_pct"))
+        if conventional is None:
+            conventional = finite(breakdown.get("conventional_equivalent_gain_pct"))
+        net, _ = net_objective_gain(critic_obj, conventional)
+        gains.append(net)
+    return gains
+
+
+def rescore_archive(archive: Any, round_no: Optional[int] = None, force: bool = False,
+                    from_version: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """
+    Recomputes the archive's objective scale (``objective_scale_for``: stated target, else the
+    archive's critic objective gains, else the default) and stores it with its source. If it
+    changed (or ``force``), re-scores every evaluated materials entry from its breakdown and
+    rebuilds the elites. Returns a summary, or None if nothing changed.
+    """
+    previous = archive.objective_scale
+    scale, source, detail = objective_scale_for(archive.target_gain_pct, archive_objective_gains(archive))
+    changed = archive.set_objective_scale(scale, source, detail, round_no)
+    if not changed and not force:
+        return None
+    rescored = 0
+    for entry_id in sorted(archive.entries):
+        entry = archive.entries[entry_id]
+        if entry.get("status") != EVALUATED or entry.get("score") is None:
+            continue
+        result = rescore_breakdown(entry.get("score_breakdown") or {}, archive.requirements, scale, source)
+        if result is None:
+            continue
+        score, breakdown = result
+        if from_version is not None:
+            breakdown["rescored_from"] = {"version": from_version, "score": entry.get("score"),
+                                          "formula": (entry.get("score_breakdown") or {}).get("formula")}
+        entry["score"], entry["score_breakdown"] = score, breakdown
+        rescored += 1
+    return {"objective_scale_pct": scale, "objective_scale_source": source, "objective_scale_detail": detail,
+            "previous_objective_scale_pct": previous.get("pct"), "rescored_entries": rescored,
+            "elite_changes": archive.recompute_elites()}
 
 # Words that show the request asks for a service life, and words that show a baseline in service.
 _SERVICE_LIFE_WORDS = ("year", "jahr", "durab", "lasting", "lifetime", "service life", "lebensdauer", "haltbar",
@@ -745,7 +980,8 @@ def critic_prompt(space: DescriptorSpace, query: str, items: Sequence[PreparedCa
                   results: Sequence[Mapping[str, Any]], requirements: Sequence[Mapping[str, Any]],
                   objective_statement: str = "", baseline_statement: str = "",
                   relevant_quantities: Sequence[str] = ()) -> str:
-    reqs = "\n".join(f"- {r['name']}: {r.get('criterion') or ''}" for r in requirements) or \
+    reqs = "\n".join(f"- {r['name']} [{normalize_priority(r.get('priority'))}]: {r.get('criterion') or ''}"
+                     for r in requirements) or \
         "- (none extracted: rate the requirements you read from the request, with short snake_case names)"
     objective = objective_statement or ("(not stated: use the request's main benefit as it applies over the "
                                         "service life and conditions the request names)")
@@ -764,19 +1000,27 @@ REQUEST: "{query}"
 OBJECTIVE (fixed for this map): {objective}
 CONVENTIONAL BASELINE (fixed for this map): {baseline}
 
-REQUIREMENTS:
+REQUIREMENTS ([must] = stated by the request: a concept that fails it does not answer the request and
+loses much of its score; [nice] = desirable):
 {reqs}
 
 For every candidate:
 - plausible_simulated_benefit_pct: your best estimate of the real-world improvement of the candidate's
-  OWN simulated quantity (e.g. fouling release stress, peak stress, wall shear), in percent against the
-  conventional baseline, positive = better. Use known values of comparable concepts; do not copy the
+  OWN simulated quantity (e.g. release stress, peak stress, wall shear, heat flux), in percent against
+  the conventional baseline, positive = better. Use known values of comparable concepts; do not copy the
   simulated number. null if you cannot estimate it.
 - plausible_objective_gain_pct: your best estimate of the candidate's contribution to the OBJECTIVE
-  against the CONVENTIONAL BASELINE, in percent, positive = better. A concept that lowers fouling
-  adhesion but not clean-surface friction can still lower time-averaged drag; a concept that lowers
-  clean-surface friction but fouls faster may not. null if you cannot estimate it.
-- plausible_gain_reasoning: one or two sentences covering both numbers.
+  against the CONVENTIONAL BASELINE, in percent, positive = better, over the service life and conditions
+  the objective names. A concept whose own quantity is not the objective can still improve it (e.g. an
+  easier release of deposits that keeps the surface working); a concept that improves the fresh state
+  but degrades faster may not. null if you cannot estimate it.
+- conventional_equivalent_gain_pct: the objective gain, in percent against the same baseline, that a
+  CONVENTIONAL measure achieving the same physical effect would give: e.g. an equal-R layer of standard
+  insulation for a concept whose benefit is added thermal resistance (cork, aerogel, an air cavity), a
+  thicker standard coating for a benefit that comes from thickness, a standard shading device of the
+  same shading factor. 0 if the effect has no conventional equivalent (the mechanism itself is new);
+  null if you cannot estimate it. Only the gain beyond it counts as the concept's own contribution.
+- plausible_gain_reasoning: one or two sentences covering the numbers.
 - simulated_quantity_relevant: true if the simulated quantity drives the objective or a requirement,
   false if it is beside the point, null if unsure.
 - relabelled_analogue: true if the concept is the same physics as its parent (or another listed concept)
@@ -795,7 +1039,8 @@ For every candidate:
 - killer_risks: what could make the concept unworkable in practice, most severe first.
 - requirement_coverage: one rating per requirement (name exactly as listed, coverage 0..1, a one-line
   reason). Count the whole system: energy and material consumption, maintenance, what is released
-  into the sea, service life.
+  into the environment, service life. Rate a [must] requirement below 0.3 only if the concept really
+  fails it.
 
 CANDIDATES
 {blocks}
@@ -811,6 +1056,7 @@ MOCK_REQUIREMENTS = (
     {"name": "low_friction_drag", "criterion": "lower frictional drag than a clean standard hull coating"},
     {"name": "non_toxic_antifouling", "criterion": "keeps fouling off without releasing biocides"},
     {"name": "multi_year_durability", "criterion": "works for several years in seawater"},
+    {"name": "low_application_cost", "criterion": "applied with standard yard equipment", "priority": "nice"},
 )
 # Mock critic: requirement coverage per mechanism class (durability/consumption proxies).
 _MOCK_COVERAGE = {
@@ -822,6 +1068,10 @@ _MOCK_COVERAGE = {
 _MOCK_CRITIC_FACTORS = (1.0, 0.8, 0.3, 1.2)
 # Mock critic: share of the simulated benefit that reaches the objective (time-averaged drag).
 _MOCK_OBJECTIVE_SHARE = {"wall_shear": 0.3, "flow_rate": 0.3, "fouling_adhesion": 0.5}
+# Mock function analysis: mechanism classes that can plausibly lower wall friction.
+MOCK_RELEVANT_MECHANISMS = ("interfacial_slip", "flow_redirection", "trapped_gas_or_liquid", "graded_stiffness")
+# Mock critic: share of the objective gain a conventional measure with the same effect would give.
+_MOCK_CONVENTIONAL_SHARE = {"trapped_gas_or_liquid": 0.6, "graded_stiffness": 0.2}
 MOCK_OBJECTIVE = "(mock) time-averaged hull friction drag over a 5-year docking interval, including fouling"
 MOCK_BASELINE = "(mock) conventional biocide-free silicone foul-release coating after 12 months in service"
 
@@ -872,6 +1122,7 @@ class MaterialsProfile(ExplorerProfile):
     report_axes = ("mechanism_class", "length_scale")
     batch_schema = MaterialsCandidateBatch
     relevance_axes = ("governing_quantity",)
+    soft_relevance_axes = ("mechanism_class",)
     compatibility_axes = ("mechanism_class", "length_scale")
     origin_axes = ("inspiration_origin",)
     combine_anchor_axes = ("governing_quantity", "mechanism_class")
@@ -919,8 +1170,10 @@ class MaterialsProfile(ExplorerProfile):
             "  for a foul-release coating, wall_shear for riblets). It need not be the objective itself; the\n"
             "  critic judges how the simulated benefit translates into the objective.\n"
             "- back_of_envelope.value: the estimated improvement of the OBJECTIVE over that baseline in percent\n"
-            "  (unit '%'). The score combines the critic's plausible objective gain, the critic-checked simulated\n"
-            "  benefit on the concept's own quantity (if that quantity is relevant) and requirement coverage.\n"
+            "  (unit '%'). The score combines the critic's plausible objective gain beyond what a conventional\n"
+            "  measure with the same physical effect would give (e.g. equal-R standard insulation for a concept\n"
+            "  whose benefit is added thermal resistance), the critic-checked simulated benefit on the concept's\n"
+            "  own quantity (if that quantity is relevant) and requirement coverage.\n"
             "- A diversify or fill_gap order that changes inspiration_origin needs a mechanism actually taken\n"
             "  from a system of that origin: name the system in inspiration_source and what it does there. The\n"
             "  parent's physics with a new origin label is a relabelled analogue: the critic flags it and its\n"
@@ -928,7 +1181,7 @@ class MaterialsProfile(ExplorerProfile):
             "  (target_feasible=false only if none can exist).\n"
             "- Every candidate is also rated against each requirement of the request (e.g. no toxic release,\n"
             "  service life, energy or material consumption): a concept that buys its benefit by violating a\n"
-            "  requirement scores low."
+            "  requirement scores low, and one that fails a 'must' requirement loses up to half of its score."
         )
 
     def analysis_instructions(self, archive: Any) -> str:
@@ -944,6 +1197,16 @@ class MaterialsProfile(ExplorerProfile):
                          "wall_shear; if fouling or years of service matter: fouling_adhesion, degradation_rate; a\n"
                          "strength or delamination requirement: stress). Explore orders only target cells with these\n"
                          "quantities, and a simulated benefit on another quantity does not count towards the score.\n")
+        mechanisms = list((archive.request_analysis.get("relevant") or {}).get("mechanism_class") or [])
+        if mechanisms:
+            parts.append("RELEVANT MECHANISM CLASSES (from the function analysis; fill_gap and diversify orders only use\n"
+                         f"these and the mechanisms of the top elites, explore rarely goes elsewhere): {', '.join(mechanisms)}.\n"
+                         "Repeat or extend them in relevant_mechanism_classes.\n")
+        else:
+            parts.append("In step 2 also list relevant_mechanism_classes: the mechanism_class tokens that can plausibly\n"
+                         "deliver the request's main benefit (a heat-load request: e.g. radiative_control,\n"
+                         "trapped_gas_or_liquid, architected_lattice, phase_change; not interfacial_slip). fill_gap and\n"
+                         "diversify orders then stay within them; explore reaches the others at a low weight.\n")
         origins = archive.preferred_values("inspiration_origin") if hasattr(archive, "preferred_values") else None
         if origins:
             reason = (archive.request_analysis.get("preferred_reason") or {}).get("inspiration_origin") or ""
@@ -954,10 +1217,15 @@ class MaterialsProfile(ExplorerProfile):
 
     def _framing_instructions(self, archive: Any) -> str:
         objective, baseline = archive.objective_statement, archive.baseline_statement
+        target = archive.target_gain_pct if hasattr(archive, "target_gain_pct") else None
+        target_text = (f"- target gain: {target:g} % (stored; repeat it in target_gain_pct)\n" if target is not None else
+                       "- target_gain_pct: if the request, your objective statement or a requirement names a numeric\n"
+                       "  improvement of the objective (e.g. '>20 %' -> 20), give that number; null if none is stated.\n"
+                       "  It sets the objective scale of the score (reaching the target scores 0.86 of the objective part).\n")
         if objective and baseline:
             text = ("OBJECTIVE AND BASELINE (fixed for this map; the critic judges every candidate's contribution to\n"
                     "this objective against this baseline; repeat them in objective_statement and baseline_statement):\n"
-                    f"- objective: {objective}\n- baseline: {baseline}\n")
+                    f"- objective: {objective}\n- baseline: {baseline}\n" + target_text)
             warnings = self.framing_warnings(archive)
             if warnings:
                 text += "  Note: " + "; ".join(warnings) + ".\n"
@@ -976,16 +1244,21 @@ class MaterialsProfile(ExplorerProfile):
             "- baseline_statement: the conventional state-of-the-art solution a concept must beat on that objective,\n"
             "  in the same condition (e.g. 'conventional biocide-free silicone foul-release coating after 12-24\n"
             "  months in service'). Every candidate and simulation compares against it.\n"
-            + known
+            + target_text + known
         )
 
-    def score_note(self) -> str:
-        """Explanation of the score for the map report (generated from the constants)."""
-        return (f"{score_formula()}. Tier 'simulated' only when a usable simulated gain on a relevant governing "
-                "quantity enters the score (never above the critic's plausible simulated benefit; not at all for a "
-                "proxy by construction); otherwise tier 'estimated' (the simulated number is shown but not scored). "
-                "The objective gain is the critic's plausible contribution to the stated objective against the stated "
-                "baseline. 'points obj / sim / req' splits the score into its three parts (before the cap). Elites "
+    def score_note(self, archive: Any = None) -> str:
+        """Explanation of the score for the map report (generated from the constants and the archive's scale)."""
+        scale = (archive.objective_scale if archive is not None and hasattr(archive, "objective_scale") else {}) or {}
+        pct, source = scale.get("pct") or OBJECTIVE_SCALE_PCT, scale.get("source") or SCALE_DEFAULT
+        detail = f" Objective scale {pct:g} % ({source}: {scale.get('detail')})." if scale.get("detail") else ""
+        return (f"{score_formula(pct, source)}.{detail} Tier 'simulated' only when a usable simulated gain on a "
+                "relevant governing quantity enters the score (never above the critic's plausible simulated benefit; not "
+                "at all for a proxy by construction); otherwise tier 'estimated' (the simulated number is shown but not "
+                "scored). The objective gain is the critic's plausible contribution to the stated objective against the "
+                "stated baseline, minus what a conventional measure with the same physical effect would give. "
+                "'points obj / sim / req' splits the score into its three parts (before the cap). The scale is recomputed "
+                "after every round and all entries are then re-scored, so scores are comparable within this map. Elites "
                 "are ranked by tier first; within a cell, scores within "
                 f"{TIE_EPSILON:g} point are a tie decided by the critic's objective gain, then fewer killer risks.")
 
@@ -1007,43 +1280,46 @@ class MaterialsProfile(ExplorerProfile):
 
     def migrate_archive(self, archive: Any, from_version: int) -> Optional[Dict[str, Any]]:
         """
-        Version 3 -> 4: re-scores every evaluated entry from its stored breakdown with the current
-        constants (``rescore_breakdown``) and rebuilds the elites with the current comparison
-        (tiebreak). The old score is kept in ``score_breakdown.rescored_from``; round logs stay as
-        recorded.
+        Version 3 or 4 -> 5: sets the archive's objective scale (no target was stored before version 5,
+        so it comes from the archive's critic objective gains; the hull-coating archive, median 0.8 %,
+        stays at the 2 % floor), re-scores every evaluated entry from its stored breakdown with the
+        current formula (``rescore_breakdown``: must-requirements, baseline factor; the
+        conventional-equivalent gain did not exist and counts as absent) and rebuilds the elites with
+        the current comparison (tiebreak). The old score is kept in ``score_breakdown.rescored_from``;
+        round logs stay as recorded.
         """
-        if from_version >= 4:
+        if from_version >= 5:
             return None
-        rescored = 0
-        for entry_id in sorted(archive.entries):
-            entry = archive.entries[entry_id]
-            if entry.get("status") != EVALUATED or entry.get("score") is None:
-                continue
-            result = rescore_breakdown(entry.get("score_breakdown") or {})
-            if result is None:
-                continue
-            score, breakdown = result
-            breakdown["rescored_from"] = {"version": from_version, "score": entry.get("score"),
-                                          "formula": (entry.get("score_breakdown") or {}).get("formula")}
-            entry["score"], entry["score_breakdown"] = score, breakdown
-            rescored += 1
-        return {"rescored_entries": rescored, "elite_changes": archive.recompute_elites()}
+        return rescore_archive(archive, round_no=None, force=True, from_version=from_version)
+
+    def update_scoring(self, archive: Any, round_no: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        Recomputes the objective scale from the archive (after a round, or when the runner starts) and
+        re-scores every entry if it changed (``rescore_archive``). Returns the summary or None.
+        """
+        return rescore_archive(archive, round_no=round_no)
 
     def framing_warnings(self, archive: Any) -> List[str]:
         queries = archive.data.get("queries") or []
         return framing_warnings(queries[0] if queries else "", archive.objective_statement, archive.baseline_statement)
 
     def relevant_values_from_batch(self, batch: Any) -> Tuple[Dict[str, List[str]], List[str]]:
-        axis = self.space.axis("governing_quantity")
-        values, dropped = [], []
-        for raw in getattr(batch, "relevant_governing_quantities", None) or []:
-            token = normalize_token(raw)
-            if token in axis.values:
-                if token not in values:
-                    values.append(token)
-            else:
-                dropped.append(str(raw))
-        return ({"governing_quantity": values} if values else {}), dropped
+        found: Dict[str, List[str]] = {}
+        dropped: List[str] = []
+        for axis_name, field in (("governing_quantity", "relevant_governing_quantities"),
+                                 ("mechanism_class", "relevant_mechanism_classes")):
+            axis = self.space.axis(axis_name)
+            values = []
+            for raw in getattr(batch, field, None) or []:
+                token = normalize_token(raw)
+                if token in axis.values:
+                    if token not in values:
+                        values.append(token)
+                else:
+                    dropped.append(str(raw))
+            if values:
+                found[axis_name] = values
+        return found, dropped
 
     def sanity_issues(self, candidate: Any, descriptors: Mapping[str, str]) -> List[str]:
         issues = []
@@ -1130,6 +1406,7 @@ class MaterialsProfile(ExplorerProfile):
             baseline_statement=MOCK_BASELINE,
             relevant_governing_quantities=["wall_shear", "flow_rate", "fouling_adhesion"],
             mechanism_classes_considered=["interfacial_slip", "flow_redirection"],
+            relevant_mechanism_classes=list(MOCK_RELEVANT_MECHANISMS),
             analogues_considered=["(mock) fish mucus", "(mock) glacier basal sliding"],
             candidates=[self.mock_candidate(order) for order in orders],
         )
@@ -1206,6 +1483,8 @@ class MaterialsProfile(ExplorerProfile):
         ratings = [RequirementRating(name=name, coverage=round(max(0.0, min(1.0, coverage + 0.1 * ((key + i) % 3 - 1))), 3),
                                      reason="(mock) rating from the mechanism class")
                    for i, name in enumerate(names)]
+        mechanism = item.descriptors.get("mechanism_class")
+        objective = round(base * factor * _MOCK_OBJECTIVE_SHARE.get(quantity, 0.1), 4)
         relabelled = False
         parents = order_parents(item.order)
         origin = item.descriptors.get("inspiration_origin")
@@ -1214,7 +1493,8 @@ class MaterialsProfile(ExplorerProfile):
         return MaterialsCriticReview(
             order_id=item.order["order_id"],
             plausible_simulated_benefit_pct=round(base * factor, 4),
-            plausible_objective_gain_pct=round(base * factor * _MOCK_OBJECTIVE_SHARE.get(quantity, 0.1), 4),
+            plausible_objective_gain_pct=objective,
+            conventional_equivalent_gain_pct=round(objective * _MOCK_CONVENTIONAL_SHARE.get(mechanism, 0.0), 4),
             plausible_gain_reasoning=f"(mock) simulated or estimated gain x {factor}",
             relabelled_analogue=relabelled,
             relabel_reason=f"(mock) same physics as '{parents[0].get('title')}'" if relabelled else "",
@@ -1278,7 +1558,9 @@ class MaterialsProfile(ExplorerProfile):
             scored = score_pipeline_result(res.raw["pipeline_result"], item.candidate, review=review,
                                            requirements=ctx.requirements, critic_status=status,
                                            relevant_quantities=(ctx.relevant or {}).get("governing_quantity"),
-                                           governing_quantity=item.descriptors.get("governing_quantity"))
+                                           governing_quantity=item.descriptors.get("governing_quantity"),
+                                           objective_scale_pct=ctx.objective_scale_pct,
+                                           objective_scale_source=ctx.objective_scale_source)
             scored.breakdown["critic_used"] = review is not None
             if critic_error:
                 scored.breakdown["critic_error"] = critic_error[:300]

@@ -11,9 +11,13 @@ Layout of ``archive.json``::
                                         "proposal density" map
     targets      {cell_key: count}      how often a search order aimed at a cell/pattern
     infeasible   {pattern_key: {...}}   cells or patterns reported as impossible
-    request_analysis                    requirements extracted from the query (fixed once set),
-                                        the objective and baseline statements (fixed once set)
-                                        and the relevant values of "relevance axes"
+    request_analysis                    requirements extracted from the query (fixed once set,
+                                        each 'must' or 'nice'), the objective and baseline
+                                        statements and the numeric target gain (fixed once set),
+                                        the relevant values of "relevance axes" (hard, and soft
+                                        ones such as materials' mechanism_class), preferred
+                                        values, and the objective scale used for scoring (with
+                                        its source and history; see the materials profile)
     rounds       [round log]            orders, outcomes and strategy yield per round
     round_counter, next_entry
 
@@ -33,7 +37,9 @@ the profile may re-score entries on the way, see ``Archive.load(migrate=...)``);
 built with a different vocabulary is refused with an explanation, because its cells and scores
 are not comparable (version 3 added ``governing_quantity`` values for fouling control and changed
 the materials score; version 4 changed the materials score again, re-scores version-3 entries
-from their stored breakdowns and adds preferred axis values). A newer archive is refused as well.
+from their stored breakdowns and adds preferred axis values; version 5 re-scores again with a
+per-archive objective scale, must/nice requirements and the conventional-equivalent gain). A newer
+archive is refused as well.
 
 Writes are atomic (temp file + ``os.replace``). Entry ids are sequential and the file is
 written with sorted keys, so the same inputs give the same file except for timestamps
@@ -49,9 +55,24 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 from vectornaut.explorer.descriptors import DescriptorSpace
 from vectornaut.storage import data_path
 
-ARCHIVE_VERSION = 4
+ARCHIVE_VERSION = 5
 # Two scores within this many points are a tie within a cell (decided by the tiebreak key).
 TIE_EPSILON = 1.0
+# Soft relevance axes: besides the values named by the function analysis, the values of the top
+# SOFT_RELEVANCE_TOP_ELITES elites (evidence, then score) count as relevant.
+SOFT_RELEVANCE_TOP_ELITES = 5
+# Requirement priorities.
+MUST = "must"
+NICE = "nice"
+# An infeasibility scope must name at least this many axes (a single axis would close a whole
+# mechanism class or length scale on one claim); otherwise only the exact target is closed.
+MIN_INFEASIBILITY_SCOPE_AXES = 2
+
+
+def normalize_priority(value: Any) -> str:
+    """'nice' for nice/optional/desirable/should, else 'must' (the default)."""
+    text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return NICE if text in (NICE, "optional", "desirable", "should", "nice_to_have", "soft") else MUST
 
 
 class ArchiveCompatibilityError(ValueError):
@@ -158,7 +179,9 @@ class Archive:
             "targets": {},
             "infeasible": {},
             "request_analysis": {"requirements": [], "requirements_round": None, "relevant": {},
+                                 "soft_relevance": [],
                                  "objective_statement": "", "baseline_statement": "", "framing_round": None,
+                                 "target_gain_pct": None, "target_round": None, "objective_scale": {},
                                  "preferred": {}, "preferred_reason": {}},
             "rounds": [],
             "round_counter": 0,
@@ -361,7 +384,8 @@ class Archive:
     def set_requirements(self, requirements: Sequence[Mapping[str, Any]], round_no: int) -> bool:
         """
         Stores the requirement list once (the first non-empty one), so the scores of later
-        rounds stay comparable. Returns True if the list was stored now.
+        rounds stay comparable. Each requirement keeps its priority ('must', the default, or
+        'nice'). Returns True if the list was stored now.
         """
         if self.requirements:
             return False
@@ -371,7 +395,8 @@ class Archive:
             if not name or name.lower() in seen:
                 continue
             seen.add(name.lower())
-            cleaned.append({"name": name, "criterion": str(item.get("criterion") or "").strip()})
+            cleaned.append({"name": name, "criterion": str(item.get("criterion") or "").strip(),
+                            "priority": normalize_priority(item.get("priority"))})
         if not cleaned:
             return False
         self.request_analysis["requirements"] = cleaned
@@ -404,6 +429,36 @@ class Archive:
             self.request_analysis["framing_round"] = round_no
         return stored
 
+    @property
+    def target_gain_pct(self) -> Optional[float]:
+        return _finite(self.request_analysis.get("target_gain_pct"))
+
+    def set_target_gain(self, value: Any, round_no: int) -> bool:
+        """Stores the numeric target gain of the objective (percent, > 0) once, like the framing."""
+        number = _finite(value)
+        if number is None or number <= 0 or self.target_gain_pct is not None:
+            return False
+        self.request_analysis["target_gain_pct"] = number
+        self.request_analysis["target_round"] = round_no
+        return True
+
+    @property
+    def objective_scale(self) -> Dict[str, Any]:
+        """{pct, source, detail, round, history} of the objective scale used for scoring ({} if never set)."""
+        return dict(self.request_analysis.get("objective_scale") or {})
+
+    def set_objective_scale(self, pct: float, source: str, detail: str, round_no: Optional[int]) -> bool:
+        """Stores the objective scale with its source; returns True if the value or the source changed."""
+        current = self.request_analysis.get("objective_scale") or {}
+        if current.get("pct") == pct and current.get("source") == source:
+            current["detail"] = detail
+            return False
+        history = list(current.get("history") or [])
+        history.append({"pct": pct, "source": source, "round": round_no})
+        self.request_analysis["objective_scale"] = {"pct": pct, "source": source, "detail": detail,
+                                                    "round": round_no, "history": history}
+        return True
+
     def stated_relevant_values(self, axis: str) -> List[str]:
         """Relevant values named by the function analysis only (without the values of elites)."""
         return list((self.request_analysis.get("relevant") or {}).get(axis) or [])
@@ -424,13 +479,31 @@ class Archive:
                 uses[parent] = uses.get(parent, 0) + 1
         return uses
 
-    def declare_relevance_axes(self, axes: Sequence[str]) -> None:
-        """Axes whose values must be relevant to the request (materials: governing_quantity)."""
+    def declare_relevance_axes(self, axes: Sequence[str], soft: Sequence[str] = ()) -> None:
+        """
+        Axes whose values must be relevant to the request (materials: governing_quantity), and
+        soft relevance axes (materials: mechanism_class): fill_gap and diversify only use their
+        relevant values, explore reaches the others at a low weight.
+        """
         relevant = self.request_analysis.setdefault("relevant", {})
-        for name in axes or ():
+        for name in list(axes or ()) + list(soft or ()):
             relevant.setdefault(name, [])
+        stored = set(self.request_analysis.get("soft_relevance") or []) | set(soft or ())
+        self.request_analysis["soft_relevance"] = [name for name in self.space.names if name in stored]
 
     def relevance_axes(self) -> List[str]:
+        """Hard relevance axes (explore, fill_gap and diversify only use relevant values)."""
+        relevant = self.request_analysis.get("relevant") or {}
+        soft = set(self.request_analysis.get("soft_relevance") or [])
+        return [name for name in self.space.names if name in relevant and name not in soft]
+
+    def soft_relevance_axes(self) -> List[str]:
+        relevant = self.request_analysis.get("relevant") or {}
+        soft = set(self.request_analysis.get("soft_relevance") or [])
+        return [name for name in self.space.names if name in soft and name in relevant]
+
+    def all_relevance_axes(self) -> List[str]:
+        """Hard and soft relevance axes (for storing the values named by the function analysis)."""
         relevant = self.request_analysis.get("relevant") or {}
         return [name for name in self.space.names if name in relevant]
 
@@ -455,7 +528,14 @@ class Archive:
         if axis not in relevant:
             return None
         values = set(relevant.get(axis) or [])
-        values.update(e["descriptors"][axis] for e in self.elite_entries())
+        if axis in (self.request_analysis.get("soft_relevance") or []):
+            # Soft axis: only when the function analysis named values; widened by the top elites only.
+            if not values:
+                return []
+            elites = self.ranked_elites()[:SOFT_RELEVANCE_TOP_ELITES]
+        else:
+            elites = self.elite_entries()
+        values.update(e["descriptors"][axis] for e in elites)
         return sorted(values, key=self.space.axis(axis).index)
 
     def is_relevant(self, cell: Mapping[str, str]) -> bool:
@@ -468,6 +548,24 @@ class Archive:
             if values and cell[axis] not in values:
                 return False
         return True
+
+    def soft_irrelevant_values(self, cell: Mapping[str, str]) -> List[str]:
+        """
+        'axis=value' for every value of a soft relevance axis (materials: mechanism_class) in the
+        (full or partial) cell that is neither named by the function analysis nor held by one of the
+        top SOFT_RELEVANCE_TOP_ELITES elites. Empty while the function analysis named no value.
+        """
+        out = []
+        for axis in self.soft_relevance_axes():
+            if axis not in cell:
+                continue
+            values = self.relevant_values(axis)
+            if values and cell[axis] not in values:
+                out.append(f"{axis}={cell[axis]}")
+        return out
+
+    def is_soft_relevant(self, cell: Mapping[str, str]) -> bool:
+        return not self.soft_irrelevant_values(cell)
 
     # ---- preferred values (e.g. biological origins for a bio-inspired request) ----
     def set_preferred_values(self, axis: str, values: Sequence[str], reason: str) -> bool:
@@ -530,12 +628,44 @@ class Archive:
         key = self.space.cell_key(target)
         self.data["targets"][key] = int(self.data["targets"].get(key, 0)) + 1
 
+    def infeasibility_pattern(self, target: Mapping[str, str],
+                              scope: Sequence[str] = ()) -> Tuple[Dict[str, str], List[str], str]:
+        """
+        The pattern a generator's infeasibility answer closes: the target restricted to the axes named
+        in ``scope`` (the axes the impossibility depends on; 'mechanism_class+length_scale' is split)
+        if at least MIN_INFEASIBILITY_SCOPE_AXES of them are fixed in the target; otherwise the exact
+        target. Returns (pattern, scope axes used, note).
+        """
+        target = {name: target[name] for name in self.space.names if name in target}
+        tokens: List[str] = []
+        for item in scope or ():
+            for part in str(item or "").replace("+", ",").replace("|", ",").replace(";", ",").split(","):
+                part = part.strip().lower().replace(" ", "_").replace("-", "_")
+                if part and part not in tokens:
+                    tokens.append(part)
+        if not tokens:
+            return target, [], ""
+        axes = [name for name in self.space.names if name in tokens and name in target]
+        unknown = [t for t in tokens if t not in self.space.names]
+        notes = [f"unknown scope axes ignored: {', '.join(unknown)}"] if unknown else []
+        if len(axes) < MIN_INFEASIBILITY_SCOPE_AXES:
+            notes.append(f"scope '{'+'.join(axes) or '-'}' names fewer than {MIN_INFEASIBILITY_SCOPE_AXES} axes "
+                         "of the target; only the target itself is closed")
+            return target, [], "; ".join(notes)
+        if len(axes) < len(target):
+            notes.append(f"generalised to {'+'.join(axes)} (any value of the other axes)")
+        return {name: target[name] for name in axes}, axes, "; ".join(notes)
+
     def mark_infeasible(self, pattern: Mapping[str, str], reason: str, *, entry_id: Optional[str],
-                        round_no: int, source: str) -> str:
+                        round_no: int, source: str, scope: Sequence[str] = (), note: str = "") -> str:
         key = self.space.cell_key(pattern)
         record = self.data["infeasible"].get(key)
         if record is None:
             record = {"reason": reason, "entry_ids": [], "round": round_no, "source": source, "count": 0}
+            if scope:
+                record["scope"] = list(scope)
+            if note:
+                record["note"] = note
             self.data["infeasible"][key] = record
         record["count"] = int(record.get("count", 0)) + 1
         if entry_id and entry_id not in record["entry_ids"]:

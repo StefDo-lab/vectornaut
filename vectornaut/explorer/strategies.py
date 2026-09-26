@@ -45,6 +45,12 @@ scores 1; a value on a well-mixed axis scores little.
 Preferred values (``Archive.preferred_values``; materials: biological origins for a
 bio-inspired request) are the only values fill_gap, diversify, combine and extrapolate
 target; explore reaches the others at ``nonpreferred_explore_factor``.
+
+Soft relevance axes (``Archive.soft_relevance_axes``; materials: mechanism_class): fill_gap and
+diversify only target values named by the function analysis or held by the top elites; explore
+reaches the others at ``soft_irrelevant_explore_factor``. fill_gap and diversify also skip cells
+whose compatibility pair (materials: mechanism x length scale) was only ever reported infeasible,
+like combine (explore weights such cells by ``explore_infeasible_pair_factor``).
 """
 import math
 from collections import defaultdict
@@ -122,6 +128,9 @@ class StrategyConfig:
     # explore: weight factor for a cell with a non-preferred value (e.g. a non-biological origin for
     # a bio-inspired request); the other strategies never target such values.
     nonpreferred_explore_factor: float = 0.1
+    # explore: weight factor for a cell with a value of a soft relevance axis (materials: a mechanism
+    # class) that the function analysis did not name; fill_gap and diversify never target such values.
+    soft_irrelevant_explore_factor: float = 0.1
 
 
 def parse_weights(spec: Optional[str]) -> Dict[str, float]:
@@ -417,10 +426,12 @@ def gap_candidates(archive: Archive, taken: Iterable[str] = (), config: Optional
             neighbours[key].append((elite, changed))
             cells[key] = cell
     stats = ExplorationStats(archive)
+    known = PairKnowledge(archive, config.compatibility_axes)
     ranked = []
     for key, items in neighbours.items():
         cell = cells[key]
-        if archive.is_infeasible(cell) or not archive.is_relevant(cell) or not archive.is_preferred(cell):
+        if archive.is_infeasible(cell) or not archive.is_relevant(cell) or not archive.is_preferred(cell) \
+                or not archive.is_soft_relevant(cell) or known.only_infeasible(cell):
             continue
         scores = sorted((float(e.get("score") or 0.0) for e, _ in items), reverse=True)
         attempts = _attempts(archive, cell)
@@ -829,6 +840,8 @@ def explore(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
             weight *= config.explore_infeasible_pair_factor
         if not archive.is_preferred(cell):
             weight *= config.nonpreferred_explore_factor
+        if not archive.is_soft_relevant(cell):
+            weight *= config.soft_irrelevant_explore_factor
         unvisited.append(cell)
         weights.append(weight)
         nearest.append(near)
@@ -862,6 +875,11 @@ def explore(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
             context["outside_preferred"] = outside
             near_text += (f" Note: {', '.join(outside)} is outside the values the request prefers; propose a concept "
                           "only if it really fits the request.")
+        irrelevant = archive.soft_irrelevant_values(cell)
+        if irrelevant:
+            context["outside_relevant"] = irrelevant
+            near_text += (f" Note: {', '.join(irrelevant)} was not named as relevant by the function analysis; "
+                          "propose a concept only if this mechanism can really deliver the request's benefit.")
         orders.append(_make_order(
             space, EXPLORE, cell, context=context,
             rationale=(
@@ -888,9 +906,14 @@ def diversify(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCo
     uses = source_uses(archive, batch)
     stats = ExplorationStats(archive)
     allowed = dict(_relevance_filter(archive) or {})
+    for name in archive.soft_relevance_axes():
+        values = archive.relevant_values(name)
+        if values:
+            allowed[name] = allowed[name] & set(values) if name in allowed else set(values)
     for name in archive.preferred_axes():
         preferred = set(archive.preferred_values(name))
         allowed[name] = allowed[name] & preferred if name in allowed else preferred
+    known = PairKnowledge(archive, config.compatibility_axes)
     axes = sorted(space.names, key=lambda name: (-stats.concentration[name], space.names.index(name)))
     orders: List[Dict[str, Any]] = []
     used = set(taken)
@@ -916,7 +939,8 @@ def diversify(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCo
                     target[name] = value
                     key = space.cell_key(target)
                     if key in used or key in archive.elites or archive.is_infeasible(target) \
-                            or not archive.is_preferred(target):
+                            or not archive.is_preferred(target) or not archive.is_soft_relevant(target) \
+                            or known.only_infeasible(target):
                         continue
                     choice = (value, elite, target, key)
                     break
@@ -1025,8 +1049,9 @@ def explain_trends(archive: Archive, config: Optional[StrategyConfig] = None,
                      "reason": reasons.get(t["status"], lambda _t: t["status"])(t)})
     eligible = [e for e in archive.elite_entries() if e.get("score") is not None and trend_eligible(e)]
     if not trends:
-        summary = (f"no trend could be fitted: {len(eligible)} simulated elite(s), and no ordinal axis has elites "
-                   "at two or more values (slice or marginal)")
+        summary = (f"no trend could be fitted at scheduling time (before this round's candidates): the archive held "
+                   f"{len(eligible)} trend-eligible (simulated) elite(s), and no ordinal axis had elites at two or more "
+                   "values (slice or marginal)")
     elif any(r["status"] == "proposed" for r in rows):
         summary = f"{sum(r['status'] == 'proposed' for r in rows)} usable trend(s) of {len(rows)}"
     else:

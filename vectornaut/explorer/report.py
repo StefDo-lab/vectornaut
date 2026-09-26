@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 from vectornaut.explorer.archive import (
     EVALUATED, FAILED, IMPROVED, IMPROVED_ON_TIEBREAK, INFEASIBLE, INVALID, NEW_ELITE, NOT_BETTER, REJECTED, Archive,
 )
-from vectornaut.explorer.strategies import STRATEGIES, find_trends, gap_candidates
+from vectornaut.explorer.strategies import STRATEGIES, StrategyConfig, find_trends, gap_candidates
 
 STAT_KEYS = ("orders", "candidates", "evaluated", "new_elite", "improved", "improved_on_tiebreak", "not_better",
              "failed", "infeasible", "invalid", "rejected", "missing", "off_target", "elites_now")
@@ -106,12 +106,15 @@ def _elites_table(archive: Archive, limit: Optional[int] = None) -> str:
             split = " / ".join(_fmt_num(parts.get(k), 1) for k in ("objective", "simulated", "requirements")) \
                 if parts else "–"
             rows.append([i, _fmt_score(e.get("score")), b.get("evidence_tier") or "–", split,
-                         _fmt_num(b.get("objective_gain_pct"), 1), _fmt_num(b.get("simulated_benefit_used_pct"), 1),
+                         _fmt_num(b.get("objective_gain_pct"), 1), _fmt_num(b.get("critic_objective_gain_pct"), 1),
+                         _fmt_num(b.get("conventional_equivalent_gain_pct"), 1),
+                         _fmt_num(b.get("simulated_benefit_used_pct"), 1),
                          _fmt_num(b.get("simulated_gain_pct"), 1), b.get("simulated_quantity") or "–",
                          _fmt_num(b.get("requirement_coverage")),
                          _flags(e), e.get("title"), space.describe(e.get("descriptors") or {}), e.get("strategy"),
                          e.get("round"), e["id"]])
-        return _table(["#", "score", "tier", "points obj / sim / req", "objective gain %", "sim. benefit used %",
+        return _table(["#", "score", "tier", "points obj / sim / req", "objective gain used %", "critic obj. %",
+                       "conv. equivalent %", "sim. benefit used %",
                        "simulated %", "simulated quantity", "req. coverage", "flags", "title", "cell", "strategy",
                        "round", "entry"], rows)
     rows = [[i, _fmt_score(e.get("score")), (e.get("score_breakdown") or {}).get("basis", ""), e.get("title"),
@@ -127,9 +130,24 @@ def _framing_section(archive: Archive, profile: Any) -> str:
     round_no = archive.request_analysis.get("framing_round")
     lines = [f"Objective and conventional baseline from the function analysis (round {round_no}); fixed for this map.\n",
              f"- **Objective**: {_md(objective or '–')}", f"- **Baseline**: {_md(baseline or '–')}"]
+    target = archive.target_gain_pct
+    if target is not None:
+        lines.append(f"- **Target gain**: {target:g} % (stated by the function analysis, round "
+                     f"{archive.request_analysis.get('target_round')})")
+    lines.extend(_scale_lines(archive))
     warnings = profile.framing_warnings(archive) if hasattr(profile, "framing_warnings") else []
     lines.extend(f"- Warning: {_md(w)}" for w in warnings)
     return "\n".join(lines) + "\n\n"
+
+
+def _scale_lines(archive: Archive) -> List[str]:
+    scale = archive.objective_scale
+    if not scale:
+        return []
+    history = ", ".join(f"{h.get('pct'):g} % ({h.get('source')}, round {h.get('round') if h.get('round') is not None else '–'})"
+                        for h in scale.get("history") or [] if isinstance(h.get("pct"), (int, float)))
+    return [f"- **Objective scale**: {scale.get('pct'):g} % ({_md(scale.get('source'))}: {_md(scale.get('detail'))}); "
+            f"a gain of this size scores 0.63 of the objective part. History: {history or '–'}"]
 
 
 def _requirements_section(archive: Archive) -> str:
@@ -138,7 +156,8 @@ def _requirements_section(archive: Archive) -> str:
     if reqs:
         round_no = archive.request_analysis.get("requirements_round")
         lines.append(f"Extracted by the generator's function analysis (round {round_no}); fixed for this map.\n")
-        lines.extend(f"- **{_md(r['name'])}**: {_md(r.get('criterion'))}" for r in reqs)
+        lines.extend(f"- **{_md(r['name'])}** [{_md(r.get('priority') or 'must')}]: {_md(r.get('criterion'))}"
+                     for r in reqs)
     else:
         lines.append("_No requirements extracted yet._")
     for axis in archive.relevance_axes():
@@ -148,6 +167,14 @@ def _requirements_section(archive: Archive) -> str:
         lines.append(f"\nRelevant `{axis}` values (explore/fill-gap/diversify use only these): "
                      f"{', '.join(stored) or '–'} (function analysis)"
                      + (f" + {', '.join(extra)} (held by elites)" if extra else ""))
+    for axis in archive.soft_relevance_axes():
+        stored = (archive.request_analysis.get("relevant") or {}).get(axis) or []
+        known = archive.relevant_values(axis) or []
+        extra = [v for v in known if v not in stored]
+        lines.append(f"\nRelevant `{axis}` values (fill-gap/diversify use only these, explore reaches the others at a "
+                     f"low weight): {', '.join(stored) or '– (none named: no restriction)'}"
+                     + (" (function analysis)" if stored else "")
+                     + (f" + {', '.join(extra)} (held by top elites)" if extra else ""))
     reasons = archive.request_analysis.get("preferred_reason") or {}
     for axis in archive.preferred_axes():
         lines.append(f"\nPreferred `{axis}` values (fill-gap/diversify/combine/extrapolate use only these; explore reaches "
@@ -163,13 +190,17 @@ def _requirement_coverage_table(archive: Archive, limit: int = 15) -> str:
         return "_No requirement ratings yet (needs the critic)._"
     rows = []
     for e in elites:
-        by_name = {r.get("name"): r for r in (e.get("score_breakdown") or {}).get("requirements") or []}
+        b = e.get("score_breakdown") or {}
+        by_name = {r.get("name"): r for r in b.get("requirements") or []}
         cells = []
         for req in reqs:
             rating = by_name.get(req["name"]) or {}
             cells.append(_fmt_num(rating.get("coverage")))
-        rows.append([e["id"], e.get("title"), *cells, _fmt_num((e.get("score_breakdown") or {}).get("requirement_coverage"))])
-    return _table(["entry", "title", *[r["name"] for r in reqs], "mean"], rows)
+        rows.append([e["id"], e.get("title"), *cells, _fmt_num(b.get("requirement_coverage")),
+                     _fmt_num(b.get("must_min_coverage")), _fmt_num(b.get("requirement_score")),
+                     _fmt_num(b.get("must_factor"))])
+    headers = [f"{r['name']} [{r.get('priority') or 'must'}]" for r in reqs]
+    return _table(["entry", "title", *headers, "mean", "min must", "req. score", "must factor"], rows)
 
 
 def _flag_counts(archive: Archive) -> str:
@@ -194,7 +225,8 @@ def never_proposed(archive: Archive) -> str:
             irrelevant = [v for v in missing if v not in relevant]
             missing = [v for v in missing if v in relevant]
             if irrelevant:
-                note = f" (not relevant to the request, not searched: {', '.join(irrelevant)})"
+                how = "only explore, at a low weight" if axis.name in archive.soft_relevance_axes() else "not searched"
+                note = f" (not relevant to the request, {how}: {', '.join(irrelevant)})"
         concentration = archive.axis_concentration(axis.name)
         everything = "every relevant value proposed" if note else "every value proposed"
         lines.append(f"- `{axis.name}` (top value holds {100.0 * concentration:.0f} % of proposals): "
@@ -258,10 +290,15 @@ def density_vs_score(archive: Archive) -> str:
     return "\n\n".join(parts)
 
 
-def _gap_table(archive: Archive, limit: int = 8) -> str:
+def _strategy_config(profile: Any) -> StrategyConfig:
+    """The profile's compatibility axes for the gap list (as the runner configures fill_gap)."""
+    return StrategyConfig(compatibility_axes=tuple(getattr(profile, "compatibility_axes", ()) or ()))
+
+
+def _gap_table(archive: Archive, limit: int = 8, config: Optional[StrategyConfig] = None) -> str:
     space = archive.space
     rows = []
-    for gap in gap_candidates(archive)[:limit]:
+    for gap in gap_candidates(archive, config=config)[:limit]:
         best, axis = gap["neighbours"][0]
         rows.append([space.describe(gap["cell"]), f"{gap['priority']:.3f}", _fmt_score(gap["best_neighbour_score"]),
                      len(gap["neighbours"]), gap["proposals"], f"{gap.get('exploration', 0.0):.2f}",
@@ -311,7 +348,8 @@ def _extrapolation_notes(strategy_notes: Mapping[str, Any]) -> str:
         return ""
     planned = (strategy_notes.get("planned") or {}).get("extrapolate", 0)
     produced = (strategy_notes.get("produced") or {}).get("extrapolate", 0)
-    text = f"\n\nExtrapolation: {produced} of {planned} planned slot(s) used; {_md(info.get('summary'))}."
+    text = (f"\n\nExtrapolation (decided at scheduling time, before this round's candidates were evaluated): "
+            f"{produced} of {planned} planned slot(s) used; {_md(info.get('summary'))}.")
     slots = info.get("slots") or {}
     if slots.get("weight"):
         text += (f" Slots: {'allocated' if slots.get('allocated') else 'none allocated'} "
@@ -329,8 +367,8 @@ def _infeasible_table(archive: Archive) -> str:
     for key in sorted(archive.data["infeasible"]):
         record = archive.data["infeasible"][key]
         rows.append([archive.space.describe(archive.space.parse_key(key)), record.get("reason"), record.get("source"),
-                     record.get("round"), record.get("count")])
-    return _table(["cell / pattern", "reason", "reported by", "round", "times"], rows) if rows else "_None._"
+                     "+".join(record.get("scope") or []) or "exact cell", record.get("round"), record.get("count")])
+    return _table(["cell / pattern", "reason", "reported by", "scope", "round", "times"], rows) if rows else "_None._"
 
 
 def _coverage(archive: Archive) -> str:
@@ -360,7 +398,7 @@ def _coverage(archive: Archive) -> str:
 def render_map(archive: Archive, profile: Any, query: str) -> str:
     axis_a, axis_b = profile.report_axes
     if hasattr(profile, "score_note"):
-        basis_note = profile.score_note()
+        basis_note = profile.score_note(archive)
     else:
         basis_note = ("Scores are self-estimated unit economics (critic-adjusted where available): a structured "
                       "brainstorming aid, not validation.")
@@ -378,7 +416,7 @@ def render_map(archive: Archive, profile: Any, query: str) -> str:
         f"## Map: {axis_a} x {axis_b}\n\n" + two_axis_view(archive, axis_a, axis_b),
         "## Where ideas are proposed vs where they work\n\n" + density_vs_score(archive),
         "## Values never proposed\n\n" + never_proposed(archive),
-        "## Promising under-explored cells (next fill-gap targets)\n\n" + _gap_table(archive),
+        "## Promising under-explored cells (next fill-gap targets)\n\n" + _gap_table(archive, config=_strategy_config(profile)),
         "## Strategy yield (all rounds)\n\n" + _stats_table(strategy_stats(archive)),
         "## Ordinal trends (current)\n\n" + _trend_table(find_trends(archive)),
         "## Trends used for extrapolation\n\n" + _used_trends(archive),
@@ -401,13 +439,22 @@ def render_round(archive: Archive, profile: Any, record: Mapping[str, Any]) -> s
                      "; ".join(x for x in (order.get("tiebreak"), order.get("note")) if x)])
     notes = record.get("batch_notes") or {}
     strategy_notes = record.get("strategy_notes") or {}
+    scoring_text = ""
+    scale = record.get("objective_scale") or {}
+    if scale:
+        scoring_text = f"Objective scale after this round: {scale.get('pct'):g} % ({_md(scale.get('source'))})."
+        update = record.get("scoring_update") or {}
+        if update and update.get("previous_objective_scale_pct") is not None:
+            scoring_text += (f" Changed from {update['previous_objective_scale_pct']:g} %: {update.get('rescored_entries', 0)} "
+                             f"entries re-scored, {len(update.get('elite_changes') or {})} elite(s) changed; scores in "
+                             "the table are after re-scoring.")
     parts = [
         f"# Explorer round {record.get('round')} ({profile.name})",
         f"Query: \"{record.get('query')}\"  \nRun: {record.get('run_id')}, seed {record.get('seed')}, "
         f"batch {len(record.get('orders', []))}",
         "## Orders and outcomes\n\n" + _table(
             ["order", "strategy", "target", "result", "score", "tier", "objective gain %", "req. coverage", "flags",
-             "title", "on target", "note"], rows),
+             "title", "on target", "note"], rows) + (f"\n\n{scoring_text}" if scoring_text else ""),
         "## Strategy yield (this round)\n\n" + _stats_table(strategy_stats(archive, rounds=[record.get("round")])),
         "## Extrapolation orders\n\n" + _used_trends(archive, rounds=[record.get("round")])
         + _extrapolation_notes(strategy_notes),
@@ -418,6 +465,8 @@ def render_round(archive: Archive, profile: Any, record: Mapping[str, Any]) -> s
             f"- Objective: {notes.get('objective_statement') or '–'}",
             f"- Baseline: {notes.get('baseline_statement') or '–'}",
             f"- Requirements: {'; '.join(r['name'] + ': ' + r.get('criterion', '') for r in notes.get('requirements') or []) or '–'}",
+            f"- Target gain: {notes['target_gain_pct']:g} %" if isinstance(notes.get("target_gain_pct"), (int, float))
+            else "- Target gain: –",
             f"- Relevant values: {'; '.join(k + ': ' + ', '.join(v) for k, v in (notes.get('relevant_values') or {}).items()) or '–'}",
             f"- Mechanism classes: {', '.join(notes.get('mechanism_classes_considered') or []) or '–'}",
             f"- Analogues: {', '.join(notes.get('analogues_considered') or []) or '–'}",
@@ -437,7 +486,9 @@ def export(archive: Archive, profile: Any, query: str) -> Dict[str, Any]:
         "requirements": archive.requirements,
         "objective_statement": archive.objective_statement,
         "baseline_statement": archive.baseline_statement,
-        "relevant_values": {axis: archive.relevant_values(axis) for axis in archive.relevance_axes()},
+        "relevant_values": {axis: archive.relevant_values(axis) for axis in archive.all_relevance_axes()},
+        "target_gain_pct": archive.target_gain_pct,
+        "objective_scale": archive.objective_scale,
         "elites": [
             {**{k: e.get(k) for k in ("id", "title", "descriptors", "cell", "score", "score_breakdown", "strategy",
                                       "round", "parent_ids", "raw_result_path")},
@@ -451,7 +502,7 @@ def export(archive: Archive, profile: Any, query: str) -> Dict[str, Any]:
         "gaps": [
             {"cell": g["cell"], "priority": g["priority"], "best_neighbour_score": g["best_neighbour_score"],
              "proposals": g["proposals"]}
-            for g in gap_candidates(archive)[:20]
+            for g in gap_candidates(archive, config=_strategy_config(profile))[:20]
         ],
         "archive": archive.data,
     }

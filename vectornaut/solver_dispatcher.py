@@ -34,6 +34,8 @@ from .solvers.parsing import (
     get_domain_bounds,
 )
 from .solvers.solvers_1d import (
+    SolverResultError,
+    SymbolicTimeoutError,
     solve_analytical,
     solve_scipy_bvp,
     solve_pytorch_pinn,
@@ -623,21 +625,7 @@ def _solve_1d(
     # one when a fallback is used); this is what solver_method reports.
     method_used = method_requested
 
-    # We will try to solve the system analytically as the absolute reference.
-    # solve_analytical checks its result and raises if it is not usable (degenerate
-    # coefficients, complex or non-finite closed form, BCs not met).
-    analytical_sol_expr = None
-    analytical_deriv = 0.0
-    analytical_error = None
-    try:
-        analytical_sol_expr, analytical_deriv = solve_analytical(
-            pde_rhs, bcs, x_sym, y_func, sym_dict, params, domain_min, domain_max
-        )
-    except Exception as e:
-        analytical_error = _short_error(e)
-        print(f"[*] SymPy Analytical solver failed: {e}. Falling back to SciPy BVP for reference.")
-
-    # We also prepare a SciPy BVP numerical solver as secondary reference/primary
+    # SciPy BVP numerical solution: secondary reference, or the primary for method 'scipy'.
     scipy_sol_func = None
     scipy_deriv = 0.0
     scipy_error = None
@@ -648,6 +636,30 @@ def _solve_1d(
     except Exception as e:
         scipy_error = _short_error(e)
         print(f"[*] SciPy BVP solver failed: {e}")
+
+    # The analytical solution is the absolute reference. solve_analytical checks its result and
+    # raises if it is not usable (degenerate coefficients, complex or non-finite closed form, BCs
+    # not met) and runs under a time budget (VECTORNAUT_SYMBOLIC_TIMEOUT_S): a symbolic solve that
+    # takes too long raises SymbolicTimeoutError and the SciPy solution is used instead. For a PINN
+    # the SciPy solution is an independent reference, so the symbolic solve is skipped when SciPy
+    # succeeded; for 'scipy' the analytical solution is the only independent reference and is kept.
+    analytical_sol_expr = None
+    analytical_deriv = 0.0
+    analytical_error = None
+    analytical_timed_out = False
+    if method_requested == "pinn" and scipy_sol_func is not None:
+        analytical_error = "skipped: SciPy BVP serves as the reference of the PINN"
+    else:
+        try:
+            analytical_sol_expr, analytical_deriv = solve_analytical(
+                pde_rhs, bcs, x_sym, y_func, sym_dict, params, domain_min, domain_max
+            )
+        except Exception as e:
+            analytical_error = _short_error(e)
+            analytical_timed_out = isinstance(e, SymbolicTimeoutError)
+            if analytical_timed_out:
+                solver_notes.append(f"analytical: {analytical_error}")
+            print(f"[*] SymPy Analytical solver failed: {e}. Falling back to SciPy BVP for reference.")
 
     # Metric spec (None = historical default: du/dx at domain_min) and baseline design.
     metric_spec, gain_note = _resolve_metric_spec(auditor_output)
@@ -670,7 +682,16 @@ def _solve_1d(
             # The reference design may have other lengths, so the domain is derived again.
             baseline_domain = get_domain_bounds(bcs, baseline_params, dependent_var=y_name)
         b_min, b_max = baseline_domain
+        # Same equation as the design: a symbolic solve that timed out for the design (or was skipped
+        # because SciPy is the PINN's reference) is not tried again for the baseline; SciPy solves it.
+        skip_symbolic = None
+        if analytical_timed_out:
+            skip_symbolic = "symbolic solve not attempted: it exceeded the time budget for the design"
+        elif method_requested == "pinn" and analytical_sol_expr is None and scipy_sol_func is not None:
+            skip_symbolic = "skipped: SciPy BVP serves as the reference of the PINN"
         try:
+            if skip_symbolic:
+                raise SolverResultError(skip_symbolic)
             baseline_expr, baseline_deriv = solve_analytical(
                 pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, b_min, b_max
             )
@@ -682,9 +703,9 @@ def _solve_1d(
                     pde_rhs, bcs, x_sym, y_func, sym_dict, baseline_params, b_min, b_max
                 )
                 baseline_callables = callables_from_bvp(baseline_interp)
-                solver_notes.append(
-                    f"baseline: analytical solution failed ({_short_error(baseline_analytical_err)}); SciPy BVP used"
-                )
+                if skip_symbolic is None or analytical_timed_out:
+                    what = skip_symbolic or f"analytical solution failed ({_short_error(baseline_analytical_err)})"
+                    solver_notes.append(f"baseline: {what}; SciPy BVP used")
             except Exception as baseline_err:
                 print(f"[*] Baseline solve failed: {baseline_err}. performance_gain_pct is reported as n/a (0).")
                 gain_note = _join_notes(gain_note, f"baseline solve failed: {baseline_err}")
@@ -830,7 +851,7 @@ def _solve_1d(
         solution_reference = [float(scipy_sol_func(pt)) for pt in sample_grid]
         reference_metric = scipy_deriv
         reference_callables = callables_from_bvp(scipy_sol_func)
-        if method_requested != "analytical":
+        if method_requested != "analytical" and not str(analytical_error or "").startswith("skipped"):
             solver_notes.append(f"reference: analytical solution failed ({analytical_error}); SciPy BVP used")
     else:
         # Fallback reference = same as primary

@@ -44,6 +44,9 @@ class EvaluationContext:
     baseline_statement: str = ""
     # Relevant values per relevance axis as named by the function analysis (not by elites).
     relevant: Dict[str, List[str]] = field(default_factory=dict)
+    # The archive's objective scale (materials: percent, with its source; None = profile default).
+    objective_scale_pct: Optional[float] = None
+    objective_scale_source: str = "default"
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -80,6 +83,9 @@ class ExplorerProfile:
     # extrapolate: marginal trends (best score per ordinal value) only within one value of these
     # axes (materials: mechanism_class). Empty = marginal over everything.
     trend_group_axes: Tuple[str, ...] = ()
+    # Soft relevance axes (materials: mechanism_class): fill_gap and diversify only use values named
+    # by the function analysis (or held by the top elites); explore reaches the others at a low weight.
+    soft_relevance_axes: Tuple[str, ...] = ()
 
     # ---- request analysis -----------------------------------------------
     def preferred_values(self, query: str, requirements: Sequence[Mapping[str, Any]]) -> Dict[str, Tuple[List[str], str]]:
@@ -88,6 +94,10 @@ class ExplorerProfile:
 
     def migrate_archive(self, archive: Any, from_version: int) -> Optional[Dict[str, Any]]:
         """Adapts an older, vocabulary-compatible archive after loading (e.g. re-scoring); returns a summary."""
+        return None
+
+    def update_scoring(self, archive: Any, round_no: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """Recomputes archive-level scoring parameters (materials: the objective scale) and re-scores; summary or None."""
         return None
 
     # ---- prompt text --------------------------------------------------

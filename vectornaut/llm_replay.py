@@ -15,7 +15,10 @@ is answered, the pipeline result is written to <session>/result.json and the Mar
 report to <session>/report.md.
 
 Runtime data (history, saved models, generated scripts) goes to <session>/data, so
-reruns reuse the same cached models and stay reproducible.
+reruns reuse the same cached models and stay reproducible. Deterministic analytical (SymPy)
+solves are memoised in <session>/solver_memo (keyed by equation, boundary conditions, parameter
+values, domain and solver code; see vectornaut.solvers.solvers_1d.solve_analytical), so a rerun
+does not repeat expensive symbolic solves or symbolic timeouts; --no-solver-memo turns it off.
 
 The idea-space explorer (vectornaut/explorer) can be driven the same way:
 
@@ -139,7 +142,15 @@ class ReplayClient:
         raise NeedResponse(index, request_path)
 
 
-def run_session(session_dir: str, query: str, epochs: int, rounds: int) -> Dict[str, Any]:
+SOLVER_MEMO_ENV = "VECTORNAUT_SOLVER_MEMO_DIR"
+
+
+def solver_memo_env(session_dir: str, enabled: bool = True) -> Dict[str, str]:
+    """Environment for the solver memo of a replay session (<session>/solver_memo), or {} when disabled."""
+    return {SOLVER_MEMO_ENV: os.path.join(session_dir, "solver_memo")} if enabled else {}
+
+
+def run_session(session_dir: str, query: str, epochs: int, rounds: int, solver_memo: bool = True) -> Dict[str, Any]:
     session_dir = os.path.abspath(session_dir)
     os.makedirs(session_dir, exist_ok=True)
     client = ReplayClient(session_dir)
@@ -147,6 +158,7 @@ def run_session(session_dir: str, query: str, epochs: int, rounds: int) -> Dict[
         "VECTORNAUT_DATA_DIR": os.path.join(session_dir, "data"),
         # The pipeline only runs live when a key is present; the replay client never uses it.
         "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY") or "replay-session",
+        **solver_memo_env(session_dir, solver_memo),
     }
 
     from vectornaut.pipeline import PipelineRunRequest, run_pipeline
@@ -197,8 +209,12 @@ def run_explorer_session(
     epochs: int = 40,
     opt_rounds: int = 1,
     use_critic: bool = True,
+    solver_memo: bool = True,
 ) -> Dict[str, Any]:
-    """Explorer run whose model calls (generator, critic, pipeline stages) are answered from the session."""
+    """
+    Explorer run whose model calls (generator, critic, pipeline stages) are answered from the session.
+    ``solver_memo``: memoise analytical solves in <session>/solver_memo (kept across reruns).
+    """
     session_dir = os.path.abspath(session_dir)
     os.makedirs(session_dir, exist_ok=True)
     client = ReplayClient(session_dir)
@@ -209,6 +225,7 @@ def run_explorer_session(
     env = {
         "VECTORNAUT_DATA_DIR": data_dir,
         "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY") or "replay-session",
+        **solver_memo_env(session_dir, solver_memo),
     }
 
     from vectornaut.explorer.profiles import get_profile
@@ -260,6 +277,8 @@ def main(argv=None) -> int:
     explorer.add_argument("--strategy-weights", default=None)
     explorer.add_argument("--opt-rounds", type=int, default=1, help="Pipeline optimization rounds per materials candidate")
     explorer.add_argument("--no-critic", action="store_true", help="Business profile: skip the critic call")
+    parser.add_argument("--no-solver-memo", action="store_true",
+                        help="Do not memoise analytical solves in <session>/solver_memo")
     args = parser.parse_args(argv)
 
     if args.explorer:
@@ -268,10 +287,11 @@ def main(argv=None) -> int:
         status = run_explorer_session(
             args.session, args.profile, args.query, args.rounds, args.batch, seed=args.seed,
             weights=args.strategy_weights, epochs=args.epochs or 40, opt_rounds=args.opt_rounds,
-            use_critic=not args.no_critic,
+            use_critic=not args.no_critic, solver_memo=not args.no_solver_memo,
         )
     else:
-        status = run_session(args.session, args.query, args.epochs or 200, args.rounds)
+        status = run_session(args.session, args.query, args.epochs or 200, args.rounds,
+                             solver_memo=not args.no_solver_memo)
     print(json.dumps(status, ensure_ascii=False))
     return 0 if status["status"] in ("complete", "rejected", "needs_response") else 1
 

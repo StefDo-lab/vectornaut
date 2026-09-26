@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from vectornaut.config import get_client, get_model_name, get_thinking_config
-from vectornaut.explorer.archive import Archive
+from vectornaut.explorer.archive import Archive, normalize_priority
 from vectornaut.explorer.descriptors import DescriptorError, normalize_token
 from vectornaut.explorer.profiles.base import ExplorerProfile
 
@@ -163,14 +163,18 @@ def build_prompt(profile: ExplorerProfile, query: str, orders: Sequence[Mapping[
     if requirements:
         requirements_text = (
             "REQUIREMENTS OF THE REQUEST (fixed for this map; a critic rates every candidate against each of them,\n"
-            "and requirement coverage is a large share of the score; repeat them in `requirements`):\n"
-            + "\n".join(f"- {r['name']}: {r['criterion']}" for r in requirements)
+            "and requirement coverage is a large share of the score; a candidate that fails a [must] requirement\n"
+            "loses up to half of its score; repeat them in `requirements`):\n"
+            + "\n".join(f"- {r['name']} [{normalize_priority(r.get('priority'))}]: {r['criterion']}" for r in requirements)
         )
     else:
         requirements_text = (
             "REQUIREMENTS OF THE REQUEST: not extracted yet. In step 1, list every explicit or clearly implied\n"
-            "requirement in `requirements` (3-6 items: short snake_case name + one-line criterion). A critic\n"
-            "will rate every candidate against them, and coverage is a large share of the score."
+            "requirement in `requirements` (3-6 items: short snake_case name + one-line criterion + priority).\n"
+            "priority 'must' for what the request states explicitly (e.g. 'without', 'at least', 'bionic',\n"
+            "'ohne', 'mindestens', 'bionisch'), 'nice' for implied or desirable properties (e.g. cost,\n"
+            "practicality). A critic will rate every candidate against them; coverage is a large share of the\n"
+            "score, and failing a 'must' requirement costs up to half of it."
         )
     analysis_text = profile.analysis_instructions(archive)
 
@@ -218,6 +222,10 @@ RULES
   violate a physical law, or be commercially impossible by construction). Then give a
   one-sentence infeasibility_reason naming the law or constraint and leave the concept
   fields empty. Do not use it for concepts that are merely difficult or unusual.
+  infeasibility_scope (optional): if the impossibility depends only on some axes (e.g. a
+  mechanism that cannot work at this length scale, whatever the origin or quantity), name
+  them (e.g. ["mechanism_class", "length_scale"], at least two); every cell with these values
+  is then closed. Leave it empty if only this exact cell is impossible.
 - back_of_envelope: a rough estimate of the main benefit with the formula and the numbers
   you used, the resulting value and its unit.
 - main_risk: the single most likely reason the concept fails.
@@ -338,12 +346,16 @@ def check_batch(profile: ExplorerProfile, orders: Sequence[Mapping[str, Any]], b
         "objective_statement": " ".join(str(getattr(batch, "objective_statement", "") or "").split()),
         "baseline_statement": " ".join(str(getattr(batch, "baseline_statement", "") or "").split()),
         "requirements": [
-            {"name": str(getattr(r, "name", "") or "").strip(), "criterion": str(getattr(r, "criterion", "") or "").strip()}
+            {"name": str(getattr(r, "name", "") or "").strip(), "criterion": str(getattr(r, "criterion", "") or "").strip(),
+             "priority": normalize_priority(getattr(r, "priority", None))}
             for r in (getattr(batch, "requirements", None) or []) if str(getattr(r, "name", "") or "").strip()
         ],
         "mechanism_classes_considered": list(getattr(batch, "mechanism_classes_considered", []) or []),
         "analogues_considered": list(getattr(batch, "analogues_considered", []) or []),
     }
+    target = getattr(batch, "target_gain_pct", None)
+    if isinstance(target, (int, float)) and not isinstance(target, bool) and math.isfinite(float(target)):
+        notes["target_gain_pct"] = float(target)
     relevant, dropped = profile.relevant_values_from_batch(batch)
     if relevant or dropped:
         notes["relevant_values"] = relevant

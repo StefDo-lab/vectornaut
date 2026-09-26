@@ -1,3 +1,9 @@
+import hashlib
+import json
+import math
+import multiprocessing
+import os
+import pickle
 import re
 import sympy as sp
 from sympy.parsing.sympy_parser import standard_transformations, convert_xor
@@ -255,7 +261,7 @@ def _solve_analytical_once(
     return final_sol, checked_residuals
 
 
-def solve_analytical(
+def _solve_analytical_impl(
     pde_rhs: sp.Expr,
     bcs_list: List[str],
     x: sp.Symbol,
@@ -301,6 +307,201 @@ def solve_analytical(
         except Exception as exc:
             errors.append(f"{label}: {type(exc).__name__}: {exc}")
     raise SolverResultError("analytical solution not usable (" + "; ".join(errors) + ")")
+
+# ------------------------------------------
+# Time budget and memo for the symbolic solve
+# ------------------------------------------
+# sp.dsolve / sp.solve can run for many minutes on innocent-looking problems (the recorded case: an
+# exponential source with two Robin boundary conditions, ~20 min). SymPy cannot be interrupted from
+# another thread, so the symbolic solve runs in a worker process that is terminated when the budget
+# is exceeded; SymbolicTimeoutError (a SolverResultError) then lets the caller fall back to SciPy.
+
+SYMBOLIC_TIMEOUT_ENV = "VECTORNAUT_SYMBOLIC_TIMEOUT_S"
+DEFAULT_SYMBOLIC_TIMEOUT_S = 20.0
+# Opt-in on-disk memo of analytical results (set by llm_replay to <session>/solver_memo).
+SOLVER_MEMO_ENV = "VECTORNAUT_SOLVER_MEMO_DIR"
+
+
+class SymbolicTimeoutError(SolverResultError):
+    """The symbolic (SymPy) solve exceeded its time budget and was terminated."""
+
+
+def symbolic_timeout_s() -> float:
+    """Time budget of one symbolic solve in seconds (env VECTORNAUT_SYMBOLIC_TIMEOUT_S, default 20; <= 0: no limit)."""
+    raw = os.environ.get(SYMBOLIC_TIMEOUT_ENV)
+    if raw is None or not str(raw).strip():
+        return DEFAULT_SYMBOLIC_TIMEOUT_S
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_SYMBOLIC_TIMEOUT_S
+    return value if math.isfinite(value) and value > 0 else 0.0
+
+
+def _analytical_worker(conn: Any, args: Tuple[Any, ...]) -> None:
+    """Runs in the worker process: solves and sends ('ok', result) or ('err', exception)."""
+    try:
+        payload = ("ok", _solve_analytical_impl(*args))
+    except BaseException as exc:  # sent back and re-raised in the parent
+        payload = ("err", exc)
+    try:
+        conn.send(payload)
+    except Exception as send_err:
+        conn.send(("err", SolverResultError(f"analytical result could not be returned from the worker "
+                                            f"({type(send_err).__name__}: {send_err})")))
+    finally:
+        conn.close()
+
+
+def _mp_context():
+    methods = multiprocessing.get_all_start_methods()
+    # fork: the worker inherits the parsed expressions (nothing to pickle on the way in, no re-import).
+    return multiprocessing.get_context("fork" if "fork" in methods else "spawn")
+
+
+def _run_with_budget(args: Tuple[Any, ...], budget: float) -> Tuple[sp.Expr, float]:
+    """_solve_analytical_impl(*args) in a worker process, terminated after ``budget`` seconds."""
+    ctx = _mp_context()
+    receiver, sender = ctx.Pipe(duplex=False)
+    proc = ctx.Process(target=_analytical_worker, args=(sender, args), daemon=True)
+    try:
+        proc.start()
+    except (AssertionError, OSError, ValueError) as exc:
+        # e.g. inside a daemonic process, which may not have children: solve in-process, unbounded.
+        receiver.close()
+        sender.close()
+        print(f"[*] Symbolic time budget unavailable ({exc}); solving in-process.")
+        return _solve_analytical_impl(*args)
+    sender.close()
+    kind, value = None, None
+    try:
+        if receiver.poll(budget):
+            kind, value = receiver.recv()
+    except (EOFError, OSError):
+        kind = "died"
+    finally:
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(2.0)
+            if proc.is_alive():
+                proc.kill()
+        proc.join()
+        receiver.close()
+    if kind is None:
+        raise SymbolicTimeoutError(f"symbolic solve exceeded the time budget of {budget:g} s ({SYMBOLIC_TIMEOUT_ENV})")
+    if kind == "died":
+        raise SolverResultError(f"symbolic solve worker exited without a result (exit code {proc.exitcode})")
+    if kind == "err":
+        raise value
+    return value
+
+
+_CODE_VERSION: Optional[str] = None
+
+
+def _code_version() -> str:
+    """Hash of this module's source and the SymPy version: memo entries of other solver code are not reused."""
+    global _CODE_VERSION
+    if _CODE_VERSION is None:
+        digest = hashlib.sha256(sp.__version__.encode("utf-8"))
+        try:
+            with open(__file__, "rb") as f:
+                digest.update(f.read())
+        except OSError:
+            pass
+        _CODE_VERSION = digest.hexdigest()[:16]
+    return _CODE_VERSION
+
+
+def solver_memo_dir() -> Optional[str]:
+    """The memo folder (env VECTORNAUT_SOLVER_MEMO_DIR) or None when the memo is off (default)."""
+    path = (os.environ.get(SOLVER_MEMO_ENV) or "").strip()
+    return path or None
+
+
+def _memo_key(kind: str, pde_rhs: sp.Expr, bcs_list: List[str], x: sp.Symbol, y_func: Any,
+              sym_dict: Dict[str, sp.Symbol], params: Dict[str, float], domain_min: float, domain_max: float) -> str:
+    def number(value: Any) -> str:
+        try:
+            return repr(float(value))
+        except (TypeError, ValueError):
+            return repr(value)
+
+    parts = [kind, _code_version(), sp.srepr(pde_rhs), [str(b) for b in bcs_list], str(x), str(y_func),
+             sorted((str(k), sp.srepr(v)) for k, v in sym_dict.items()),
+             sorted((str(k), number(v)) for k, v in params.items()), number(domain_min), number(domain_max)]
+    return hashlib.sha256(json.dumps(parts, ensure_ascii=True).encode("utf-8")).hexdigest()
+
+
+def _memo_read(path: str) -> Optional[Tuple[str, Any]]:
+    try:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    except Exception:
+        return None
+
+
+def _memo_write(path: str, record: Tuple[str, Any]) -> None:
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = f"{path}.{os.getpid()}.tmp"
+        with open(tmp, "wb") as f:
+            pickle.dump(record, f)
+        os.replace(tmp, path)
+    except Exception:
+        pass
+
+
+def solve_analytical(
+    pde_rhs: sp.Expr,
+    bcs_list: List[str],
+    x: sp.Symbol,
+    y_func: sp.Function,
+    sym_dict: Dict[str, sp.Symbol],
+    params: Dict[str, float],
+    domain_min: float,
+    domain_max: float
+) -> Tuple[sp.Expr, float]:
+    """
+    Analytical solution of the 1D BVP (see ``_solve_analytical_impl``) under a time budget
+    (``symbolic_timeout_s``, env VECTORNAUT_SYMBOLIC_TIMEOUT_S, default 20 s): the symbolic solve runs
+    in a worker process that is terminated when the budget is exceeded, raising SymbolicTimeoutError
+    (a SolverResultError, so the caller's SciPy fallback runs). With VECTORNAUT_SOLVER_MEMO_DIR set,
+    results, deterministic failures and timeouts are memoised on disk, keyed by the equation, BCs,
+    symbols, parameter values, domain, SymPy version and solver source; a memoised timeout is reused
+    only while the budget is not larger than the one that timed out.
+    """
+    args = (pde_rhs, bcs_list, x, y_func, sym_dict, params, domain_min, domain_max)
+    budget = symbolic_timeout_s()
+    memo = solver_memo_dir()
+    path = None
+    if memo:
+        path = os.path.join(memo, "analytical",
+                            _memo_key("analytical", pde_rhs, bcs_list, x, y_func, sym_dict, params, domain_min,
+                                      domain_max) + ".pkl")
+        record = _memo_read(path)
+        if record is not None:
+            kind, value = record
+            if kind == "ok":
+                return value
+            if kind == "err" and isinstance(value, BaseException):
+                raise value
+            if kind == "timeout" and budget > 0 and budget <= float(value):
+                raise SymbolicTimeoutError(f"symbolic solve exceeded the time budget of {float(value):g} s "
+                                           f"({SYMBOLIC_TIMEOUT_ENV}; memoised)")
+    try:
+        result = _run_with_budget(args, budget) if budget > 0 else _solve_analytical_impl(*args)
+    except SymbolicTimeoutError:
+        if path:
+            _memo_write(path, ("timeout", budget))
+        raise
+    except SolverResultError as exc:
+        if path:
+            _memo_write(path, ("err", exc))
+        raise
+    if path:
+        _memo_write(path, ("ok", result))
+    return result
 
 
 # ==========================================
