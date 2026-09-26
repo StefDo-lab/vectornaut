@@ -6,7 +6,9 @@ import random
 import tempfile
 import unittest
 
-from vectornaut.explorer.archive import EVALUATED, FAILED, IMPROVED, NEW_ELITE, NOT_BETTER, Archive
+from vectornaut.explorer.archive import (
+    ARCHIVE_VERSION, EVALUATED, FAILED, IMPROVED, INVALID, NEW_ELITE, NOT_BETTER, Archive, ArchiveCompatibilityError,
+)
 from vectornaut.explorer.descriptors import NOMINAL, ORDINAL, Axis, DescriptorError, DescriptorSpace
 from vectornaut.explorer.profiles.business import BUSINESS_SPACE
 from vectornaut.explorer.profiles.materials import MATERIALS_SPACE
@@ -208,6 +210,55 @@ class ArchiveTest(ArchiveTestCase):
         loaded = Archive.load("test", SPACE, path=self.archive.path)
         self.assertEqual(loaded.requirements, [])
         self.assertEqual(loaded.relevance_axes(), [])
+
+    def _rewrite(self, **changes):
+        self.archive.save()
+        with open(self.archive.path, encoding="utf-8") as f:
+            data = json.load(f)
+        data.update(changes)
+        with open(self.archive.path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+    def test_older_archive_with_the_same_vocabulary_is_migrated(self):
+        self.add(cell("a", "s1", "x"), 5.0)
+        self._rewrite(version=2)
+        loaded = Archive.load("test", SPACE, path=self.archive.path)
+        self.assertEqual(loaded.data["version"], ARCHIVE_VERSION)
+        self.assertEqual(loaded.data["migrated_from"], 2)
+        self.assertEqual(len(loaded.elites), 1)
+        self.assertEqual(loaded.objective_statement, "")
+
+    def test_archive_with_another_vocabulary_or_a_newer_version_is_refused(self):
+        self.add(cell("a", "s1", "x"), 5.0)
+        self._rewrite(version=ARCHIVE_VERSION + 1)
+        with self.assertRaises(ArchiveCompatibilityError) as ctx:
+            Archive.load("test", SPACE, path=self.archive.path)
+        self.assertIn("newer than this explorer", str(ctx.exception))
+        # A version-2 materials archive: governing_quantity had no fouling values yet.
+        old_axes = MATERIALS_SPACE.to_dict()
+        old_axes[3] = dict(old_axes[3], values=["wall_shear", "flow_rate", "heat_flux", "temperature", "deflection",
+                                                "stress", "field_strength", "other"])
+        path = os.path.join(self._tmp.name, "materials.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"version": 2, "profile": "materials", "axes": old_axes, "entries": {}, "elites": {}}, f)
+        with self.assertRaises(ArchiveCompatibilityError) as ctx:
+            Archive.load("materials", MATERIALS_SPACE, path=path)
+        message = str(ctx.exception)
+        for text in ("version 2", "governing_quantity: new values fouling_adhesion, degradation_rate",
+                     "not comparable", "--archive NAME"):
+            self.assertIn(text, message)
+        self.assertIsInstance(ctx.exception, ValueError)
+
+    def test_source_uses_count_sources_not_context_neighbours(self):
+        a = self.add(cell("a", "s1", "x"), 50.0)
+        b = self.add(cell("b", "s1", "x"), 40.0)
+        c = self.add(cell("c", "s1", "x"), 30.0)
+        self.add(cell("a", "s2", "x"), 1.0, strategy="fill_gap", parents=[a["id"], b["id"]])
+        self.add(cell("a", "s3", "x"), 1.0, strategy="combine", parents=[b["id"], c["id"]])
+        self.add(cell("a", "s4", "x"), 1.0, strategy="refine", parents=[c["id"]])
+        self.assertEqual(self.archive.source_uses(), {a["id"]: 1, b["id"]: 1, c["id"]: 1})
+        batch = [{"strategy": "diversify", "parent_ids": [a["id"]]}, {"strategy": "refine", "parent_ids": [a["id"]]}]
+        self.assertEqual(st.source_uses(self.archive, batch)[a["id"]], 2)
 
     def test_raw_result_is_stored_relative_to_the_archive(self):
         entry = self.archive.add_entry(
@@ -438,11 +489,16 @@ class CombineRefineExploreTest(ArchiveTestCase):
     def test_explore_picks_unvisited_feasible_cells(self):
         self.add(cell("a", "s1", "x"), 5.0)
         self.archive.mark_infeasible({"mech": "b"}, "no", entry_id=None, round_no=1, source="test")
-        orders = st.explore(self.archive, random.Random(1), 100, set(), st.StrategyConfig())
+        orders = st.explore(self.archive, random.Random(1), 100, set(), st.StrategyConfig(explore_max_distance=0))
         targets = [o["target"] for o in orders]
         self.assertEqual(len(targets), 3 * 5 * 2 - 1 - 10)
         self.assertNotIn(cell("a", "s1", "x"), targets)
         self.assertFalse(any(t["mech"] == "b" for t in targets))
+        # By default only cells within distance 3 of a feasible entry.
+        near = st.explore(self.archive, random.Random(1), 100, set(), st.StrategyConfig())
+        self.assertTrue(near)
+        self.assertLess(len(near), len(targets))
+        self.assertTrue(all(SPACE.distance(o["target"], cell("a", "s1", "x")) <= 3 for o in near))
 
     def test_explore_only_uses_relevant_values_of_relevance_axes(self):
         self.archive.declare_relevance_axes(["origin"])
@@ -483,6 +539,155 @@ class CombineRefineExploreTest(ArchiveTestCase):
         self.assertEqual(len(keys), len(set(keys)))
         self.assertNotIn(SPACE.cell_key(cell("a", "s3", "y")), keys)
         self.assertFalse(set(keys) & set(self.archive.elites))
+
+
+COMPAT = st.StrategyConfig(compatibility_axes=("mech", "size"))
+
+
+class CompatibilityRotationTest(ArchiveTestCase):
+    def _no_source(self, parent_id, times):
+        """Records that an elite already served as a source (entries without a cell change no statistics)."""
+        for _ in range(times):
+            self.archive.add_entry(round_no=1, run_id="t", title="x", concept={}, descriptors=None, status=INVALID,
+                                   order={"order_id": "o", "strategy": "fill_gap", "target": {},
+                                          "parent_ids": [parent_id]})
+
+    def test_combine_keeps_a_proven_mechanism_scale_pair(self):
+        # The recorded failure: a mm-scale mechanism combined with nm (distance 4 on the size axis alone).
+        a = self.add(cell("a", "s1", "x"), 50.0)
+        b = self.add(cell("c", "s5", "y"), 40.0)
+        for seed in range(10):
+            orders = st.combine(self.archive, random.Random(seed), 1, set(), COMPAT)
+            self.assertEqual(len(orders), 1)
+            target = orders[0]["target"]
+            self.assertIn((target["mech"], target["size"]), {("a", "s1"), ("c", "s5")})
+            self.assertIn("feasible elsewhere", orders[0]["context"]["compatibility"])
+        # Without compatibility axes (e.g. business) any mixture that is not infeasible may be chosen.
+        mixed = {(o["target"]["mech"], o["target"]["size"])
+                 for seed in range(20) for o in st.combine(self.archive, random.Random(seed), 1, set(), st.StrategyConfig())}
+        self.assertTrue(mixed - {("a", "s1"), ("c", "s5")})
+        self.assertEqual(sorted(orders[0]["parent_ids"]), sorted([a["id"], b["id"]]))
+
+    def test_combine_accepts_unproven_pairs_close_to_both_parents_but_not_infeasible_ones(self):
+        self.add(cell("a", "s2", "x"), 50.0)
+        self.add(cell("b", "s3", "y"), 40.0)
+        targets = {o["target_key"] for seed in range(20) for o in st.combine(self.archive, random.Random(seed), 1, set(), COMPAT)}
+        pairs = {(SPACE.parse_key(k)["mech"], SPACE.parse_key(k)["size"]) for k in targets}
+        self.assertTrue(pairs & {("a", "s3"), ("b", "s2")})              # unproven, within distance 2 of both
+        self.archive.mark_infeasible({"mech": "a", "size": "s3"}, "no", entry_id=None, round_no=1, source="test")
+        self.archive.mark_infeasible(cell("b", "s2", "x"), "no", entry_id=None, round_no=1, source="test")
+        for seed in range(20):
+            for order in st.combine(self.archive, random.Random(seed), 1, set(), COMPAT):
+                pair = (order["target"]["mech"], order["target"]["size"])
+                self.assertNotIn(pair, {("a", "s3"), ("b", "s2")})
+
+    def test_explore_prefers_cells_next_to_feasible_regions(self):
+        self.add(cell("a", "s1", "x"), 50.0)
+        self.archive.add_entry(round_no=1, run_id="t", title="bad", concept={}, descriptors=cell("c", "s5", "y"),
+                               status=FAILED, order={"order_id": "o", "strategy": "seed", "target": {}})
+
+        def far_share(config):
+            far = total = 0
+            for seed in range(40):
+                for order in st.explore(self.archive, random.Random(seed), 3, set(), config):
+                    total += 1
+                    far += SPACE.distance(order["target"], cell("a", "s1", "x")) >= 3
+            return far / total
+
+        biased = far_share(st.StrategyConfig())
+        flat = far_share(st.StrategyConfig(explore_distance_decay=0.0))
+        self.assertLess(biased, flat)
+        order = st.explore(self.archive, random.Random(0), 1, set(), st.StrategyConfig())[0]
+        self.assertEqual(order["context"]["nearest_feasible"]["distance"],
+                         SPACE.distance(order["target"], cell("a", "s1", "x")))
+        self.assertIn("nearest concept that worked", order["rationale"])
+
+    def test_explore_avoids_pairs_that_were_only_infeasible(self):
+        self.add(cell("a", "s1", "x"), 50.0)
+        self.archive.mark_infeasible(cell("b", "s1", "x"), "no", entry_id=None, round_no=1, source="test")
+        config = st.StrategyConfig(compatibility_axes=("mech", "size"), explore_distance_decay=0.0,
+                                   explore_infeasible_pair_factor=0.0)
+        for seed in range(10):
+            for order in st.explore(self.archive, random.Random(seed), 5, set(), config):
+                self.assertNotEqual((order["target"]["mech"], order["target"]["size"]), ("b", "s1"))
+
+    def _two_elite_archive(self):
+        top = self.add(cell("a", "s3", "x"), 60.0)
+        low = self.add(cell("c", "s1", "y"), 55.0)
+        return top, low
+
+    def test_fill_gap_rotates_source_elites_within_a_batch(self):
+        top, low = self._two_elite_archive()
+
+        def sources(penalty):
+            orders = st.fill_gap(self.archive, random.Random(0), 4, set(), st.StrategyConfig(source_penalty=penalty))
+            return [o["parent_ids"][0] for o in orders]
+
+        self.assertEqual(sources(0.0).count(top["id"]), 3)
+        rotated = sources(0.3)
+        self.assertEqual((rotated.count(top["id"]), rotated.count(low["id"])), (2, 2))
+
+    def test_fill_gap_penalises_elites_that_already_served_as_source(self):
+        top, low = self._two_elite_archive()
+        first = st.fill_gap(self.archive, random.Random(0), 1, set(), st.StrategyConfig())[0]
+        self.assertEqual(first["parent_ids"][0], top["id"])
+        self._no_source(top["id"], 3)
+        first = st.fill_gap(self.archive, random.Random(0), 1, set(), st.StrategyConfig())[0]
+        self.assertEqual(first["parent_ids"][0], low["id"])
+        self.assertEqual(first["context"]["source_uses"], 0)
+        gap = st.gap_candidates(self.archive)[0]
+        self.assertIn("source_uses", gap)
+        # The batch counts too: a fallback call sees the sources of orders already scheduled.
+        batch = [{"strategy": "fill_gap", "parent_ids": [low["id"]]}] * 3
+        first = st.fill_gap(self.archive, random.Random(0), 1, set(), st.StrategyConfig(), batch=batch)[0]
+        self.assertEqual(first["parent_ids"][0], top["id"])
+
+    def test_diversify_rotates_its_source_elite(self):
+        best = self.add(cell("a", "s3", "x"), 60.0)
+        second = self.add(cell("b", "s3", "x"), 58.0)
+        self.add(cell("c", "s1", "x"), 30.0)
+        self.assertEqual(st.diversify(self.archive, random.Random(0), 1, set(), st.StrategyConfig())[0]["parent_ids"],
+                         [best["id"]])
+        self._no_source(best["id"], 2)
+        order = st.diversify(self.archive, random.Random(0), 1, set(), st.StrategyConfig())[0]
+        self.assertEqual(order["parent_ids"], [second["id"]])
+        self.assertEqual(order["target"], cell("b", "s3", "y"))
+
+    def test_orders_that_change_an_origin_axis_demand_a_real_origin(self):
+        self.add(cell("a", "s3", "x"), 60.0)
+        self.add(cell("b", "s3", "x"), 40.0)
+        self.add(cell("c", "s1", "x"), 30.0)          # every proposal has origin=x: the least diverse axis
+        config = st.StrategyConfig(origin_axes=("origin",))
+        order = st.diversify(self.archive, random.Random(0), 1, set(), config)[0]
+        self.assertEqual(order["context"]["axis"], "origin")
+        self.assertIn("must really come from a origin=y system", order["rationale"])
+        self.assertIn("relabelled analogue", order["rationale"])
+        gaps = st.fill_gap(self.archive, random.Random(0), 10, set(), config)
+        by_axis = {o["context"]["neighbours"][0]["differs_in"]: o for o in gaps}
+        self.assertIn("relabelled analogue", by_axis["origin"]["rationale"])
+        self.assertNotIn("relabelled analogue", by_axis["size"]["rationale"])
+        plain = st.diversify(self.archive, random.Random(0), 1, set(), st.StrategyConfig())[0]
+        self.assertNotIn("relabelled analogue", plain["rationale"])
+
+    def test_schedule_reports_why_extrapolation_did_not_fire(self):
+        diagnostics = {}
+        st.schedule(self.archive, 3, random.Random(0), round_no=1, diagnostics=diagnostics)
+        self.assertIn("no trend could be fitted", diagnostics["extrapolate"]["summary"])
+        # The recorded case: three marginal points with r2 = 0.20.
+        for size, score in (("s1", 14.9), ("s3", 4.6), ("s5", 27.7)):
+            self.add(cell("a", size, "x"), score, breakdown={"evidence_tier": "simulated", "evidence_rank": 2})
+        diagnostics = {}
+        orders = st.schedule(self.archive, 6, random.Random(0), round_no=2, diagnostics=diagnostics)
+        info = diagnostics["extrapolate"]
+        self.assertNotIn(st.EXTRAPOLATE, {o["strategy"] for o in orders})
+        self.assertIn("poor_fit", info["summary"])
+        row = next(t for t in info["trends"] if t["status"] == "poor_fit")
+        self.assertIn("< 0.5", row["reason"])
+        self.assertEqual(diagnostics["produced"].get(st.EXTRAPOLATE, 0), 0)
+        self.assertEqual(sum(diagnostics["produced"].values()), 6)
+        # Diagnostics do not change the schedule.
+        again = st.schedule(self.archive, 6, random.Random(0), round_no=2)
+        self.assertEqual(json.dumps(again, sort_keys=True), json.dumps(orders, sort_keys=True))
 
 
 class SchedulerTest(ArchiveTestCase):

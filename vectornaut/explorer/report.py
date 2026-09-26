@@ -98,17 +98,34 @@ def _elites_table(archive: Archive, limit: Optional[int] = None) -> str:
         rows = []
         for i, e in enumerate(elites, 1):
             b = e.get("score_breakdown") or {}
-            rows.append([i, _fmt_score(e.get("score")), b.get("evidence_tier") or "–",
-                         _fmt_num(b.get("requirement_coverage")), _fmt_num(b.get("used_gain_pct"), 1),
-                         _fmt_num(b.get("simulated_gain_pct"), 1), _fmt_num(b.get("critic_plausible_gain_pct"), 1),
+            parts = b.get("contributions") or {}
+            split = " / ".join(_fmt_num(parts.get(k), 1) for k in ("objective", "simulated", "requirements")) \
+                if parts else "–"
+            rows.append([i, _fmt_score(e.get("score")), b.get("evidence_tier") or "–", split,
+                         _fmt_num(b.get("objective_gain_pct"), 1), _fmt_num(b.get("simulated_benefit_used_pct"), 1),
+                         _fmt_num(b.get("simulated_gain_pct"), 1), b.get("simulated_quantity") or "–",
+                         _fmt_num(b.get("requirement_coverage")),
                          _flags(e), e.get("title"), space.describe(e.get("descriptors") or {}), e.get("strategy"),
                          e.get("round"), e["id"]])
-        return _table(["#", "score", "tier", "req. coverage", "gain used %", "simulated %", "critic %", "flags",
-                       "title", "cell", "strategy", "round", "entry"], rows)
+        return _table(["#", "score", "tier", "points obj / sim / req", "objective gain %", "sim. benefit used %",
+                       "simulated %", "simulated quantity", "req. coverage", "flags", "title", "cell", "strategy",
+                       "round", "entry"], rows)
     rows = [[i, _fmt_score(e.get("score")), (e.get("score_breakdown") or {}).get("basis", ""), e.get("title"),
              space.describe(e.get("descriptors") or {}), e.get("strategy"), e.get("round"), e["id"]]
             for i, e in enumerate(elites, 1)]
     return _table(["#", "score", "basis", "title", "cell", "strategy", "round", "entry"], rows)
+
+
+def _framing_section(archive: Archive, profile: Any) -> str:
+    objective, baseline = archive.objective_statement, archive.baseline_statement
+    if not objective and not baseline:
+        return ""
+    round_no = archive.request_analysis.get("framing_round")
+    lines = [f"Objective and conventional baseline from the function analysis (round {round_no}); fixed for this map.\n",
+             f"- **Objective**: {_md(objective or '–')}", f"- **Baseline**: {_md(baseline or '–')}"]
+    warnings = profile.framing_warnings(archive) if hasattr(profile, "framing_warnings") else []
+    lines.extend(f"- Warning: {_md(w)}" for w in warnings)
+    return "\n".join(lines) + "\n\n"
 
 
 def _requirements_section(archive: Archive) -> str:
@@ -243,7 +260,7 @@ def _gap_table(archive: Archive, limit: int = 8) -> str:
     if not rows:
         return "_No gaps next to elites._"
     return _table(["empty cell", "priority", "best neighbour", "elite neighbours", "proposals", "under-explored",
-                   "step from best"], rows)
+                   "step from source (rotation-adjusted)"], rows)
 
 
 def _trend_table(trends: Sequence[Mapping[str, Any]]) -> str:
@@ -276,6 +293,22 @@ def _used_trends(archive: Archive, rounds: Optional[Iterable[int]] = None) -> st
     if not rows:
         return "_No extrapolation orders yet._"
     return _table(["round", "order", "axis", "mode", "step", "slope/step", "result", "score"], rows)
+
+
+def _extrapolation_notes(strategy_notes: Mapping[str, Any]) -> str:
+    """Why extrapolation did or did not fire in a round (from schedule diagnostics)."""
+    info = strategy_notes.get("extrapolate")
+    if not info:
+        return ""
+    planned = (strategy_notes.get("planned") or {}).get("extrapolate", 0)
+    produced = (strategy_notes.get("produced") or {}).get("extrapolate", 0)
+    text = f"\n\nExtrapolation: {produced} of {planned} planned slot(s) used; {_md(info.get('summary'))}."
+    rows = [[t["axis"], t["mode"], ", ".join(f"{k}={v}" for k, v in (t.get("fixed") or {}).items()) or "(marginal)",
+             t["points"], f"{t['slope']:+.2f}", f"{t['r2']:.2f}", t["status"], t["reason"]]
+            for t in info.get("trends") or []]
+    if rows:
+        text += "\n\n" + _table(["axis", "mode", "held fixed", "points", "slope/step", "r2", "status", "why"], rows)
+    return text
 
 
 def _infeasible_table(archive: Archive) -> str:
@@ -313,19 +346,17 @@ def _coverage(archive: Archive) -> str:
 
 def render_map(archive: Archive, profile: Any, query: str) -> str:
     axis_a, axis_b = profile.report_axes
-    basis_note = ("Scores are self-estimated unit economics (critic-adjusted where available): a structured "
-                  "brainstorming aid, not validation." if profile.name == "business" else
-                  "Score = 100 * gate * (0.5 * gain_score + 0.5 * requirement coverage). Tier 'simulated' uses the "
-                  "simulated gain (the lower of simulation and critic if they differ by more than 2x); tier "
-                  "'estimated' (no usable simulated gain, e.g. flagged implausible_gain) uses the lower of the "
-                  "critic's and the candidate's estimate at half weight and is capped at 50. Elites are ranked by "
-                  "tier first.")
+    if hasattr(profile, "score_note"):
+        basis_note = profile.score_note()
+    else:
+        basis_note = ("Scores are self-estimated unit economics (critic-adjusted where available): a structured "
+                      "brainstorming aid, not validation.")
     parts = [
         f"# Explorer map: {profile.name}",
         f"Query: \"{query}\"  \nArchive: `{archive.path}`  \nRounds so far: {archive.round_counter}",
         f"> {basis_note}",
         "## Coverage\n\n" + _coverage(archive),
-        "## Requirements of the request\n\n" + _requirements_section(archive),
+        "## Requirements of the request\n\n" + _framing_section(archive, profile) + _requirements_section(archive),
         "## Elites (best per cell)\n\n" + _elites_table(archive, limit=25),
     ]
     if archive.requirements:
@@ -350,24 +381,29 @@ def render_round(archive: Archive, profile: Any, record: Mapping[str, Any]) -> s
         result = order.get("outcome") or order.get("entry_status") or order.get("item_status")
         target = space.describe(space.parse_key(order.get("target_key") or ""))
         rows.append([order["order_id"], order["strategy"], target, result, _fmt_score(order.get("score")),
-                     order.get("evidence_tier") or "–", _fmt_num(order.get("requirement_coverage")),
+                     order.get("evidence_tier") or "–", _fmt_num(order.get("objective_gain_pct"), 1),
+                     _fmt_num(order.get("requirement_coverage")),
                      ", ".join(order.get("flags") or []) or "–",
                      order.get("title") or "", {True: "yes", False: "no", None: "–"}[order.get("on_target")],
                      order.get("note") or ""])
     notes = record.get("batch_notes") or {}
+    strategy_notes = record.get("strategy_notes") or {}
     parts = [
         f"# Explorer round {record.get('round')} ({profile.name})",
         f"Query: \"{record.get('query')}\"  \nRun: {record.get('run_id')}, seed {record.get('seed')}, "
         f"batch {len(record.get('orders', []))}",
         "## Orders and outcomes\n\n" + _table(
-            ["order", "strategy", "target", "result", "score", "tier", "req. coverage", "flags", "title", "on target",
-             "note"], rows),
+            ["order", "strategy", "target", "result", "score", "tier", "objective gain %", "req. coverage", "flags",
+             "title", "on target", "note"], rows),
         "## Strategy yield (this round)\n\n" + _stats_table(strategy_stats(archive, rounds=[record.get("round")])),
-        "## Extrapolation orders\n\n" + _used_trends(archive, rounds=[record.get("round")]),
+        "## Extrapolation orders\n\n" + _used_trends(archive, rounds=[record.get("round")])
+        + _extrapolation_notes(strategy_notes),
     ]
     if notes.get("function_analysis") or notes.get("mechanism_classes_considered") or notes.get("analogues_considered"):
         parts.append("## Generator notes\n\n" + "\n".join([
             f"- Function analysis: {notes.get('function_analysis') or '–'}",
+            f"- Objective: {notes.get('objective_statement') or '–'}",
+            f"- Baseline: {notes.get('baseline_statement') or '–'}",
             f"- Requirements: {'; '.join(r['name'] + ': ' + r.get('criterion', '') for r in notes.get('requirements') or []) or '–'}",
             f"- Relevant values: {'; '.join(k + ': ' + ', '.join(v) for k, v in (notes.get('relevant_values') or {}).items()) or '–'}",
             f"- Mechanism classes: {', '.join(notes.get('mechanism_classes_considered') or []) or '–'}",
@@ -386,6 +422,8 @@ def export(archive: Archive, profile: Any, query: str) -> Dict[str, Any]:
         "rounds": archive.round_counter,
         "grid_size": archive.space.size,
         "requirements": archive.requirements,
+        "objective_statement": archive.objective_statement,
+        "baseline_statement": archive.baseline_statement,
         "relevant_values": {axis: archive.relevant_values(axis) for axis in archive.relevance_axes()},
         "elites": [
             {**{k: e.get(k) for k in ("id", "title", "descriptors", "cell", "score", "score_breakdown", "strategy",

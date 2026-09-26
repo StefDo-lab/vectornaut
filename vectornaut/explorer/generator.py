@@ -10,7 +10,8 @@ the model report that a target cell cannot contain a working concept.
 ``check_batch`` matches candidates to orders and applies the deterministic checks:
 descriptor vocabulary, required fields, finite numbers, duplicate titles, and the
 profile's own sanity checks. It also reads the request analysis of step 1 (requirements,
-relevant values of relevance axes) and validates it against the vocabulary.
+objective and baseline statements, relevant values of relevance axes) and validates the
+relevant values against the vocabulary.
 
 Order contexts are shortened field by field (``compact_context``), so the JSON in the
 prompt always stays valid and the key fields (ids, titles, scores, main risks) survive.
@@ -36,7 +37,7 @@ MAX_EXCLUDED_TITLES = 30
 MAX_CONTEXT_CHARS = 2000
 # Fields kept longer when the context is shortened (never dropped).
 KEY_FIELDS = ("id", "title", "score", "basis", "evidence_tier", "flags", "requirement_coverage", "main_risk",
-              "differs_in", "neighbour_value", "gap_value")
+              "differs_in", "neighbour_value", "gap_value", "objective_gain_pct", "distance")
 KEY_FIELD_MIN_CHARS = 160
 # Tried in this order until the JSON fits; below the last step long text is dropped.
 STRING_LIMITS = (400, 240, 160, 100, 60)
@@ -162,14 +163,14 @@ def build_prompt(profile: ExplorerProfile, query: str, orders: Sequence[Mapping[
     if requirements:
         requirements_text = (
             "REQUIREMENTS OF THE REQUEST (fixed for this map; a critic rates every candidate against each of them,\n"
-            "and requirement coverage counts as much as the simulated benefit; repeat them in `requirements`):\n"
+            "and requirement coverage is half of the score; repeat them in `requirements`):\n"
             + "\n".join(f"- {r['name']}: {r['criterion']}" for r in requirements)
         )
     else:
         requirements_text = (
             "REQUIREMENTS OF THE REQUEST: not extracted yet. In step 1, list every explicit or clearly implied\n"
             "requirement in `requirements` (3-6 items: short snake_case name + one-line criterion). A critic\n"
-            "will rate every candidate against them, and coverage counts as much as the simulated benefit."
+            "will rate every candidate against them, and coverage is half of the score."
         )
     analysis_text = profile.analysis_instructions(archive)
 
@@ -334,6 +335,8 @@ def check_batch(profile: ExplorerProfile, orders: Sequence[Mapping[str, Any]], b
 
     notes = {
         "function_analysis": getattr(batch, "function_analysis", "") or "",
+        "objective_statement": " ".join(str(getattr(batch, "objective_statement", "") or "").split()),
+        "baseline_statement": " ".join(str(getattr(batch, "baseline_statement", "") or "").split()),
         "requirements": [
             {"name": str(getattr(r, "name", "") or "").strip(), "criterion": str(getattr(r, "criterion", "") or "").strip()}
             for r in (getattr(batch, "requirements", None) or []) if str(getattr(r, "name", "") or "").strip()

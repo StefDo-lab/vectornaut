@@ -15,6 +15,7 @@ VECTORNAUT_DATA_DIR/explorer/<profile>/archive.json (or .../<profile>/<name>/ wi
 Live mode needs GEMINI_API_KEY (or an injected client, e.g. vectornaut.llm_replay --explorer).
 """
 import argparse
+import dataclasses
 import json
 import os
 import random
@@ -23,7 +24,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from vectornaut.explorer import report
 from vectornaut.explorer.archive import (
-    EVALUATED, FAILED, INFEASIBLE, INVALID, REJECTED, Archive, default_archive_path,
+    EVALUATED, FAILED, INFEASIBLE, INVALID, REJECTED, Archive, ArchiveCompatibilityError, default_archive_path,
 )
 from vectornaut.explorer.generator import (
     MISSING, OK, REJECTED as ITEM_REJECTED, INVALID as ITEM_INVALID, TARGET_INFEASIBLE, CandidateGenerator,
@@ -77,9 +78,18 @@ class ExplorerRunner:
         self.weights = dict(weights) if weights else None
         self.mock = mock
         self.client = client
-        self.config = strategy_config or StrategyConfig()
+        config = strategy_config or StrategyConfig()
+        # Profile knowledge the (profile-agnostic) strategies need, unless the caller set it.
+        self.config = dataclasses.replace(
+            config,
+            compatibility_axes=tuple(config.compatibility_axes or getattr(profile, "compatibility_axes", ()) or ()),
+            origin_axes=tuple(config.origin_axes or getattr(profile, "origin_axes", ()) or ()),
+        )
         path = archive_path or default_archive_path(profile.name, archive_name)
-        self.archive = Archive.load(profile.name, profile.space, path=path, clock=clock)
+        try:
+            self.archive = Archive.load(profile.name, profile.space, path=path, clock=clock)
+        except ArchiveCompatibilityError as err:
+            raise ExplorerError(str(err))
         known = self.archive.data.get("queries") or []
         if known and self.query not in known and not allow_new_query:
             raise ExplorerError(
@@ -90,20 +100,32 @@ class ExplorerRunner:
         self.out_dir = os.path.abspath(out_dir or os.path.join(self.archive.directory, "reports"))
         self.generator = CandidateGenerator(profile, client=client, mock=mock)
         self.ctx = EvaluationContext(query=self.query, mock=mock, epochs=epochs, opt_rounds=opt_rounds,
-                                     use_critic=use_critic, verbose=verbose, requirements=self.archive.requirements)
+                                     use_critic=use_critic, verbose=verbose)
+        self._sync_context()
+
+    def _sync_context(self) -> None:
+        """Copies the fixed request analysis (requirements, objective, baseline, relevant values) into the context."""
+        archive = self.archive
+        self.ctx.requirements = archive.requirements
+        self.ctx.objective_statement = archive.objective_statement
+        self.ctx.baseline_statement = archive.baseline_statement
+        self.ctx.relevant = {axis: archive.stated_relevant_values(axis) for axis in archive.relevance_axes()}
 
     def _update_request_analysis(self, notes: Mapping[str, Any], round_no: int) -> Dict[str, Any]:
-        """Stores the first requirement list and the relevant values named by the generator."""
+        """Stores the first requirement list, objective and baseline, and the relevant values named by the generator."""
         archive = self.archive
         stored = archive.set_requirements(notes.get("requirements") or [], round_no)
+        framing = archive.set_framing(notes.get("objective_statement") or "", notes.get("baseline_statement") or "",
+                                      round_no)
         added: Dict[str, List[str]] = {}
         for axis, values in sorted((notes.get("relevant_values") or {}).items()):
             if axis in archive.relevance_axes():
                 new = archive.add_relevant_values(axis, values)
                 if new:
                     added[axis] = new
-        self.ctx.requirements = archive.requirements
-        return {"requirements_stored": stored, "relevant_added": added}
+        self._sync_context()
+        return {"requirements_stored": stored, "objective_stored": framing["objective"],
+                "baseline_stored": framing["baseline"], "relevant_added": added}
 
     # ------------------------------------------------------------------
     def run_round(self, batch: int, run_id: str) -> Dict[str, Any]:
@@ -112,7 +134,9 @@ class ExplorerRunner:
         started = archive.clock()
         round_no = archive.next_round()
         rng = random.Random(f"{self.seed}:{round_no}")
-        orders = schedule(archive, batch, rng, round_no=round_no, weights=self.weights, config=self.config)
+        diagnostics: Dict[str, Any] = {}
+        orders = schedule(archive, batch, rng, round_no=round_no, weights=self.weights, config=self.config,
+                          diagnostics=diagnostics)
         for order in orders:
             if order["target"]:
                 archive.count_target(order["target"])
@@ -136,7 +160,7 @@ class ExplorerRunner:
                 "rationale": order["rationale"], "parent_ids": order["parent_ids"],
                 "trend": (order.get("context") or {}).get("trend"), "item_status": item.status,
                 "entry_id": None, "entry_status": None, "outcome": None, "on_target": None, "score": None,
-                "evidence_tier": None, "flags": [], "requirement_coverage": None,
+                "evidence_tier": None, "flags": [], "requirement_coverage": None, "objective_gain_pct": None,
                 "title": getattr(item.candidate, "title", None) if item.candidate is not None else None,
                 "note": "; ".join(item.issues)[:300],
             }
@@ -172,13 +196,14 @@ class ExplorerRunner:
                 log.update({"entry_id": entry["id"], "entry_status": entry["status"], "outcome": entry["outcome"],
                             "on_target": entry["on_target"], "score": entry["score"],
                             "evidence_tier": breakdown.get("evidence_tier"), "flags": list(breakdown.get("flags") or []),
-                            "requirement_coverage": breakdown.get("requirement_coverage")})
+                            "requirement_coverage": breakdown.get("requirement_coverage"),
+                            "objective_gain_pct": breakdown.get("objective_gain_pct")})
             order_logs.append(log)
 
         record = {
             "round": round_no, "run_id": run_id, "seed": self.seed, "query": self.query, "mock": self.mock,
             "orders": order_logs, "batch_notes": generation.batch_notes, "unmatched": generation.unmatched,
-            "request_analysis_update": analysis_update,
+            "request_analysis_update": analysis_update, "strategy_notes": diagnostics,
             "started_at": started, "finished_at": archive.clock(),
         }
         archive.log_round(record)

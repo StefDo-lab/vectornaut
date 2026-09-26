@@ -11,7 +11,8 @@ Layout of ``archive.json``::
                                         "proposal density" map
     targets      {cell_key: count}      how often a search order aimed at a cell/pattern
     infeasible   {pattern_key: {...}}   cells or patterns reported as impossible
-    request_analysis                    requirements extracted from the query (fixed once set)
+    request_analysis                    requirements extracted from the query (fixed once set),
+                                        the objective and baseline statements (fixed once set)
                                         and the relevant values of "relevance axes"
     rounds       [round log]            orders, outcomes and strategy yield per round
     round_counter, next_entry
@@ -21,6 +22,12 @@ an ``evidence_rank`` (materials: 2 = simulated, 1 = estimated, 0 = estimated aft
 implausible simulation). A lower-ranked entry never replaces a higher-ranked elite, and a
 higher-ranked entry replaces a lower-ranked one regardless of score. Entries without a rank
 (business) all rank equal, so only the score decides.
+
+Versioning: ``version`` is ARCHIVE_VERSION. An older archive whose axes (names *and* values)
+equal the profile's is migrated on load (the version is raised and ``migrated_from`` noted);
+an archive built with a different vocabulary is refused with an explanation, because its
+cells and scores are not comparable (version 3 added ``governing_quantity`` values for
+fouling control and changed the materials score). A newer archive is refused as well.
 
 Writes are atomic (temp file + ``os.replace``). Entry ids are sequential and the file is
 written with sorted keys, so the same inputs give the same file except for timestamps
@@ -36,7 +43,11 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 from vectornaut.explorer.descriptors import DescriptorSpace
 from vectornaut.storage import data_path
 
-ARCHIVE_VERSION = 2
+ARCHIVE_VERSION = 3
+
+
+class ArchiveCompatibilityError(ValueError):
+    """The stored archive cannot be used with the current profile (version or vocabulary)."""
 
 # Entry statuses.
 EVALUATED = "evaluated"          # scored; may be an elite
@@ -107,7 +118,8 @@ class Archive:
             "proposals": {},
             "targets": {},
             "infeasible": {},
-            "request_analysis": {"requirements": [], "requirements_round": None, "relevant": {}},
+            "request_analysis": {"requirements": [], "requirements_round": None, "relevant": {},
+                                 "objective_statement": "", "baseline_statement": "", "framing_round": None},
             "rounds": [],
             "round_counter": 0,
             "next_entry": 1,
@@ -133,10 +145,11 @@ class Archive:
                 raise ValueError(f"Archive {archive.path} belongs to profile '{data.get('profile')}', not '{profile}'.")
             stored_axes = [axis.get("name") for axis in data.get("axes", [])]
             if stored_axes != space.names:
-                raise ValueError(
+                raise ArchiveCompatibilityError(
                     f"Archive {archive.path} was built with axes {stored_axes}; the profile now has {space.names}. "
                     "Use a new archive name."
                 )
+            data = archive._check_version(data)
             base = archive._empty()
             analysis = dict(base["request_analysis"])
             base.update(data)
@@ -144,6 +157,42 @@ class Archive:
             base["request_analysis"] = analysis
             archive.data = base
         return archive
+
+    def _check_version(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Refuses newer archives and archives with another vocabulary; migrates older compatible ones."""
+        try:
+            version = int(data.get("version") or 1)
+        except (TypeError, ValueError):
+            version = 1
+        if version > ARCHIVE_VERSION:
+            raise ArchiveCompatibilityError(
+                f"Archive {self.path} has version {version}, newer than this explorer (version {ARCHIVE_VERSION}). "
+                "Update Vectornaut or use another archive (--archive NAME)."
+            )
+        current = {axis["name"]: list(axis["values"]) for axis in self.space.to_dict()}
+        changes = []
+        for axis in data.get("axes", []):
+            name, stored = axis.get("name"), list(axis.get("values") or [])
+            wanted = current.get(name, [])
+            if stored == wanted:
+                continue
+            added = [v for v in wanted if v not in stored]
+            removed = [v for v in stored if v not in wanted]
+            detail = (["new values " + ", ".join(added)] if added else []) + \
+                     (["removed values " + ", ".join(removed)] if removed else [])
+            changes.append(f"{name}: " + ("; ".join(detail) or "values reordered"))
+        if changes:
+            raise ArchiveCompatibilityError(
+                f"Archive {self.path} (version {version}) was built with a different descriptor vocabulary "
+                f"({'; '.join(changes)}). Its cells and scores are not comparable with the current profile "
+                f"(archive version {ARCHIVE_VERSION}), so it is not migrated. Start a new map with --archive NAME, "
+                "or move the old archive folder away."
+            )
+        if version < ARCHIVE_VERSION:
+            data = dict(data)
+            data["migrated_from"] = version
+            data["version"] = ARCHIVE_VERSION
+        return data
 
     def save(self) -> str:
         os.makedirs(self.directory, exist_ok=True)
@@ -248,6 +297,52 @@ class Archive:
         self.request_analysis["requirements"] = cleaned
         self.request_analysis["requirements_round"] = round_no
         return True
+
+    @property
+    def objective_statement(self) -> str:
+        return str(self.request_analysis.get("objective_statement") or "")
+
+    @property
+    def baseline_statement(self) -> str:
+        return str(self.request_analysis.get("baseline_statement") or "")
+
+    def set_framing(self, objective: str, baseline: str, round_no: int) -> Dict[str, bool]:
+        """
+        Stores the objective statement (the request's main benefit as it applies over the stated
+        service life and conditions) and the baseline statement (the conventional solution in the
+        same condition). Each is stored once, the first non-empty one, like the requirements, so
+        the scores of later rounds stay comparable. Returns which of the two were stored now.
+        """
+        stored = {"objective": False, "baseline": False}
+        for key, value, flag in (("objective_statement", objective, "objective"),
+                                 ("baseline_statement", baseline, "baseline")):
+            text = " ".join(str(value or "").split())
+            if text and not self.request_analysis.get(key):
+                self.request_analysis[key] = text
+                stored[flag] = True
+        if any(stored.values()) and self.request_analysis.get("framing_round") is None:
+            self.request_analysis["framing_round"] = round_no
+        return stored
+
+    def stated_relevant_values(self, axis: str) -> List[str]:
+        """Relevant values named by the function analysis only (without the values of elites)."""
+        return list((self.request_analysis.get("relevant") or {}).get(axis) or [])
+
+    def source_uses(self, exclude_strategies: Sequence[str] = ("refine",)) -> Dict[str, int]:
+        """
+        How often each entry served as the source of a later order: the first parent of every
+        entry (fill_gap/diversify/extrapolate list further neighbours only as context), both
+        parents of a combine entry. Refinements are counted separately by the refine strategy.
+        """
+        uses: Dict[str, int] = {}
+        for entry in self.entries.values():
+            strategy = entry.get("strategy")
+            if strategy in exclude_strategies:
+                continue
+            parents = list(entry.get("parent_ids") or [])
+            for parent in parents[:2] if strategy == "combine" else parents[:1]:
+                uses[parent] = uses.get(parent, 0) + 1
+        return uses
 
     def declare_relevance_axes(self, axes: Sequence[str]) -> None:
         """Axes whose values must be relevant to the request (materials: governing_quantity)."""

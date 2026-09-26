@@ -39,7 +39,7 @@ class CandidateBase(BaseModel):
 
 
 class MaterialsCandidate(CandidateBase):
-    baseline: str = Field(default="", description="The baseline your back_of_envelope estimate compares against, stated explicitly (default: the conventional state-of-the-art solution for the request, e.g. a standard clean hull coating, not a fouled or untreated hull)")
+    baseline: str = Field(default="", description="The baseline your back_of_envelope estimate compares against, stated explicitly (default: the map's baseline_statement, i.e. the conventional solution in the same service condition; never a parent or sibling concept)")
     inspiration_source: str = Field(default="", description="The natural or technical system the idea is borrowed from")
     domain: str = Field(default="", description="Scientific domain, e.g. Fluid Dynamics, Thermodynamics, Structural Mechanics")
     physical_mechanism: str = Field(default="", description="The physical mechanism and how it maps onto the request")
@@ -78,6 +78,8 @@ class ExplorerCandidateBatch(BaseModel):
 
 
 class MaterialsCandidateBatch(ExplorerCandidateBatch):
+    objective_statement: str = Field(default="", description="Step 1: the request's main benefit stated as it applies over the stated service life and conditions, e.g. 'time-averaged hull friction drag over a 5-year docking interval, including the effect of fouling' (not the drag of a freshly applied clean surface if the request asks for years of service)")
+    baseline_statement: str = Field(default="", description="Step 1: the conventional state-of-the-art solution a concept must beat on that objective, in the same condition, e.g. 'conventional biocide-free silicone foul-release coating after 12-24 months in service'")
     relevant_governing_quantities: List[str] = Field(default_factory=list, description="Step 1: the governing_quantity tokens (from the vocabulary) that measure a benefit the request actually asks for")
     candidates: List[MaterialsCandidate] = Field(default_factory=list, description="Step 4: exactly one candidate per search order")
 
@@ -106,8 +108,14 @@ class RequirementRating(BaseModel):
 
 class MaterialsCriticReview(BaseModel):
     order_id: str = Field(description="order_id of the reviewed candidate")
-    plausible_gain_pct: Optional[float] = Field(default=None, description="Your best estimate of the real-world improvement of the request's main benefit, in percent, against the conventional state-of-the-art baseline; null if it cannot be estimated")
-    plausible_gain_reasoning: str = Field(default="", description="One or two sentences: how you arrived at plausible_gain_pct")
+    plausible_simulated_benefit_pct: Optional[float] = Field(default=None, description="Your best estimate of the real-world improvement of the candidate's OWN simulated quantity (its governing_quantity, e.g. fouling release stress), in percent, against the conventional baseline (positive = better); null if it cannot be estimated. Do not copy the simulated number")
+    plausible_objective_gain_pct: Optional[float] = Field(default=None, description="Your best estimate of the candidate's contribution to the stated OBJECTIVE against the stated BASELINE (e.g. time-averaged drag including fouling over the service life), in percent (positive = better); null if it cannot be estimated")
+    plausible_gain_reasoning: str = Field(default="", description="One or two sentences: how you arrived at both numbers")
+    simulated_quantity_relevant: Optional[bool] = Field(default=None, description="True if the simulated quantity drives the objective or a requirement (e.g. fouling release for time-averaged drag), false if it is beside the point; null if unsure")
+    relabelled_analogue: bool = Field(default=False, description="True if the concept is the same physics as its parent (or another listed concept) with only the inspiration label changed, i.e. the claimed origin does not actually supply the mechanism")
+    relabel_reason: str = Field(default="", description="If relabelled_analogue: one line naming the concept it copies")
+    baseline_conventional: Optional[bool] = Field(default=None, description="False if the candidate's or the simulation's baseline is not the conventional solution (e.g. a parent concept, an untreated or fouled surface, an idealised case); null if unsure")
+    baseline_issue: str = Field(default="", description="If baseline_conventional is false: one line saying what the baseline is instead")
     key_assumption_issues: List[str] = Field(default_factory=list, description="Modelling choices that drive the simulated gain (free parameters, gap sizes, laminar models of turbulent flow, missing losses), most important first")
     killer_risks: List[str] = Field(default_factory=list, description="Risks that could make the concept unworkable in practice, most severe first")
     requirement_coverage: List[RequirementRating] = Field(default_factory=list, description="One rating per listed requirement")
