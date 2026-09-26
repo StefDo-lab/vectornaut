@@ -232,8 +232,8 @@ def apply_metric_transform(transform: Optional[str], value: float, params: Dict[
 
 def callables_from_expr(expr: sp.Expr, x_sym: sp.Symbol) -> Tuple[Callable, Callable]:
     """(u, du/dx) as vectorised numpy callables from a SymPy solution."""
-    f = sp.lambdify(x_sym, expr, "numpy")
-    df = sp.lambdify(x_sym, sp.diff(expr, x_sym), "numpy")
+    f = sp.lambdify(x_sym, expr, ["scipy", "numpy"])
+    df = sp.lambdify(x_sym, sp.diff(expr, x_sym), ["scipy", "numpy"])
 
     def _vec(fn):
         def wrapped(x):

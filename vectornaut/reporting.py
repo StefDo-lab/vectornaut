@@ -356,6 +356,8 @@ def generate_markdown_report_content(data: dict, timestamp_str: str) -> str:
         md.append(f"- **Vergleichsdesign (Baseline):** {baseline_name}: `{_with_unit(baseline_val, metric_unit)}`")
     if simulator.get("gain_note"):
         md.append(f"- **Hinweis zur Metrik:** {simulator.get('gain_note')}")
+    if simulator.get("solver_note"):
+        md.append(f"- **Hinweis zum Solver (Fallback):** {simulator.get('solver_note')}")
     
     if simulator.get("solver_method") == "pinn":
         md.append(f"- **PINN Trainingsepochen:** {simulator.get('epochs_trained', 0)}")

@@ -200,17 +200,17 @@ def _fluid_ui():
     }
 
 
-def _fluid_miner(params):
+def _fluid_miner(params, bcs=None):
     return MinerOutput(
         design_name="Fluid concept", inspiration_source="-", domain="Fluid Dynamics", physical_mechanism="-",
         parameters=[ParameterProposal(name=k, value=v, min_bound=v / 10.0, max_bound=v * 10.0, justification="-")
                     for k, v in params.items()],
-        governing_equation="d2u_dy2 = -1", boundary_conditions=["u(0) = 0", "u(1) = 1"],
+        governing_equation="d2u_dy2 = -1", boundary_conditions=bcs or ["u(0) = 0", "u(1) = 1"],
         independent_variables=["y"], dependent_variables=["u"], svg_schematic="<svg></svg>",
     )
 
 
-def _audit_fluid(params, coefficient):
+def _audit_fluid(params, coefficient, bcs=None):
     audit = AuditorOutput(
         audit_passed=True, audit_notes="model notes",
         audited_parameters=[AuditedParameter(name=k, value=v) for k, v in params.items()],
@@ -219,7 +219,7 @@ def _audit_fluid(params, coefficient):
     )
     client = _client_returning(audit)
     with contextlib.redirect_stdout(io.StringIO()):
-        result = Auditor(client=client).audit_design(_fluid_miner(params), user_query="drag")
+        result = Auditor(client=client).audit_design(_fluid_miner(params, bcs), user_query="drag")
     return result, _prompt_of(client)
 
 
@@ -242,9 +242,12 @@ class AuditorRibletTest(unittest.TestCase):
         result, _ = _audit_fluid({"riblet_height": 0.01, "viscosity": 1e-3}, 3e-6)
         self.assertAlmostEqual(result.simulation_coefficient, 3e-6, delta=1e-18)
 
+    # The recompute now also requires that the equations use the coefficient: the BCs here
+    # reference slip_length (before, the default "u(0) = 0" BCs were enough).
     def test_riblet_geometry_recomputes_coefficient(self):
         h, s = 0.01, 0.02
-        result, _ = _audit_fluid({"riblet_height": h, "riblet_spacing": s, "viscosity": 1e-3}, 3e-6)
+        result, _ = _audit_fluid({"riblet_height": h, "riblet_spacing": s, "viscosity": 1e-3}, 3e-6,
+                                 bcs=["u(0) = slip_length * du_dy(0)", "u(1) = 1"])
         expected = 0.2 * s * (1.0 - math.exp(-2.0 * h / s))
         self.assertAlmostEqual(result.simulation_coefficient, expected, delta=1e-12)
         self.assertIn("Riblet-Geometrie", result.audit_notes)

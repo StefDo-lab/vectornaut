@@ -310,3 +310,5 @@ class SimulatorOutput(BaseModel):
     baseline_metric_value: Optional[float] = Field(description="Metric of the baseline design the gain is computed against", default=None)
     gain_basis: Optional[str] = Field(description="What performance_gain_pct compares against: 'baseline_parameters' (auditor's reference design), 'bionic_effect' (same design without slip/simulation coefficient) or 'none' (no baseline: gain not computable, performance_gain_pct is 0 and means n/a)", default=None)
     gain_note: Optional[str] = Field(description="Why the metric spec or the gain could not be used as requested", default=None)
+    solver_note: Optional[str] = Field(description="Solver fallbacks and their reasons (e.g. analytical solution failed, SciPy BVP used); None = the requested solvers were used", default=None)
+    boundary_derivatives: Optional[List[Dict[str, float]]] = Field(description="du/dx of the primary 1D solution at the domain ends from the solver itself ([{'location': x, 'value': du/dx}]), for the validator's derivative BC check", default=None)

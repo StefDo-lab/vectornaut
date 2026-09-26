@@ -1,4 +1,5 @@
 import math
+import re
 from .config import get_client, get_model_name, get_thinking_config, MinerOutput, AuditorOutput, AuditedParameter, DimensionlessNumber, ObjectiveMetricContract
 
 def extract_param(params_dict, keys, default):
@@ -94,6 +95,26 @@ def _default_ui_metadata(matched_domain, miner_output) -> dict:
         "reference_metric": { "label": "Reference Metric" },
         "performance_gain": { "label": "Performance Gain" },
     }
+
+
+# Names under which the equations/BCs can use the coefficient (see solver_dispatcher).
+_COEFFICIENT_NAMES = ("simulation_coefficient", "slippage_coefficient", "lambda", "slip_length")
+
+
+def _equations_use_coefficient(miner_output) -> bool:
+    """True if the governing equation or a BC references simulation_coefficient or a slip alias."""
+    texts = [getattr(miner_output, "governing_equation", "") or ""] + list(getattr(miner_output, "boundary_conditions", None) or [])
+    joined = " ".join(str(t) for t in texts)
+    return any(re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", joined) for name in _COEFFICIENT_NAMES)
+
+
+def riblet_slip_estimate(height: float, spacing: float) -> float:
+    """
+    Rough dimensional slip-length estimate of a riblet surface, lambda = 0.2 s (1 - exp(-2 h / s)),
+    in the unit of s (m). It saturates at 0.2 s for tall riblets. It is a rough estimate only:
+    Luchini's protrusion-height difference Delta h for common riblet shapes is about half of it.
+    """
+    return 0.2 * spacing * (1.0 - math.exp(-2.0 * height / spacing))
 
 
 def _tracked_parameter(coefficient, params):
@@ -193,7 +214,7 @@ class Auditor:
         3. Calculate the key dimensionless numbers of this problem (e.g. Reynolds, Péclet, Biot, Nusselt numbers). Use the actual characteristic length, velocity and material properties from the parameters above; where a needed quantity is not a parameter, state the value you assumed and why in audit_notes. Do not report numbers that do not apply to this problem.
         4. Derive the core simulation coefficient of this mechanism (simulation_coefficient), e.g. an effective slip length, heat transfer coefficient or effective stiffness, from the parameters and the physics of the mechanism, and explain the derivation in audit_notes.
            - Only for riblet geometries (parameters riblet_height and riblet_spacing), a common estimate of the slip length is
-             lambda = 0.2 * riblet_spacing * (1 - exp(-2.0 * riblet_height / riblet_spacing)); the pipeline recomputes the coefficient with this formula when both parameters are present.
+             lambda = 0.2 * riblet_spacing * (1 - exp(-2.0 * riblet_height / riblet_spacing)); the pipeline recomputes the coefficient with this formula (a dimensional length in m, a rough estimate) when both parameters are present and the equations use simulation_coefficient or a slip-length alias.
            - For every other mechanism derive the coefficient yourself (it is not the riblet formula). If the mechanism has no such single coefficient, return 0.0 and say so in audit_notes.
            - The equations use simulation_coefficient only if they refer to it (or to slip_length, lambda, slippage_coefficient); otherwise it is informational.
         5. Select the best solver_method out of:
@@ -327,23 +348,27 @@ class Auditor:
                     break
 
             if overridden_slip is not None:
+                # The override is used as given (dimensional, like the model's coefficient);
+                # it used to be divided by 10 * riblet_spacing for spacings < 5 mm.
                 recalculated_coeff = overridden_slip
-                if "riblet_spacing" in sanitized_params or "spacing" in sanitized_params:
-                    s = extract_param(sanitized_params, ["riblet_spacing", "spacing"], 0.03)
-                    if s < 0.005:
-                        char_height = 10.0 * s
-                        recalculated_coeff = recalculated_coeff / char_height
             elif "riblet_height" in sanitized_params and "riblet_spacing" in sanitized_params:
-                # Riblet geometry: slip length from the riblet formula (only when both
-                # riblet parameters exist; other fluid mechanisms keep the model's coefficient).
-                h = sanitized_params["riblet_height"]
-                s = sanitized_params["riblet_spacing"]
-                # Recalculate lambda (dimensional)
-                recalculated_coeff = 0.2 * s * (1.0 - math.exp(-2.0 * h / s))
-                if s < 0.005:
-                    char_height = 10.0 * s
-                    recalculated_coeff = recalculated_coeff / char_height
-                coeff_source = "Riblet-Geometrie (lambda = 0.2 s (1 - exp(-2 h / s)))"
+                # Riblet geometry: rough dimensional slip-length estimate (only when both
+                # riblet parameters exist and the equations actually use the coefficient;
+                # other fluid mechanisms keep the model's coefficient). No division by a
+                # characteristic height: the value stays a length in the unit of s, like
+                # the slip lengths the equations/BCs expect.
+                if _equations_use_coefficient(miner_output):
+                    recalculated_coeff = riblet_slip_estimate(sanitized_params["riblet_height"], sanitized_params["riblet_spacing"])
+                    coeff_source = (
+                        "Riblet-Geometrie, grobe Schätzung lambda = 0.2 s (1 - exp(-2 h / s)) in m; "
+                        "die Protrusionshöhen-Differenz nach Luchini ist etwa halb so groß"
+                    )
+                else:
+                    changes.append(
+                        "simulation_coefficient nicht aus der Riblet-Geometrie neu berechnet: Gleichung und "
+                        "Randbedingungen verwenden weder simulation_coefficient noch slip_length/slippage_coefficient/lambda "
+                        f"(Modellwert {_fmt(audited.simulation_coefficient)} beibehalten)"
+                    )
             else:
                 recalculated_coeff = extract_param(sanitized_params, ["slip_length", "slippage_coefficient"], audited.simulation_coefficient)
                 coeff_source = "slip_length"
