@@ -17,11 +17,12 @@ import contextlib
 import io
 import math
 import random
+import re
 import zlib
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from vectornaut.config import MinerConceptOutput, ParameterProposal, get_client, get_model_name, get_thinking_config
-from vectornaut.explorer.archive import EVALUATED, FAILED, INFEASIBLE
+from vectornaut.explorer.archive import EVALUATED, FAILED, INFEASIBLE, TIE_EPSILON
 from vectornaut.explorer.descriptors import NOMINAL, ORDINAL, Axis, DescriptorSpace, normalize_token
 from vectornaut.explorer.profiles.base import (
     EvaluationContext,
@@ -91,22 +92,33 @@ MATERIALS_SPACE = DescriptorSpace([
 #       d = 1 if a critic judged it next to a relevant simulation, else ESTIMATE_DISCOUNT
 #   simulated_score = 1 - exp(-simulated_benefit_pct / SIM_SCALE_PCT)             (0 for gains <= 0)
 #       only if the simulated gain is usable AND the simulated quantity is relevant to the
-#       request; the lower of simulation and critic when they differ strongly; else 0
+#       request; simulated_benefit_pct = min(simulated gain, critic's plausible simulated benefit)
+#       whenever the critic gave one; 0 if the critic calls the gain a proxy by construction
 #   relabel_factor = RELABEL_FACTOR if the critic calls the concept a relabelled analogue, else 1
 #   estimated tier: score <= ESTIMATED_SCORE_CAP
 #
 # Evidence tiers: "simulated" only if the simulated number enters the score (usable and on a
 # relevant quantity); otherwise "estimated". An estimate that replaced an implausible simulated
 # gain ranks lowest (see archive.rank_key).
-
-# Saturation scales: a gain of SCALE percent scores 1 - 1/e. Objective gains (time-averaged drag,
-# fuel) are typically single-digit percentages, simulated benefits on the concept's own quantity
-# (release stress, stress peaks) are often tens of percent, hence two scales.
-OBJECTIVE_SCALE_PCT = 10.0
+#
+# Saturation scales: a gain of SCALE percent scores 1 - 1/e. Why these constants (archive
+# version 4, chosen on the v3 role-play of the hull-coating query): the critic's objective gains
+# were 0.3-1.5 % (time-averaged drag), its plausible simulated benefits 25-80 %. With the version-3
+# constants (objective scale 10 %, weights 0.35 / 0.15 / 0.5, the higher simulated number used
+# when simulation and critic were within 50 % of each other) a 1 % objective gain was worth 3.3
+# points while the simulated term saturated at 14-15 points above ~50 %, so the ranking followed
+# the requirement-coverage ratings (0.42-0.50, a few points of rating noise) and proxies such as a
+# leaching flux against an oil-containing baseline. With an objective scale of 2 % a gain of
+# 0.5 / 1.0 / 1.5 % scores 0.22 / 0.39 / 0.53, i.e. 10 / 18 / 24 points at W_OBJ = 0.45: the
+# objective separates the concepts, the simulated term (at most 10 points, the lower of simulation
+# and critic) keeps the simulation evidence, and requirement coverage keeps the hard constraints.
+# Re-scoring the v3 archive this way ranks the compliance-release concepts (critic objective gain
+# 1-1.5 %) first and the leaching proxies (0.5-0.8 %) below them (docs/EXPLORER.md).
+OBJECTIVE_SCALE_PCT = 2.0
 SIM_SCALE_PCT = 20.0
-W_OBJ = 0.35
-W_SIM = 0.15
-W_REQ = 0.5
+W_OBJ = 0.45
+W_SIM = 0.10
+W_REQ = 0.45
 # Objective gains not judged next to a relevant simulation count half, and an estimated entry
 # scores at most ESTIMATED_SCORE_CAP.
 ESTIMATE_DISCOUNT = 0.5
@@ -119,6 +131,7 @@ REQ_UNRATED_DEFAULT = 0.5
 # validator's physics_performance_gain_sanity check uses the same bound).
 MAX_PLAUSIBLE_GAIN_PCT = 500.0
 # Simulation and critic "differ strongly" when |a - b| > max(SENSITIVITY_ABS_PP, SENSITIVITY_REL * max(|a|, |b|)).
+# This only sets the flag: the lower of the two numbers is always used when the critic gave one.
 SENSITIVITY_REL = 0.5
 SENSITIVITY_ABS_PP = 1.0
 GAIN_SANITY_CHECK = "physics_performance_gain_sanity"
@@ -139,11 +152,22 @@ FLAG_OBJECTIVE_UNCHECKED = "objective_gain_unchecked"
 FLAG_OBJECTIVE_MISSING = "objective_gain_missing"
 FLAG_RELABELLED = "relabelled_analogue"
 FLAG_BASELINE_NOT_CONVENTIONAL = "baseline_not_conventional"
+FLAG_PROXY = "proxy_by_construction"
 FLAG_REQ_UNRATED = "requirements_unrated"
 FLAG_REQ_PARTIAL = "requirements_partially_rated"
 FLAG_CRITIC_MISSING = "critic_missing"
 FLAG_CRITIC_FAILED = "critic_failed"
 FLAG_BASELINE_UNSTATED = "baseline_unstated"
+
+# Words in the request or its requirements that ask for a biological model (bionic, bio-inspired,
+# biomimetic; German: bionisch, Bionik). Then only biological inspiration origins are preferred
+# (fill_gap, diversify, combine, extrapolate); other origins only via explore at a low weight.
+_BIO_REQUEST_PATTERN = re.compile(
+    r"\bbioni(?:c|cs|k|sch\w*)\b|\bbio[-\s]?inspir\w*|\bbiomim\w*|\bbiologically[-\s]inspired\b"
+    r"|\bderived from (?:a |an )?biological\b|\bbiological (?:model|role model|analogue|analog|system)s?\b",
+    re.IGNORECASE,
+)
+BIOLOGICAL_ORIGINS = ("plant", "animal", "microbe")
 
 PLACEHOLDER_SVG = (
     '<svg viewBox="0 0 400 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">'
@@ -167,9 +191,58 @@ def score_formula() -> str:
         f"objective_score = (1 - exp(-objective_gain_pct / {OBJECTIVE_SCALE_PCT:g})) * d, d = 1 if a critic judged "
         f"the objective next to a relevant simulation, else {ESTIMATE_DISCOUNT:g}; "
         f"simulated_score = 1 - exp(-simulated_benefit_pct / {SIM_SCALE_PCT:g}) if the simulated quantity is relevant, "
-        f"else 0; relabel_factor = {RELABEL_FACTOR:g} for a relabelled analogue, else 1; "
+        "else 0, simulated_benefit_pct = min(simulated, critic) when the critic gave a number, 0 for a proxy by "
+        f"construction; relabel_factor = {RELABEL_FACTOR:g} for a relabelled analogue, else 1; "
         f"estimated tier capped at {ESTIMATED_SCORE_CAP:g}"
     )
+
+
+def simulated_benefit_used(simulated: float, critic_sim: Optional[float]) -> Tuple[float, str, bool]:
+    """
+    (benefit used, source, differ strongly?) for a usable, relevant simulated gain: the lower of
+    the simulation and the critic's plausible simulated benefit whenever the critic gave one
+    (a model result is never scored above the critic's real-world estimate); the simulation
+    alone without a critic value. 'Differ strongly' only sets the model_assumption_sensitive flag.
+    """
+    if critic_sim is None:
+        return simulated, "simulation", False
+    sensitive = differs_strongly(simulated, critic_sim)
+    note = "; simulation and critic differ strongly" if sensitive else ""
+    if critic_sim < simulated:
+        return critic_sim, f"critic (lower than the simulation{note})", sensitive
+    return simulated, f"simulation (not above the critic{note})", sensitive
+
+
+def combine_score(tier: str, gate: float, relabel_factor: float, simulated_benefit: Optional[float],
+                  objective_gain: Optional[float], discount: float, coverage: float) -> Dict[str, Any]:
+    """The numeric part of the score (shared by scoring and the archive-version-3 re-scoring)."""
+    simulated_score = saturating(simulated_benefit, SIM_SCALE_PCT)
+    objective_score = saturating(objective_gain, OBJECTIVE_SCALE_PCT) * discount
+    scale = 100.0 * gate * relabel_factor
+    contributions = {"objective": scale * W_OBJ * objective_score, "simulated": scale * W_SIM * simulated_score,
+                     "requirements": scale * W_REQ * coverage}
+    score = sum(contributions.values())
+    capped = False
+    if tier == TIER_ESTIMATED and score > ESTIMATED_SCORE_CAP:
+        score, capped = ESTIMATED_SCORE_CAP, True
+    return {
+        "score": round(score, 4), "capped": capped,
+        "components": {"gate": round(gate, 6), "objective_score": round(objective_score, 6),
+                       "simulated_score": round(simulated_score, 6), "requirement_coverage": round(coverage, 6)},
+        "contributions": {k: round(v, 4) for k, v in contributions.items()},
+    }
+
+
+def tiebreak_values(critic_obj: Optional[float], killer_risks: Sequence[Any],
+                    simulated_benefit: Optional[float], critic_present: bool) -> Optional[List[Optional[float]]]:
+    """
+    Tie-break key stored as score_breakdown['tiebreak'] (archive.tiebreak_key): higher critic
+    objective gain, then fewer killer risks, then higher simulated benefit used. None without a
+    critic review (no tie-break then).
+    """
+    if not critic_present:
+        return None
+    return [critic_obj, -float(len(killer_risks or [])), simulated_benefit]
 
 
 def _raw_simulated_gain(simulator: Mapping[str, Any]) -> tuple:
@@ -343,19 +416,21 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
     quantity = governing_quantity or _descriptor(candidate, "governing_quantity")
     relevant, relevance_reason = quantity_relevance(quantity, relevant_quantities, review)
 
-    # Simulated component: only a usable simulated gain on a relevant quantity counts.
+    proxy = bool(getattr(review, "proxy_by_construction", False)) if review is not None else False
+
+    # Simulated component: only a usable simulated gain on a relevant quantity counts, never above
+    # the critic's plausible simulated benefit, and not at all if the critic calls it a proxy.
     sim_used, sim_source = None, "none"
     if sim["usable_gain"] is not None and relevant:
         tier = TIER_SIMULATED
-        simulated = sim["usable_gain"]
-        sim_used, sim_source = simulated, "simulation"
-        if critic_sim is not None and differs_strongly(simulated, critic_sim):
+        sim_used, sim_source, sensitive = simulated_benefit_used(sim["usable_gain"], critic_sim)
+        if sensitive:
             flags.append(FLAG_SENSITIVE)
-            if critic_sim < simulated:
-                sim_used, sim_source = critic_sim, "critic (simulation and critic differ strongly)"
-            else:
-                sim_source = "simulation (simulation and critic differ strongly; the lower one is used)"
-        basis = "simulated" if sim_source == "simulation" else "simulated, critic-checked"
+        basis = "simulated" if critic_sim is None else "simulated, critic-checked"
+        if proxy:
+            flags.append(FLAG_PROXY)
+            sim_used, sim_source = None, "none (the critic calls the simulated gain a proxy by construction)"
+            basis = "simulated, proxy by construction (simulated part not scored)"
     else:
         tier = TIER_ESTIMATED
         if sim["usable_gain"] is not None:
@@ -363,7 +438,8 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
             basis = "estimated (simulated quantity not relevant)"
         else:
             basis = "estimated, not simulated"
-    simulated_score = saturating(sim_used, SIM_SCALE_PCT)
+        if proxy:
+            flags.append(FLAG_PROXY)
 
     # Objective component: the critic's contribution to the stated objective (else the candidate's estimate).
     if critic_obj is not None:
@@ -375,7 +451,6 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
         obj_used, obj_source = None, "none"
         flags.append(FLAG_OBJECTIVE_MISSING)
     discount = 1.0 if (tier == TIER_SIMULATED and obj_source == "critic") else ESTIMATE_DISCOUNT
-    objective_score = saturating(obj_used, OBJECTIVE_SCALE_PCT) * discount
 
     req = requirement_coverage(requirements, review)
     flags.extend(req["flags"])
@@ -393,13 +468,7 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
     if review is not None and getattr(review, "baseline_conventional", None) is False:
         flags.append(FLAG_BASELINE_NOT_CONVENTIONAL)
 
-    scale = 100.0 * gate * relabel_factor
-    contributions = {"objective": scale * W_OBJ * objective_score, "simulated": scale * W_SIM * simulated_score,
-                     "requirements": scale * W_REQ * req["coverage"]}
-    score = sum(contributions.values())
-    capped = False
-    if tier == TIER_ESTIMATED and score > ESTIMATED_SCORE_CAP:
-        score, capped = ESTIMATED_SCORE_CAP, True
+    combined = combine_score(tier, gate, relabel_factor, sim_used, obj_used, discount, req["coverage"])
     rank = EVIDENCE_RANK[tier]
     if tier == TIER_ESTIMATED and FLAG_IMPLAUSIBLE in flags:
         rank = IMPLAUSIBLE_RANK
@@ -415,6 +484,8 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
             "relabel_reason": getattr(review, "relabel_reason", "") or "",
             "baseline_conventional": getattr(review, "baseline_conventional", None),
             "baseline_issue": getattr(review, "baseline_issue", "") or "",
+            "proxy_by_construction": proxy,
+            "proxy_reason": getattr(review, "proxy_reason", "") or "",
             "key_assumption_issues": list(getattr(review, "key_assumption_issues", None) or []),
             "killer_risks": list(getattr(review, "killer_risks", None) or []),
         }
@@ -425,13 +496,14 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
         "flags": flags,
         "formula": score_formula(),
         "weights": {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ},
-        "components": {"gate": round(gate, 6), "objective_score": round(objective_score, 6),
-                       "simulated_score": round(simulated_score, 6),
-                       "requirement_coverage": round(req["coverage"], 6)},
+        "scales_pct": {"objective": OBJECTIVE_SCALE_PCT, "simulated": SIM_SCALE_PCT},
+        "components": combined["components"],
         "objective_discount": discount,
         "relabel_factor": relabel_factor,
-        "contributions": {k: round(v, 4) for k, v in contributions.items()},
-        "capped": capped,
+        "contributions": combined["contributions"],
+        "capped": combined["capped"],
+        "tiebreak": tiebreak_values(critic_obj, (critic_block or {}).get("killer_risks") or [], sim_used,
+                                    review is not None),
         "requirement_coverage": round(req["coverage"], 4),
         "requirements": req["rows"],
         "objective_gain_pct": obj_used,
@@ -459,7 +531,55 @@ def score_pipeline_result(result: Mapping[str, Any], candidate: Any, review: Any
         "primary_metric_value": finite(simulator.get("primary_metric_value")),
         "is_mock": bool(result.get("is_mock")),
     }
-    return EvaluationResult(status=EVALUATED, score=round(score, 4), breakdown=breakdown)
+    return EvaluationResult(status=EVALUATED, score=combined["score"], breakdown=breakdown)
+
+
+def rescore_breakdown(breakdown: Mapping[str, Any]) -> Optional[Tuple[float, Dict[str, Any]]]:
+    """
+    Re-scores a stored archive-version-3 breakdown with the current constants (migration to
+    version 4). Everything the formula needs is in the breakdown: tier, gate, relabel factor,
+    the usable simulated gain, the critic's two numbers, the objective gain used, its discount
+    and the requirement coverage. Returns (score, new breakdown) or None if the breakdown has no
+    tier (not a materials score). The proxy flag did not exist in version 3 and counts as False.
+    """
+    tier = breakdown.get("evidence_tier")
+    components = breakdown.get("components") or {}
+    if tier not in EVIDENCE_RANK or "gate" not in components:
+        return None
+    new = dict(breakdown)
+    flags = [f for f in (breakdown.get("flags") or []) if f != FLAG_SENSITIVE]
+    critic = dict(breakdown.get("critic") or {})
+    critic_sim = finite(breakdown.get("critic_simulated_benefit_pct"))
+    proxy = bool(critic.get("proxy_by_construction"))
+    sim_used, sim_source = None, "none"
+    usable = finite(breakdown.get("performance_gain_pct"))
+    if tier == TIER_SIMULATED and usable is not None:
+        sim_used, sim_source, sensitive = simulated_benefit_used(usable, critic_sim)
+        if sensitive:
+            flags.append(FLAG_SENSITIVE)
+        if proxy:
+            sim_used, sim_source = None, "none (the critic calls the simulated gain a proxy by construction)"
+    gate = float(components.get("gate") or 0.0)
+    relabel = float(breakdown.get("relabel_factor") or 1.0)
+    discount = float(breakdown.get("objective_discount") or ESTIMATE_DISCOUNT)
+    coverage = float(breakdown.get("requirement_coverage") if breakdown.get("requirement_coverage") is not None
+                     else REQ_UNRATED_DEFAULT)
+    combined = combine_score(tier, gate, relabel, sim_used, finite(breakdown.get("objective_gain_pct")), discount,
+                             coverage)
+    new.update({
+        "flags": flags,
+        "formula": score_formula(),
+        "weights": {"objective": W_OBJ, "simulated": W_SIM, "requirements": W_REQ},
+        "scales_pct": {"objective": OBJECTIVE_SCALE_PCT, "simulated": SIM_SCALE_PCT},
+        "components": combined["components"],
+        "contributions": combined["contributions"],
+        "capped": combined["capped"],
+        "simulated_benefit_used_pct": sim_used,
+        "simulated_benefit_source": sim_source,
+        "tiebreak": tiebreak_values(finite(breakdown.get("critic_objective_gain_pct")), critic.get("killer_risks") or [],
+                                    sim_used, bool(breakdown.get("critic"))),
+    })
+    return combined["score"], new
 
 
 # Words that show the request asks for a service life, and words that show a baseline in service.
@@ -665,6 +785,12 @@ For every candidate:
 - baseline_conventional: false if the candidate's or the simulation's baseline is not the conventional
   baseline above (e.g. a parent concept, an untreated or fouled surface, an idealised case); say what it
   is in baseline_issue.
+- proxy_by_construction: true if the simulated gain follows directly from an input or baseline choice,
+  not from modelled physics: e.g. a leaching or loss flux compared against a baseline that contains the
+  leaching species while the design contains none (the gain is ~100 % by definition), or a gain that
+  equals an assumed input ratio (friction coefficients, settlement factors) with nothing solved in
+  between. Name the choice in proxy_reason. The simulated benefit then does not count towards the score;
+  the objective gain and the requirement ratings still do.
 - key_assumption_issues: the modelling choices that drive the simulated gain, most important first.
 - killer_risks: what could make the concept unworkable in practice, most severe first.
 - requirement_coverage: one rating per requirement (name exactly as listed, coverage 0..1, a one-line
@@ -748,6 +874,8 @@ class MaterialsProfile(ExplorerProfile):
     relevance_axes = ("governing_quantity",)
     compatibility_axes = ("mechanism_class", "length_scale")
     origin_axes = ("inspiration_origin",)
+    combine_anchor_axes = ("governing_quantity", "mechanism_class")
+    trend_group_axes = ("mechanism_class",)
     textbook_solutions = (
         "Shark-skin riblets for drag reduction",
         "Lotus-leaf superhydrophobic surfaces",
@@ -816,6 +944,12 @@ class MaterialsProfile(ExplorerProfile):
                          "wall_shear; if fouling or years of service matter: fouling_adhesion, degradation_rate; a\n"
                          "strength or delamination requirement: stress). Explore orders only target cells with these\n"
                          "quantities, and a simulated benefit on another quantity does not count towards the score.\n")
+        origins = archive.preferred_values("inspiration_origin") if hasattr(archive, "preferred_values") else None
+        if origins:
+            reason = (archive.request_analysis.get("preferred_reason") or {}).get("inspiration_origin") or ""
+            parts.append(f"PREFERRED INSPIRATION ORIGINS: {', '.join(origins)} ({reason}). fill_gap, diversify,\n"
+                         "combine and extrapolate orders only target these origins; the mechanism must really come\n"
+                         "from such a biological system. Other origins appear only in explore orders.\n")
         return "\n".join(parts)
 
     def _framing_instructions(self, archive: Any) -> str:
@@ -848,10 +982,52 @@ class MaterialsProfile(ExplorerProfile):
     def score_note(self) -> str:
         """Explanation of the score for the map report (generated from the constants)."""
         return (f"{score_formula()}. Tier 'simulated' only when a usable simulated gain on a relevant governing "
-                "quantity enters the score (the lower of simulation and critic if they differ strongly); otherwise "
-                "tier 'estimated' (the simulated number is shown but not scored). The objective gain is the critic's "
-                "plausible contribution to the stated objective against the stated baseline. 'points obj / sim / "
-                "req' splits the score into its three parts (before the cap). Elites are ranked by tier first.")
+                "quantity enters the score (never above the critic's plausible simulated benefit; not at all for a "
+                "proxy by construction); otherwise tier 'estimated' (the simulated number is shown but not scored). "
+                "The objective gain is the critic's plausible contribution to the stated objective against the stated "
+                "baseline. 'points obj / sim / req' splits the score into its three parts (before the cap). Elites "
+                "are ranked by tier first; within a cell, scores within "
+                f"{TIE_EPSILON:g} point are a tie decided by the critic's objective gain, then fewer killer risks.")
+
+    def preferred_values(self, query: str, requirements: Sequence[Mapping[str, Any]]) -> Dict[str, Tuple[List[str], str]]:
+        """
+        Biological inspiration origins only, if the request or one of its requirements asks for a
+        bionic / bio-inspired / biomimetic concept (keywords, deterministic). Otherwise no preference.
+        """
+        sources = [("the request", query or "")]
+        for req in requirements or ():
+            text = f"{req.get('name') or ''} {req.get('criterion') or ''}".replace("_", " ")
+            sources.append((f"requirement '{req.get('name')}'", text))
+        for label, text in sources:
+            match = _BIO_REQUEST_PATTERN.search(text)
+            if match:
+                return {"inspiration_origin": (list(BIOLOGICAL_ORIGINS),
+                                               f"{label} asks for a biological model ('{match.group(0)}')")}
+        return {}
+
+    def migrate_archive(self, archive: Any, from_version: int) -> Optional[Dict[str, Any]]:
+        """
+        Version 3 -> 4: re-scores every evaluated entry from its stored breakdown with the current
+        constants (``rescore_breakdown``) and rebuilds the elites with the current comparison
+        (tiebreak). The old score is kept in ``score_breakdown.rescored_from``; round logs stay as
+        recorded.
+        """
+        if from_version >= 4:
+            return None
+        rescored = 0
+        for entry_id in sorted(archive.entries):
+            entry = archive.entries[entry_id]
+            if entry.get("status") != EVALUATED or entry.get("score") is None:
+                continue
+            result = rescore_breakdown(entry.get("score_breakdown") or {})
+            if result is None:
+                continue
+            score, breakdown = result
+            breakdown["rescored_from"] = {"version": from_version, "score": entry.get("score"),
+                                          "formula": (entry.get("score_breakdown") or {}).get("formula")}
+            entry["score"], entry["score_breakdown"] = score, breakdown
+            rescored += 1
+        return {"rescored_entries": rescored, "elite_changes": archive.recompute_elites()}
 
     def framing_warnings(self, archive: Any) -> List[str]:
         queries = archive.data.get("queries") or []

@@ -5,12 +5,12 @@ from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from vectornaut.explorer.archive import (
-    EVALUATED, FAILED, IMPROVED, INFEASIBLE, INVALID, NEW_ELITE, NOT_BETTER, REJECTED, Archive,
+    EVALUATED, FAILED, IMPROVED, IMPROVED_ON_TIEBREAK, INFEASIBLE, INVALID, NEW_ELITE, NOT_BETTER, REJECTED, Archive,
 )
 from vectornaut.explorer.strategies import STRATEGIES, find_trends, gap_candidates
 
-STAT_KEYS = ("orders", "candidates", "evaluated", "new_elite", "improved", "not_better", "failed",
-             "infeasible", "invalid", "rejected", "missing", "off_target", "elites_now")
+STAT_KEYS = ("orders", "candidates", "evaluated", "new_elite", "improved", "improved_on_tiebreak", "not_better",
+             "failed", "infeasible", "invalid", "rejected", "missing", "off_target", "elites_now")
 
 
 def _md(text: Any) -> str:
@@ -51,6 +51,8 @@ def strategy_stats(archive: Archive, rounds: Optional[Iterable[int]] = None) -> 
             outcome = order.get("outcome")
             if outcome in (NEW_ELITE, IMPROVED, NOT_BETTER):
                 s[outcome] += 1
+            if order.get("tiebreak") == IMPROVED_ON_TIEBREAK:
+                s["improved_on_tiebreak"] += 1
             if order.get("on_target") is False:
                 s["off_target"] += 1
     elite_ids = set(archive.elites.values())
@@ -69,7 +71,9 @@ def _stats_table(stats: Mapping[str, Mapping[str, int]]) -> str:
         if name not in stats:
             continue
         s = stats[name]
-        rows.append([name, s["orders"], s["evaluated"], s["new_elite"], s["improved"], s["not_better"], s["failed"],
+        improved = s["improved"] if not s.get("improved_on_tiebreak") else \
+            f"{s['improved']} ({s['improved_on_tiebreak']} on tiebreak)"
+        rows.append([name, s["orders"], s["evaluated"], s["new_elite"], improved, s["not_better"], s["failed"],
                      s["infeasible"], s["invalid"] + s["rejected"], s["missing"], s["off_target"], s["elites_now"]])
     return _table(headers, rows) if rows else "_No orders yet._"
 
@@ -144,6 +148,11 @@ def _requirements_section(archive: Archive) -> str:
         lines.append(f"\nRelevant `{axis}` values (explore/fill-gap/diversify use only these): "
                      f"{', '.join(stored) or '–'} (function analysis)"
                      + (f" + {', '.join(extra)} (held by elites)" if extra else ""))
+    reasons = archive.request_analysis.get("preferred_reason") or {}
+    for axis in archive.preferred_axes():
+        lines.append(f"\nPreferred `{axis}` values (fill-gap/diversify/combine/extrapolate use only these; explore reaches "
+                     f"the others at a low weight): {', '.join(archive.preferred_values(axis))}"
+                     + (f" ({_md(reasons.get(axis))})" if reasons.get(axis) else ""))
     return "\n".join(lines)
 
 
@@ -303,6 +312,10 @@ def _extrapolation_notes(strategy_notes: Mapping[str, Any]) -> str:
     planned = (strategy_notes.get("planned") or {}).get("extrapolate", 0)
     produced = (strategy_notes.get("produced") or {}).get("extrapolate", 0)
     text = f"\n\nExtrapolation: {produced} of {planned} planned slot(s) used; {_md(info.get('summary'))}."
+    slots = info.get("slots") or {}
+    if slots.get("weight"):
+        text += (f" Slots: {'allocated' if slots.get('allocated') else 'none allocated'} "
+                 f"({_md(slots.get('reason'))}).")
     rows = [[t["axis"], t["mode"], ", ".join(f"{k}={v}" for k, v in (t.get("fixed") or {}).items()) or "(marginal)",
              t["points"], f"{t['slope']:+.2f}", f"{t['r2']:.2f}", t["status"], t["reason"]]
             for t in info.get("trends") or []]
@@ -385,7 +398,7 @@ def render_round(archive: Archive, profile: Any, record: Mapping[str, Any]) -> s
                      _fmt_num(order.get("requirement_coverage")),
                      ", ".join(order.get("flags") or []) or "–",
                      order.get("title") or "", {True: "yes", False: "no", None: "–"}[order.get("on_target")],
-                     order.get("note") or ""])
+                     "; ".join(x for x in (order.get("tiebreak"), order.get("note")) if x)])
     notes = record.get("batch_notes") or {}
     strategy_notes = record.get("strategy_notes") or {}
     parts = [

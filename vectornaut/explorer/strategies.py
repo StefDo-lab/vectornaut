@@ -15,14 +15,17 @@ Strategies
                neighbours along different axes, under-explored axis values and low
                proposal density.
 - extrapolate: along an ordinal axis, fit the score trend over elites of the top evidence
-               tier (holding the other axes fixed, or marginalised; at least
-               ``min_trend_points`` points and r^2 >= ``min_r2``) and target one step beyond
-               the explored edge in the improving direction. No trend or end of scale -> no order.
+               tier (holding the other axes fixed, or marginalised within one value of the
+               group axes, materials: one mechanism class; at least ``min_trend_points`` points
+               and r^2 >= ``min_r2``) and target one step beyond the explored edge in the
+               improving direction. No trend or end of scale -> no order. The scheduler gives
+               extrapolate slots only if a qualifying slice trend exists (``extrapolate_slots``).
 - combine:     two elites far apart in descriptor space -> a cell mixing their descriptors
                (under-explored mixtures first), only if the mixture is compatible: its
                compatibility pair (materials: mechanism x length scale) was feasible elsewhere,
                or the cell lies within distance 2 of both parents; pairs only ever reported
-               infeasible are skipped.
+               infeasible are skipped. Anchor axes (materials: governing_quantity, and the
+               mechanism if it never worked on that quantity) come from the stronger parent.
 - diversify:   the least-proposed value of the least diverse axis, one step from an elite.
 - explore:     a random cell nobody has proposed or targeted yet, restricted to relevant
                values of the relevance axes (materials: governing_quantity) and weighted
@@ -38,13 +41,17 @@ inspiration_origin) demand a mechanism taken from the new origin (no relabelled 
 that value)``, where concentration is the share of proposals held by the axis' most
 common value. A value nobody proposed on an axis where every proposal shares one value
 scores 1; a value on a well-mixed axis scores little.
+
+Preferred values (``Archive.preferred_values``; materials: biological origins for a
+bio-inspired request) are the only values fill_gap, diversify, combine and extrapolate
+target; explore reaches the others at ``nonpreferred_explore_factor``.
 """
 import math
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
-from vectornaut.explorer.archive import EVALUATED, Archive, evidence_rank
+from vectornaut.explorer.archive import EVALUATED, Archive, evidence_rank, rank_key
 from vectornaut.explorer.descriptors import DescriptorSpace
 
 REFINE = "refine"
@@ -105,6 +112,16 @@ class StrategyConfig:
     combine_max_parent_distance: int = 2
     # Axes that name where an idea comes from (materials: inspiration_origin); set from the profile.
     origin_axes: Tuple[str, ...] = ()
+    # combine: axes taken from the stronger parent (evidence tier, then score). The first always;
+    # each further one only if the weaker parent's value was never evaluated together with the
+    # anchored value (materials: governing_quantity, mechanism_class); set from the profile.
+    combine_anchor_axes: Tuple[str, ...] = ()
+    # extrapolate: marginal trends only within one value of these axes (materials:
+    # mechanism_class); empty = marginal over all other axes. Set from the profile.
+    trend_group_axes: Tuple[str, ...] = ()
+    # explore: weight factor for a cell with a non-preferred value (e.g. a non-biological origin for
+    # a bio-inspired request); the other strategies never target such values.
+    nonpreferred_explore_factor: float = 0.1
 
 
 def parse_weights(spec: Optional[str]) -> Dict[str, float]:
@@ -159,12 +176,16 @@ def entry_summary(space: DescriptorSpace, entry: Mapping[str, Any]) -> Dict[str,
 
 
 def trend_eligible(entry: Mapping[str, Any]) -> bool:
-    """Only simulated (or unranked) scores feed trends; estimates and implausible gains do not."""
+    """
+    Only simulated (or unranked) scores feed trends; estimates, implausible gains and simulated
+    gains the critic calls a proxy by construction do not.
+    """
     breakdown = entry.get("score_breakdown") or {}
     tier = breakdown.get("evidence_tier")
     if tier not in (None, "simulated"):
         return False
-    return "implausible_gain" not in (breakdown.get("flags") or [])
+    flags = breakdown.get("flags") or []
+    return "implausible_gain" not in flags and "proxy_by_construction" not in flags
 
 
 class ExplorationStats:
@@ -399,7 +420,7 @@ def gap_candidates(archive: Archive, taken: Iterable[str] = (), config: Optional
     ranked = []
     for key, items in neighbours.items():
         cell = cells[key]
-        if archive.is_infeasible(cell) or not archive.is_relevant(cell):
+        if archive.is_infeasible(cell) or not archive.is_relevant(cell) or not archive.is_preferred(cell):
             continue
         scores = sorted((float(e.get("score") or 0.0) for e, _ in items), reverse=True)
         attempts = _attempts(archive, cell)
@@ -530,7 +551,9 @@ def find_trends(archive: Archive, config: Optional[StrategyConfig] = None, taken
         target[axis.name] = values[next_idx]
         record["target"] = {name: target[name] for name in space.names if name in target}
         key = space.cell_key(record["target"])
-        if key in taken:
+        if not archive.is_preferred(record["target"]):
+            record["status"] = "not_preferred"
+        elif key in taken:
             record["status"] = "taken"
         elif space.is_full(record["target"]):
             if archive.is_infeasible(record["target"]):
@@ -553,13 +576,25 @@ def find_trends(archive: Archive, config: Optional[StrategyConfig] = None, taken
             fixed = dict(zip(others, rest))
             trends.append(_trend(axis, "slice", fixed, points, fixed))
 
-        best_per_value: Dict[str, float] = {}
+        # Marginal: best score per value, within one value of the group axes (materials: one
+        # mechanism class), so points of different mechanisms are never fitted together.
+        group_axes = [name for name in config.trend_group_axes if name in space.names and name != axis.name]
+        marginal_groups: Dict[Tuple[str, ...], Dict[str, float]] = defaultdict(dict)
         for entry in elites:
+            group = tuple(entry["descriptors"][name] for name in group_axes)
             value = entry["descriptors"][axis.name]
-            best_per_value[value] = max(best_per_value.get(value, -math.inf), float(entry["score"]))
-        if len(best_per_value) >= 2:
+            best = marginal_groups[group]
+            best[value] = max(best.get(value, -math.inf), float(entry["score"]))
+        for group in sorted(marginal_groups):
+            best_per_value = marginal_groups[group]
+            members = [e for e in elites if tuple(e["descriptors"][name] for name in group_axes) == group]
+            fixed = dict(zip(group_axes, group))
+            # A marginal fit whose points are one slice is that slice (already fitted).
+            if len(best_per_value) < 2 or (group_axes and len({json_key({n: e["descriptors"][n] for n in others})
+                                                               for e in members}) < 2):
+                continue
             points = sorted(best_per_value.items(), key=lambda item: axis.index(item[0]))
-            trends.append(_trend(axis, "marginal", {}, points, {}))
+            trends.append(_trend(axis, "marginal", fixed, points, fixed))
 
     def _rank(trend):
         return (0 if trend["mode"] == "slice" else 1, -abs(trend["slope"]) * trend["r2"], trend["axis"],
@@ -634,18 +669,23 @@ def combine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
     used = set(taken)
     stats = ExplorationStats(archive)
     known = PairKnowledge(archive, config.compatibility_axes)
+    proven = proven_anchor_pairs(archive, config)
     for distance, _, a, b in pairs:
         if len(orders) >= n:
             break
         diff = space.differing_axes(a["descriptors"], b["descriptors"])
+        strong, weak = (a, b) if (rank_key(a), b["id"]) >= (rank_key(b), a["id"]) else (b, a)
+        anchored = combine_anchors(diff, strong, weak, proven, config)
+        free = [name for name in diff if name not in anchored]
         options = []
-        for mask in range(1, 2 ** len(diff) - 1):
-            child = dict(a["descriptors"])
-            take = {}
-            for bit, name in enumerate(diff):
-                source = b if mask >> bit & 1 else a
-                child[name] = source["descriptors"][name]
-                take[name] = "B" if source is b else "A"
+        for mask in range(1, 2 ** len(free)):
+            child = dict(strong["descriptors"])
+            for bit, name in enumerate(free):
+                if mask >> bit & 1:
+                    child[name] = weak["descriptors"][name]
+            if child == a["descriptors"] or child == b["descriptors"] or not archive.is_preferred(child):
+                continue
+            take = {name: ("A" if child[name] == a["descriptors"][name] else "B") for name in diff}
             options.append((space.cell_key(child), child, take))
         options.sort(key=lambda o: o[0])
         rng.shuffle(options)
@@ -664,20 +704,74 @@ def combine(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
             continue
         key, child, take, why = choice
         used.add(key)
+        context = {
+            "parent_a": entry_summary(space, a), "parent_b": entry_summary(space, b),
+            "descriptor_distance": distance, "take_from": take, "compatibility": why,
+        }
+        anchor_text = ""
+        if anchored:
+            context["anchored"] = {name: {"from": "A" if strong is a else "B", "why": reason}
+                                   for name, reason in anchored.items()}
+            anchor_text = (f" {', '.join(f'{name}={child[name]}' for name in anchored)} come(s) from the stronger "
+                           f"parent '{strong.get('title')}' ({_tier_text(strong)}): the mixed concept must work on "
+                           "that quantity with a mechanism that can actually affect it.")
         orders.append(_make_order(
-            space, COMBINE, child,
-            context={
-                "parent_a": entry_summary(space, a), "parent_b": entry_summary(space, b),
-                "descriptor_distance": distance, "take_from": take, "compatibility": why,
-            },
+            space, COMBINE, child, context=context,
             rationale=(
                 f"Cross two distant elites (distance {distance}): '{a.get('title')}' ({a.get('score'):.1f}) and "
                 f"'{b.get('title')}' ({b.get('score'):.1f}). Combine the working principle of both in the mixed cell "
-                f"{space.describe(child)} ({why})."
+                f"{space.describe(child)} ({why})." + anchor_text
             ),
             parent_ids=[a["id"], b["id"]],
         ))
     return orders
+
+
+def proven_anchor_pairs(archive: Archive, config: StrategyConfig) -> Dict[str, Set[Tuple[str, str]]]:
+    """
+    For every further anchor axis (materials: mechanism_class): the (value, first-anchor value) pairs
+    that produced an evaluated, trend-eligible (simulated or unranked) concept somewhere.
+    """
+    anchors = [name for name in config.combine_anchor_axes if name in archive.space.names]
+    proven: Dict[str, Set[Tuple[str, str]]] = {name: set() for name in anchors[1:]}
+    if len(anchors) < 2:
+        return proven
+    first = anchors[0]
+    for entry in archive.entries.values():
+        if entry.get("status") != EVALUATED or not entry.get("descriptors") or not trend_eligible(entry):
+            continue
+        for name in anchors[1:]:
+            proven[name].add((entry["descriptors"][name], entry["descriptors"][first]))
+    return proven
+
+
+def combine_anchors(diff: Sequence[str], strong: Mapping[str, Any], weak: Mapping[str, Any],
+                    proven: Mapping[str, Set[Tuple[str, str]]], config: StrategyConfig) -> Dict[str, str]:
+    """
+    Axes the child takes from the stronger parent, with the reason. The first anchor axis
+    (materials: governing_quantity) always, so a combine never inherits the quantity of an
+    estimated or weaker parent; a further anchor axis (mechanism_class) when the weaker parent's
+    value never produced a working concept on the anchored quantity.
+    """
+    anchors = [name for name in config.combine_anchor_axes if name in strong["descriptors"]]
+    if not anchors:
+        return {}
+    first = anchors[0]
+    target_value = strong["descriptors"][first]
+    result: Dict[str, str] = {}
+    if first in diff:
+        result[first] = f"from the stronger parent ({_tier_text(strong)} vs {_tier_text(weak)})"
+    for name in anchors[1:]:
+        value = weak["descriptors"][name]
+        if name in diff and (value, target_value) not in proven.get(name, set()):
+            result[name] = f"{name}={value} never produced a working concept with {first}={target_value}"
+    return result
+
+
+def _tier_text(entry: Mapping[str, Any]) -> str:
+    tier = (entry.get("score_breakdown") or {}).get("evidence_tier")
+    score = float(entry.get("score") or 0.0)
+    return f"{tier}, {score:.1f}" if tier else f"{score:.1f}"
 
 
 def _relevance_filter(archive: Archive) -> Optional[Dict[str, Set[str]]]:
@@ -733,6 +827,8 @@ def explore(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
                 weight *= math.exp(-config.explore_distance_decay * max(near[0] - 1, 0))
         if known.only_infeasible(cell):
             weight *= config.explore_infeasible_pair_factor
+        if not archive.is_preferred(cell):
+            weight *= config.nonpreferred_explore_factor
         unvisited.append(cell)
         weights.append(weight)
         nearest.append(near)
@@ -760,6 +856,12 @@ def explore(archive: Archive, rng, n: int, taken: Set[str], config: StrategyConf
                                            "cell": space.describe(entry["descriptors"])}
             near_text = (f" The nearest concept that worked is '{entry.get('title')}' at distance {distance} "
                          f"({', '.join(space.differing_axes(cell, entry['descriptors']))} differ).")
+        if not archive.is_preferred(cell):
+            outside = [f"{axis}={cell[axis]}" for axis in archive.preferred_axes()
+                       if cell[axis] not in archive.preferred_values(axis)]
+            context["outside_preferred"] = outside
+            near_text += (f" Note: {', '.join(outside)} is outside the values the request prefers; propose a concept "
+                          "only if it really fits the request.")
         orders.append(_make_order(
             space, EXPLORE, cell, context=context,
             rationale=(
@@ -785,7 +887,10 @@ def diversify(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCo
         return []
     uses = source_uses(archive, batch)
     stats = ExplorationStats(archive)
-    allowed = _relevance_filter(archive) or {}
+    allowed = dict(_relevance_filter(archive) or {})
+    for name in archive.preferred_axes():
+        preferred = set(archive.preferred_values(name))
+        allowed[name] = allowed[name] & preferred if name in allowed else preferred
     axes = sorted(space.names, key=lambda name: (-stats.concentration[name], space.names.index(name)))
     orders: List[Dict[str, Any]] = []
     used = set(taken)
@@ -810,7 +915,8 @@ def diversify(archive: Archive, rng, n: int, taken: Set[str], config: StrategyCo
                     target = dict(elite["descriptors"])
                     target[name] = value
                     key = space.cell_key(target)
-                    if key in used or key in archive.elites or archive.is_infeasible(target):
+                    if key in used or key in archive.elites or archive.is_infeasible(target) \
+                            or not archive.is_preferred(target):
                         continue
                     choice = (value, elite, target, key)
                     break
@@ -909,6 +1015,7 @@ def explain_trends(archive: Archive, config: Optional[StrategyConfig] = None,
         "scale_end": lambda t: f"{t['edge']} is the end of the scale",
         "infeasible": lambda t: f"the next cell ({t['next']}) is reported infeasible",
         "taken": lambda t: "the next cell is already targeted in this batch",
+        "not_preferred": lambda t: "the next cell uses a value the request does not prefer",
         "proposed": lambda t: f"usable: {t['edge']} -> {t['next']}",
     }
     rows = []
@@ -930,6 +1037,32 @@ def explain_trends(archive: Archive, config: Optional[StrategyConfig] = None,
         best = max(rows, key=lambda r: (r["points"], r["r2"]))
         summary += f" (e.g. {best['axis']} {best['mode']}: {best['reason']})"
     return {"summary": summary, "trends": rows}
+
+
+def extrapolate_slots(archive: Archive, config: StrategyConfig, weights: Mapping[str, float]) -> Dict[str, Any]:
+    """
+    Whether extrapolate gets slots in this batch: only if a qualifying slice trend exists (other
+    axes held fixed, i.e. the same mechanism, origin and quantity; at least ``min_trend_points``
+    simulated points, r^2 >= ``min_r2``, improving at the edge, next cell open). Otherwise its
+    weight goes to the other strategies, unless it is the only strategy with a weight (its slots
+    then fall back as before).
+    """
+    weight = float(weights.get(EXTRAPOLATE, 0.0) or 0.0)
+    qualifying = [t for t in find_trends(archive, config) if t["mode"] == "slice" and t["status"] == "proposed"]
+    others = any(float(w or 0.0) > 0 for name, w in weights.items() if name != EXTRAPOLATE)
+    if weight <= 0:
+        return {"weight": weight, "qualifying_slice_trends": len(qualifying), "allocated": False,
+                "reason": "extrapolate has no weight"}
+    if qualifying:
+        best = qualifying[0]
+        return {"weight": weight, "qualifying_slice_trends": len(qualifying), "allocated": True,
+                "reason": f"slice trend along {best['axis']} with {json_key(best['fixed'])} "
+                          f"({len(best['points'])} points, r2 {best['r2']:.2f}): {best['edge']} -> {best['next']}"}
+    return {"weight": weight, "qualifying_slice_trends": 0, "allocated": not others,
+            "reason": "no qualifying slice trend: needs the same values on all other axes, "
+                      f">= {config.min_trend_points} simulated points and r2 >= {config.min_r2:g}; "
+                      + ("its share went to the other strategies" if others else
+                         "extrapolate is the only weighted strategy, its slots fall back")}
 
 
 def schedule(
@@ -955,10 +1088,15 @@ def schedule(
     if not archive.elites:
         explore_w = weights.get(EXPLORE, 0.0)
         weights = {SEED: max(1.0 - explore_w, 0.5), EXPLORE: explore_w}
+    slots = extrapolate_slots(archive, config, weights)
+    if not slots["allocated"] and weights.get(EXTRAPOLATE, 0) > 0:
+        # No qualifying slice trend: the extrapolate share goes to the other strategies.
+        weights[EXTRAPOLATE] = 0.0
     counts = allocate(weights, batch_size, rng)
     if diagnostics is not None:
         diagnostics["planned"] = {name: k for name, k in counts.items() if k}
         diagnostics["extrapolate"] = explain_trends(archive, config)
+        diagnostics["extrapolate"]["slots"] = slots
 
     orders: List[Dict[str, Any]] = []
     taken: Set[str] = set()

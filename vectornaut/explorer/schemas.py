@@ -116,6 +116,8 @@ class MaterialsCriticReview(BaseModel):
     relabel_reason: str = Field(default="", description="If relabelled_analogue: one line naming the concept it copies")
     baseline_conventional: Optional[bool] = Field(default=None, description="False if the candidate's or the simulation's baseline is not the conventional solution (e.g. a parent concept, an untreated or fouled surface, an idealised case); null if unsure")
     baseline_issue: str = Field(default="", description="If baseline_conventional is false: one line saying what the baseline is instead")
+    proxy_by_construction: bool = Field(default=False, description="True if the simulated gain follows directly from an input or baseline choice rather than from modelled physics (e.g. a leaching flux compared against a baseline that contains the leaching species while the design contains none, or a gain equal to an assumed input ratio); the simulated benefit then does not count")
+    proxy_reason: str = Field(default="", description="If proxy_by_construction: one line naming the input or baseline choice that produces the gain")
     key_assumption_issues: List[str] = Field(default_factory=list, description="Modelling choices that drive the simulated gain (free parameters, gap sizes, laminar models of turbulent flow, missing losses), most important first")
     killer_risks: List[str] = Field(default_factory=list, description="Risks that could make the concept unworkable in practice, most severe first")
     requirement_coverage: List[RequirementRating] = Field(default_factory=list, description="One rating per listed requirement")

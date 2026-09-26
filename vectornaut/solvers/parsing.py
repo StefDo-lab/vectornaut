@@ -89,6 +89,35 @@ def parse_equation_and_bcs(
         
     return pde_rhs, bcs_list, x, y_func, sym_dict
 
+# Derivative-like names with one-letter variables (du_dx, d2u_dy2, dp_dx): never injected,
+# even if the variable is not listed (the historical rule).
+_SHORT_DERIVATIVE_PATTERN = re.compile(r"^d2?[a-zA-Z_]_d[a-zA-Z_]2?$")
+# Fallback when the dependent/independent variables are unknown: derivative-like names whose
+# variable names have up to four characters (dc_dxi, d2c_dxi2, d2u_dxdy). Longer parts are
+# left alone so that parameters such as 'density_dimensionless' can still be injected.
+_DERIVATIVE_NAME_PATTERN = re.compile(
+    r"^d2?[A-Za-z_][A-Za-z0-9]{0,3}_d[A-Za-z_][A-Za-z0-9]{0,3}?(?:2|d[A-Za-z_][A-Za-z0-9]{0,3})?$"
+)
+
+
+def derivative_names(independent_vars: List[str], dependent_vars: List[str]) -> set:
+    """
+    The derivative notations the solvers understand, spelled out for the actual variable
+    names: dU_dX, d2U_dX2, d2U_dXdY (both orders) and the subscripts U_X, U_XX, U_XY.
+    """
+    names = set()
+    ivs = [iv for iv in (independent_vars or []) if iv]
+    for dv in dependent_vars or []:
+        if not dv:
+            continue
+        for a in ivs:
+            names.update({f"d{dv}_d{a}", f"d2{dv}_d{a}2", f"{dv}_{a}", f"{dv}_{a}{a}"})
+            for b in ivs:
+                if a != b:
+                    names.update({f"d2{dv}_d{a}d{b}", f"{dv}_{a}{b}"})
+    return names
+
+
 def auto_detect_and_inject_missing_params(
     gov_eq_str: str,
     bcs_list: List[str],
@@ -98,7 +127,10 @@ def auto_detect_and_inject_missing_params(
 ) -> Dict[str, float]:
     """
     Parses equations and BCs for parameter symbols that are missing from params,
-    and injects them with sensible defaults.
+    and injects them with sensible defaults. Derivative notations of the actual variables
+    (e.g. d2u_dxi2, dc_dxi for coordinate 'xi') are never injected, nor are other
+    one-letter derivative-like names such as dp_dx. Without variable names, derivative-like
+    names with short multi-character parts count as derivatives (_DERIVATIVE_NAME_PATTERN).
     """
     updated_params = params.copy()
     
@@ -118,11 +150,15 @@ def auto_detect_and_inject_missing_params(
         ignored.add(dv)
         ignored.add(f"d{dv}")
         ignored.add(f"d2{dv}")
-        
+    derivatives = derivative_names(independent_vars, dependent_vars)
+    variables_known = bool(derivatives)
+
     for w in words:
         if w.lower() in ignored or w in ignored:
             continue
-        if re.match(r"^d2?[a-zA-Z_]_d[a-zA-Z_]2?$", w):
+        if w in derivatives or _SHORT_DERIVATIVE_PATTERN.match(w):
+            continue
+        if not variables_known and _DERIVATIVE_NAME_PATTERN.match(w):
             continue
         if w in updated_params:
             continue
