@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist die Saharasilberameise: ihre dreieckigen, gerillten Haare werfen Sonnenlicht per Totalreflexion zur\u00fcck und strahlen im mittleren Infrarot stark ab. Du baust das als d\u00fcnne Matte aus dreieckigen Glasmikrofasern (5-10 \u00b5m), die auf einen wei\u00dfen mineralischen Grund aufgeschmolzen werden. Im 1D-Dachmodell sinkt der W\u00e4rmestrom in den Raum um ~23 % gegen\u00fcber einer gealterten Cool-Roof-Farbe (7,5 statt 9,7 W/m\u00b2), wobei der Auditor schon eine Staubeinlagerung einkalkuliert hat.",
+ "pros_and_cons": "Vorteile: Glas ist UV-stabil, hohe Emission, keine Polymere. Nachteile: die Fasermatte ist ein Staubf\u00e4nger, spr\u00f6de gegen Hagel und Sandabrieb, Fertigung dreieckiger Fasern teuer; der Vorteil gegen\u00fcber einer guten mineralischen K\u00fchlfarbe ist unsicher.",
+ "mechanical_limits": "Glasfasern sind spr\u00f6de (Bruchdehnung ~2-4 %); Hagelk\u00f6rner und Sandstrahl brechen freistehende Fasern. Anbindung an den Grund muss 30-40 K Tageszyklen \u00fcberstehen. Ausfallkriterium: Reflexion < 0,80 oder Faserverlust > 20 %.",
+ "manufacturing_methods": "Faserziehen aus Preformen mit Dreiecksquerschnitt (wie bei Spezial-Glasfasern), Vliesbildung, Einbetten in Silikatgrund durch Spr\u00fchen und Sintern bei niedriger Temperatur; alternativ gepr\u00e4gte Glasfliesen mit Mikroprismen.",
+ "cost_estimation": "Faserprototyp 50-100 k\u20ac; Serie grob 20-40 \u20ac/m\u00b2, also deutlich teurer als Farbe (5-10 \u20ac/m\u00b2).",
+ "validation_experiments": "Ulbrichtkugel-Reflexion und FTIR-Emission, Staubtests im Windkanal mit Arizona-Teststaub, Hagelschlagtest, Au\u00dfenbewitterung 2 Jahre in W\u00fcstenklima, W\u00e4rmestrommessung an Testboxen.",
+ "industry_partners": "Glasfaserhersteller, Hersteller keramischer Fassadenplatten, Bauphysik-Institute, Cool-Roof-Zertifizierer.",
+ "_prompt_hash": "1a460328747e51d2"
+}

@@ -1,0 +1,146 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Critical checks: (1) Actuation direction: pine-cone scales open when dry; the laminate must be arranged so that dry air closes the flaps. In hot-dry climates daytime RH 10-20 percent and night 30-50 percent gives a usable RH swing, but in hot-humid climates the swing is small. (2) Durability: cellulose-based hygromorphs lose 30-60 percent of their curvature amplitude after a few years of UV and wetting; a 20-year mean actuation availability of ~0.6 is optimistic. (3) Flap temperature: 15 cm flaps have h ~10 W/m2K per side, so an aged flap (alpha ~0.4) runs ~6 K above air and radiates toward the wall. Bimorph curvature (Timoshenko, equal thickness and modulus): kappa = 1.5*d_eps/t = 1.5*0.02*0.3/0.002 = 4.5 1/m for a 30 percent RH swing, i.e. tip rotation over 0.15 m ~ 0.68 rad - enough to close. Dimensionless: flap Reynolds number 2*0.15/1.6e-5 = 1.9e4; Biot envelope 0.035. Model: steady 1D wall conduction with a shaded outer boundary; audited actuation_availability 0.6, flap_solar_absorptance 0.4. Baseline: exposed wall with aged cool paint (h_o 20, no flaps). Expected gain only ~2 percent: the sheltered wall loses convective cooling and the warm flaps re-radiate, which nearly cancels the shading of an already white wall. Simulation coefficient: bilayer curvature 4.5 1/m. Mechanical: flap hinges and wind flutter over 20 years are a concern. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "bilayer_thickness",
+   "value": 0.002
+  },
+  {
+   "name": "hygroscopic_strain_coefficient",
+   "value": 0.02
+  },
+  {
+   "name": "flap_length",
+   "value": 0.15
+  },
+  {
+   "name": "shading_fraction_closed",
+   "value": 0.8
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  },
+  {
+   "name": "actuation_availability",
+   "value": 0.6
+  },
+  {
+   "name": "wall_solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 300.0
+  },
+  {
+   "name": "flap_solar_absorptance",
+   "value": 0.4
+  },
+  {
+   "name": "flap_radiative_coefficient",
+   "value": 5.0
+  },
+  {
+   "name": "flap_convective_coefficient",
+   "value": 10.0
+  },
+  {
+   "name": "wall_emittance",
+   "value": 0.9
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 20.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 15.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "flap_Reynolds",
+   "value": 19000.0
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.035
+  }
+ ],
+ "simulation_coefficient": 4.5,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of west-wall heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of west-wall heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "bilayer_thickness",
+   "flap_length",
+   "shading_fraction_closed",
+   "flap_solar_absorptance"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "actuation_availability",
+   "value": 0.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  }
+ ],
+ "baseline_description": "exposed wall with aged conventional white acrylic cool paint, no flaps"
+}

@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du mischst in eine weiße Dachbeschichtung ein leitfähiges Netz aus ~20 nm ATO-Nanopartikeln, das triboelektrische Ladung von Staub ableitet, damit die elektrostatische Haftung wegfällt. Ein pflanzliches Vorbild gibt es dafür nicht - das Konzept stammt aus antistatischen PV-Glasbeschichtungen. Im Modell sinkt der Wärmestrom nur um ~2 % (5,47 statt 5,56 W/m²), weil die dunkle Verschmutzung von Cool Roofs vor allem aus feinem Ruß und Organik besteht, die über Van-der-Waals- und Kapillarkräfte haftet.",
+  "pros_and_cons": "Vorteile: Einfach in bestehende Farbsysteme integrierbar, passiv, keine Toxizität bei gebundenem ATO (Antimon aber kritisch bei Abrieb). Nachteile: Kaum Wirkung auf die relevante Verschmutzung; ATO senkt die NIR-Reflexion; kein bionischer Mechanismus; Antimon-Freisetzung durch Abwitterung ist umweltrelevant.",
+  "mechanical_limits": "Wie konventionelle Acrylbeschichtung: Neuanstrich nach ~10 Jahren, UV-Alterung des Binders. Das Perkolationsnetz reißt bei Mikrorissen auf und verliert Leitfähigkeit.",
+  "manufacturing_methods": "Dispersion von ATO-Nanopartikeln (5-10 Vol.-%) in einer weißen Acryl- oder Silikatfarbe, Standard-Spritz- oder Rollauftrag.",
+  "cost_estimation": "ATO ~50-100 EUR/kg; bei ~20 g/m² +1-2 EUR/m² gegenüber Standard-Cool-Roof-Farbe.",
+  "validation_experiments": "Soiling-Test (ASTM D7897) mit und ohne ATO; Messung der Oberflächenladung und Staubhaftung im Windkanal mit Wüstenstaub; Freibewitterung 2 Jahre mit SR-Messung; Eluat-Test auf Antimon.",
+  "industry_partners": "Hersteller antistatischer Beschichtungen und Farbhersteller; PV-Soiling-Forschungsgruppen."
+}

@@ -1,0 +1,122 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Model: steady 1D series conduction interior -> wall -> nanowood panel with sol-air Robin boundary; q = [alpha*I + h*dT - eps*R_net]/(1 + h*R_tot). Adjustments: the proposal's aged SR 0.75 and k 0.03 are dry, fresh laboratory values. Delignified cellulose outdoors photo-yellows (UV oxidation of cellulose forms chromophores even without lignin), greys by mould and soils; a 20-year life-mean SR of ~0.65 is more realistic even with a hydrophobic siloxane treatment. Moisture uptake (cellulose equilibrium moisture 5-10 %) raises the transverse conductivity to ~0.04 W/mK. Hand result with the audited values: R_panel = 0.02/0.04 = 0.5 m2K/W, q = (0.35*180 + 150 - 0.93*40)/(1 + 15*2.5) = 175.8/38.5 = 4.57 W/m2 vs 5.59 W/m2 for aged white paint directly on the wall: -18 %, almost all from the added resistance. Structural: nanowood has high longitudinal strength (~100 MPa after densification; non-densified nanowood ~10-20 MPa), fine for cladding, but wet/dry cycling causes swelling and cracking; combustible. Durability for 20 years outdoors is the decisive weakness. Simulation coefficient: effective conductance 1/(R_tot + 1/h) = 0.39 W/m2K.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "panel_thickness",
+   "value": 0.02
+  },
+  {
+   "name": "panel_conductivity",
+   "value": 0.04
+  },
+  {
+   "name": "panel_solar_reflectance_aged",
+   "value": 0.65
+  },
+  {
+   "name": "panel_thermal_emittance",
+   "value": 0.93
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "solar_irradiance_daily_mean",
+   "value": 180.0
+  },
+  {
+   "name": "indoor_temperature",
+   "value": 298.15
+  },
+  {
+   "name": "ambient_temperature",
+   "value": 308.15
+  },
+  {
+   "name": "external_heat_transfer_coefficient",
+   "value": 15.0
+  },
+  {
+   "name": "net_sky_longwave",
+   "value": 40.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "OuterFilmBiotDesign",
+   "value": 37.5
+  },
+  {
+   "name": "OuterFilmBiotBaseline",
+   "value": 30.0
+  }
+ ],
+ "simulation_coefficient": 0.39,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Building physics / facade insulation",
+  "independent_var": {
+   "label": "Normalized thermal position (0 = interior, 1 = panel surface)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Daily-mean heat flux into the interior"
+  },
+  "reference_metric": {
+   "label": "Analytical daily-mean heat flux into the interior"
+  },
+  "performance_gain": {
+   "label": "Reduction of facade heat gain vs aged white coating"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of daily-mean facade heat gain",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Daily-mean heat flux into the interior",
+  "reference_metric": "Analytical daily-mean heat flux into the interior",
+  "lower_is_better": true,
+  "acceptance_threshold": 15.0,
+  "hard_constraints": [
+   "relative error between solvers < 1 %",
+   "finite outputs",
+   "parameters within audited bounds"
+  ],
+  "design_variables": [
+   "panel_thickness",
+   "panel_conductivity",
+   "panel_solar_reflectance_aged",
+   "panel_thermal_emittance"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "0",
+  "scale": "1 / (1 / wall_u_value + panel_thickness / panel_conductivity)",
+  "unit": "W/m^2",
+  "label": "Daily-mean heat flux into the interior"
+ },
+ "baseline_parameters": [
+  {
+   "name": "panel_thickness",
+   "value": 0.0
+  },
+  {
+   "name": "panel_solar_reflectance_aged",
+   "value": 0.67
+  },
+  {
+   "name": "panel_thermal_emittance",
+   "value": 0.9
+  }
+ ],
+ "baseline_description": "Aged white acrylic coating (SR 0.67) directly on the same wall"
+}

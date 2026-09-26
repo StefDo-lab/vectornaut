@@ -1,0 +1,17 @@
+{
+  "governing_equation": "d2T_dx2 = 0",
+  "boundary_conditions": [
+    "T(0) = indoor_temperature",
+    "roof_u_value * dT_dx(1) = (1 - clean_solar_reflectance + aged_reflectance_loss) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - T(1)) - thermal_emittance * net_sky_longwave"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"],
+  "parameters": [
+    {"name": "indoor_temperature", "value": 298.15, "min_bound": 293.15, "max_bound": 301.15, "justification": "Conditioned interior (x=0)."},
+    {"name": "ambient_temperature", "value": 308.15, "min_bound": 298.15, "max_bound": 318.15, "justification": "Daily-mean outdoor air."},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0, "min_bound": 8.0, "max_bound": 30.0, "justification": "Combined outer film coefficient."},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0, "min_bound": 200.0, "max_bound": 350.0, "justification": "Horizontal roof, hot summer day."},
+    {"name": "net_sky_longwave", "value": 85.0, "min_bound": 40.0, "max_bound": 120.0, "justification": "Dry clear sky."},
+    {"name": "thermal_emittance", "value": 0.9, "min_bound": 0.85, "max_bound": 0.95, "justification": "Acrylic-type white binder with ATO network."}
+  ]
+}

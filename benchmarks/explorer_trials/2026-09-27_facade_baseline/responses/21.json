@@ -1,0 +1,153 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Checks: cavity Reynolds number Re = u*2d/nu = 0.4*0.12/1.6e-5 = 3000 (transitional); cavity h ~ 4-6 W/m2K; NTU = 2*h_c*H/(rho*cp*u*d) = 2*5*10/(1150*0.4*0.06) = 3.6, so the air heats to a large part of the cladding excess by the top; mean fraction 0.5 is fair. Cladding excess temperature alpha*I/(h_o+2h_c+h_r) = 0.3*300/35 = 2.6 K. Model: steady 1D conduction through the wall with a combined convective+radiative cavity boundary; linear, analytical. Baseline (same equation): exposed wall with aged cool paint: cavity_convective_coefficient = 20 (outdoor h_o), cavity_radiative_coefficient = 0, wall_direct_solar_absorptance = 0.32, wall_longwave_loss = 18 W/m2, air_heating_fraction = 0. Simulation coefficient: combined cavity-side coefficient h_c + h_r = 10 W/m2K. Expected gain ~14%. The stack/wind-cap shaping only matters through cavity velocity; at u = 0.1 m/s the fraction rises toward 0.8 and the gain drops to ~11%. Mechanical: standard rainscreen, no issue. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "cavity_depth",
+   "value": 0.06
+  },
+  {
+   "name": "cavity_air_velocity",
+   "value": 0.4
+  },
+  {
+   "name": "cladding_solar_absorptance",
+   "value": 0.3
+  },
+  {
+   "name": "facade_height",
+   "value": 10.0
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 300.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "cavity_convective_coefficient",
+   "value": 5.0
+  },
+  {
+   "name": "cavity_radiative_coefficient",
+   "value": 5.0
+  },
+  {
+   "name": "air_heating_fraction",
+   "value": 0.5
+  },
+  {
+   "name": "wall_direct_solar_absorptance",
+   "value": 0.0
+  },
+  {
+   "name": "wall_longwave_loss",
+   "value": 0.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "cavity_Reynolds",
+   "value": 3000.0
+  },
+  {
+   "name": "cavity_NTU",
+   "value": 3.6
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.05
+  }
+ ],
+ "simulation_coefficient": 10.0,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of west-wall heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of west-wall heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "cavity_depth",
+   "cladding_solar_absorptance",
+   "air_heating_fraction"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "cavity_convective_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "cavity_radiative_coefficient",
+   "value": 0.0
+  },
+  {
+   "name": "wall_direct_solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "wall_longwave_loss",
+   "value": 18.0
+  },
+  {
+   "name": "air_heating_fraction",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "exposed solid wall with aged conventional white acrylic cool paint"
+}

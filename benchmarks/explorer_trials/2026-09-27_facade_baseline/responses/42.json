@@ -1,0 +1,104 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Model: steady 1D moisture transport through the render thickness (x normalised by render_thickness), with an effective diffusivity D_eff = render_moisture_diffusivity + crack_area_fraction*crack_moisture_diffusivity*healed_permeability_ratio; metric = moisture flux into the substrate D_eff*(c0 - c1)/render_thickness. Design: healed cracks (ratio 0.1); baseline: same render with the same cracks unhealed (ratio 1.0). Honest note: the gain follows almost directly from the assumed healed_permeability_ratio, because the crack term dominates D_eff; it is closer to an input ratio than to modelled physics. Degradation link: moisture ingress drives render and substrate damage, but it does not change solar reflectance, so the effect on the heat-gain objective is ~0-3 percent. Viability: Bacillus spores survive in alkaline concrete for years, but in hot dry render the healing needs repeated wetting, and nutrient (calcium lactate) is consumed after one or two healing events. Dimensionless: crack/matrix transport ratio crack_area_fraction*D_crack/D_matrix = 2 (crack-dominated); healing reduces it to 0.2. Simulation coefficient: D_eff design = 6e-9 m2/s. Solver analytical. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "crack_width",
+   "value": 0.0002
+  },
+  {
+   "name": "render_thickness",
+   "value": 0.01
+  },
+  {
+   "name": "healed_permeability_ratio",
+   "value": 0.1
+  },
+  {
+   "name": "render_solar_absorptance",
+   "value": 0.25
+  },
+  {
+   "name": "surface_moisture_concentration",
+   "value": 50.0
+  },
+  {
+   "name": "substrate_moisture_concentration",
+   "value": 5.0
+  },
+  {
+   "name": "render_moisture_diffusivity",
+   "value": 5e-09
+  },
+  {
+   "name": "crack_moisture_diffusivity",
+   "value": 1e-05
+  },
+  {
+   "name": "crack_area_fraction",
+   "value": 0.001
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "crack_to_matrix_transport_ratio",
+   "value": 2.0
+  }
+ ],
+ "simulation_coefficient": 6e-09,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Moisture transport",
+  "independent_var": {
+   "label": "Normalised depth through render",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Moisture content",
+   "unit": "kg/m^3"
+  },
+  "primary_metric": {
+   "label": "Moisture flux into substrate (solver)"
+  },
+  "reference_metric": {
+   "label": "Moisture flux into substrate (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of moisture ingress through cracked render"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of moisture ingress through cracked render",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Moisture flux into substrate (solver)",
+  "reference_metric": "Moisture flux into substrate (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "healed_permeability_ratio",
+   "render_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-(render_moisture_diffusivity + crack_area_fraction*crack_moisture_diffusivity*healed_permeability_ratio)/render_thickness",
+  "unit": "kg/(m^2 s)",
+  "label": "Moisture flux into substrate"
+ },
+ "baseline_parameters": [
+  {
+   "name": "healed_permeability_ratio",
+   "value": 1.0
+  }
+ ],
+ "baseline_description": "same render with unhealed cracks"
+}

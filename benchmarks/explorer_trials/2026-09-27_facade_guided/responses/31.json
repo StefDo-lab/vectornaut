@@ -1,0 +1,52 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: same steady 1D roof conduction with linearised sol-air boundary as the other roof coatings; q = U*[alpha*I + h*dT - eps*R_net]/(U + h). Adjustments: clean SR 0.93 for closed glass cells with sub-micron BaSO4 in the walls is optimistic: closing the cells replaces part of the high-contrast air/particle interfaces by glass/particle interfaces (index ratio 1.64/1.5 instead of 1.64/1.0), and hollow-glass-microsphere roof coatings reach ~0.85-0.90; I set 0.92. Life-mean aged loss 0.05 assumes the sealed surface stays sealed; sand abrasion and thermal cycling will open a fraction of the surface cells, so I set 0.06 (aged SR 0.86). Emittance 0.93 plausible. Hand result: design q = 0.5*(0.14*300 + 150 - 0.93*85)/15.5 = 3.64 W/m2 vs baseline (SR 0.85 - 0.18 = 0.67, eps 0.90) 5.56 W/m2: -35 %. Dimensionless: h/U = 30; solar absorption number alpha*I/(h*dT) = 0.28 vs 0.66 baseline. Structural: closed-cell silicate glass foam layers (cellular glass) are strong in compression (~0.5-1 MPa) and inert; thin (~0.5 mm) layers on flexible roofs crack, so the coat suits concrete roofs and fibre-cement or ceramic facade panels (factory-fired). Simulation coefficient: U_eff = U*h/(U+h) = 0.484 W/m2K.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "solar_reflectance", "value": 0.92},
+    {"name": "aged_reflectance_loss", "value": 0.06},
+    {"name": "thermal_emittance", "value": 0.93},
+    {"name": "cell_size", "value": 3e-05},
+    {"name": "crystal_size", "value": 4e-07},
+    {"name": "roof_u_value", "value": 0.5},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0},
+    {"name": "net_sky_longwave", "value": 85.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "OuterFilmToRoofConductanceRatio", "value": 30.0},
+    {"name": "SolarAbsorptionNumberDesign", "value": 0.28},
+    {"name": "SolarAbsorptionNumberBaseline", "value": 0.66}
+  ],
+  "simulation_coefficient": 0.484,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Building heat transfer / radiative cooling",
+    "independent_var": {"label": "Normalized position through roof (0 = interior, 1 = outer surface)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of roof heat gain vs aged white cool coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean roof heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["solar_reflectance", "aged_reflectance_loss", "thermal_emittance", "cell_size", "crystal_size"]
+  },
+  "metric": {"kind": "derivative_at", "location": "0", "scale": "roof_u_value", "unit": "W/m^2", "label": "Daily-mean heat flux into the interior"},
+  "baseline_parameters": [
+    {"name": "solar_reflectance", "value": 0.85},
+    {"name": "aged_reflectance_loss", "value": 0.18},
+    {"name": "thermal_emittance", "value": 0.90}
+  ],
+  "baseline_description": "Conventional white acrylic cool coating, aged/soiled (SR 0.67, emittance 0.90), same roof"
+}

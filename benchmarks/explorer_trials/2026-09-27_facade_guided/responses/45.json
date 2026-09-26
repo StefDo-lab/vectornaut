@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du verkleidest die Fassade mit 20 mm Platten aus delignifiziertem, hydrophobiertem Holz ('Nanowood'): Das ausgerichtete Zellulose-Nanofibrillen-Gitter der Holzzellwand streut Sonnenlicht (weiß), strahlt im mittleren Infrarot ab und leitet Wärme quer zur Faser kaum (~0,03-0,04 W/mK). Mit realistisch gealterten Werten (SR 0,65 durch Vergilbung und Verschmutzung, k 0,04 durch Feuchte) sinkt der Wärmestrom einer Westwand um ~18 % (4,57 statt 5,59 W/m²), fast ausschließlich durch den zusätzlichen Wärmewiderstand. Die 20-jährige Außenbeständigkeit ist die entscheidende offene Frage.",
+  "pros_and_cons": "Vorteile: Nachwachsender Rohstoff, leicht, fest, dämmend und zugleich hell; kein Strom, kein Wasser. Nachteile: Zellulose vergilbt unter UV, quillt, schimmelt und ist brennbar; Weiße und Dämmwirkung gehen im Freien verloren; der Gewinn gegenüber einer konventionellen Zusatzdämmung ist gering; Herstellung (Delignifizierung mit Chemikalien) aufwendig.",
+  "mechanical_limits": "Nicht verdichtetes Nanowood ~10-20 MPa Festigkeit längs, quer deutlich weniger; Nass-Trocken-Zyklen erzeugen Quellspannungen und Risse; Befestigung mit Hinterlüftung nötig; Brandverhalten wie Holz.",
+  "manufacturing_methods": "Delignifizierung von Balsa- oder Lindenholz (NaOH/Na2SO3, dann H2O2), Gefriertrocknung, Hydrophobierung mit Methyltrimethoxysilan, Zuschnitt zu Platten; industriell bisher nur im Labormaßstab.",
+  "cost_estimation": "Heute Labormaßstab; geschätzt 50-150 EUR/m² bei Serienfertigung für 20 mm, also deutlich teurer als Mineralwolle-WDVS gleichen Widerstands.",
+  "validation_experiments": "Außenbewitterung (Xenon-Test 3000 h plus 2 Jahre Freiland) mit SR-, Farbort- und Wärmeleitmessung; Schimmel- und Brandprüfung; Testfassade gegen WDVS gleicher R.",
+  "industry_partners": "Holzforschungsinstitute (Nanowood), Holzwerkstoffhersteller, Fassadenbauer für Holzfassaden."
+}

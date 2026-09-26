@@ -1,0 +1,142 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameter check: lamella h for a 25 mm plate at 2 m/s: Re = 2*0.025/1.6e-5 = 3100, Nu = 0.664 Re^0.5 Pr^(1/3) = 33, h = 33*0.026/0.025 = 34 W/m2K per side; 30 W/m2K is fair (lower in calm afternoons, ~15). Shading fraction 0.85 on a west wall requires lamella spacing/depth tuned for low afternoon sun; plausible for vertical fins or dense lamellae. The air behind the screen is sheltered: h at the wall drops to ~12 W/m2K (the formulator's change); this is included and slightly raises the wall temperature for a given absorbed flux. The shaded wall loses most of its sky view, so its net longwave loss drops (modelled with (1-shading_fraction)). Dimensionless: lamella Reynolds number 3100 (laminar), Nusselt 33, Biot of envelope 0.044. Simulation coefficient: lamella excess temperature alpha_l*I*sf/(2*h_l) = 0.3*300*0.85/60 = 1.3 K. Model: steady 1D conduction, analytical. Baseline: exposed wall with aged cool paint (h_o 20 W/m2K, no shading). Expected gain ~16%. Mechanical: screen must be designed for wind loads (~1 kPa) and fixings for 20 years; standard for brise-soleil. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "lamella_width",
+   "value": 0.025
+  },
+  {
+   "name": "lamella_convective_coefficient",
+   "value": 30.0
+  },
+  {
+   "name": "screen_offset",
+   "value": 0.15
+  },
+  {
+   "name": "shading_fraction",
+   "value": 0.85
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  },
+  {
+   "name": "wall_solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 300.0
+  },
+  {
+   "name": "lamella_solar_absorptance",
+   "value": 0.3
+  },
+  {
+   "name": "lamella_radiative_coefficient",
+   "value": 5.0
+  },
+  {
+   "name": "wall_emittance",
+   "value": 0.9
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 20.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 12.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "lamella_Reynolds",
+   "value": 3100.0
+  },
+  {
+   "name": "lamella_Nusselt",
+   "value": 33.0
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.044
+  }
+ ],
+ "simulation_coefficient": 1.3,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of west-wall heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of west-wall heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "lamella_width",
+   "shading_fraction",
+   "screen_offset",
+   "lamella_solar_absorptance"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "shading_fraction",
+   "value": 0.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  }
+ ],
+ "baseline_description": "exposed wall with aged conventional white acrylic cool paint, no screen"
+}

@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du bekleidest die Fassade mit 40 mm Backkork-Platten (expandierter Kork), deren geschlossene, luftgefüllte Suberinzellen wie die feuerschützende Rinde der Korkeiche isolieren, und schließt sie mit einer weißen, langsam kreidenden Silikatputz-Haut ab. Im Tagesmittel-Modell einer Westfassade sinkt der Wärmestrom ins Innere von 5,59 auf 3,57 W/m² (-36 %). Rund 33 dieser 36 Prozentpunkte stammen aus dem zusätzlichen Wärmewiderstand (1,0 m²K/W) und wären mit jedem WDVS gleicher Dicke erreichbar.",
+  "pros_and_cons": "Vorteile: Nachwachsender, verrottungsfester Dämmstoff mit jahrzehntelanger Fassadenerfahrung; mineralische weiße Haut UV-stabil; keine Energie, kein Wasser. Nachteile: Wirkung überwiegend konventionelle Dämmung; Kork ist brennbar (Euroklasse E) und auf höheren Gebäuden eingeschränkt; Putz auf Kork braucht Armierung; Kosten höher als Mineralwolle-WDVS.",
+  "mechanical_limits": "Korkplatten Druckfestigkeit ~0,1-0,2 MPa, Querzug ~50 kPa - genug für Winddruck, aber Dübelung nötig. Rissgefahr der Putzhaut an Plattenstößen bei Temperaturwechseln; Feuchteaufnahme gering. Ausfall: Haftverlust des Putzes, Brand.",
+  "manufacturing_methods": "Backkork (Korkgranulat im Autoklav mit Dampf expandiert, durch eigenes Suberin gebunden), Platten 40-60 mm, verklebt und gedübelt, Armierungsmörtel mit Glasgewebe, weißer Silikatputz (TiO2/CaCO3).",
+  "cost_estimation": "Backkork 40 mm ~25-40 EUR/m², Putzsystem 25-40 EUR/m², Montage 30-50 EUR/m²: gesamt 80-130 EUR/m² gegenüber 60-100 EUR/m² für Mineralwolle-WDVS und 10-20 EUR/m² für Farbe.",
+  "validation_experiments": "Testfassaden mit Wärmestromplatten: Kork+weiße Haut, Mineralwolle-WDVS gleicher Dicke mit weißem Acryl, gealterte weiße Farbe; SR-Messung der Haut über 3 Jahre; Brandprüfung nach EN 13501.",
+  "industry_partners": "Korkverarbeiter (Backkork-Hersteller), WDVS-Systemhalter, Hersteller mineralischer Putze, Fassadenprüfinstitute."
+}

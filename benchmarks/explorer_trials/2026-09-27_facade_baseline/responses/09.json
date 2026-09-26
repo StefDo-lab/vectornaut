@@ -1,0 +1,113 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameters physical. Diatomite contains iron and clay impurities that absorb in the blue/NIR; calcined, bleached diatomite reaches SR ~0.88-0.90 in thick layers; with BaSO4 co-filler SR ~0.92 new is plausible, the aged 20-year mean I set to alpha 0.14 (SR 0.86) instead of 0.12, since the silicate surface is porous and dust sticks. Emittance: amorphous silica has a reststrahlen reflection band at 8-10 um, so for a silica-rich coating eps ~0.90-0.93; set 0.92. Pore size parameter pi*d/lambda = pi*0.5e-6/0.55e-6 = 2.9 (Mie resonant scattering, efficient). Biot envelope 0.026. Simulation coefficient: sol-air excess (alpha*I - eps*dR)/h_o = (84-73.6)/20 = 0.52 K. Model: steady 1D conduction, analytical. Metric: heat flux to the room at x=1. Baseline: aged cool paint alpha 0.32, eps 0.90. Roof case; expected gain ~29%. Mechanical: silicate paints are proven on mineral substrates for 20+ years; not suitable on flexible metal roofs without primer. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "solar_absorptance",
+   "value": 0.14
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.92
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 600.0
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 80.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "pore_diameter",
+   "value": 5e-07
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "pore_size_parameter",
+   "value": 2.9
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.026
+  }
+ ],
+ "simulation_coefficient": 0.52,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of roof heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of roof heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "solar_absorptance",
+   "thermal_emittance",
+   "pore_diameter"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.9
+  }
+ ],
+ "baseline_description": "aged conventional white acrylic cool roof paint (SR 0.68, eps 0.90)"
+}

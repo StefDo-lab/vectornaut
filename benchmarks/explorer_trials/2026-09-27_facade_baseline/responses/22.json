@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild sind Termitenh\u00fcgel und Pr\u00e4riehundbaue: geformte \u00d6ffnungen nutzen Windgeschwindigkeitsunterschiede (Bernoulli) und Auftrieb, um ohne Arbeit zu l\u00fcften. Du baust eine hinterl\u00fcftete Vorhangfassade mit 6-cm-Luftspalt und einer windsaugenden Abluftkappe oben. Die Innenwand sieht dann Luft nahe Au\u00dfentemperatur statt der hei\u00dfen Bekleidung. Im Westwand-Modell sinkt der W\u00e4rmestrom in den Raum um ~14 % (7,5 statt 8,7 W/m\u00b2) gegen\u00fcber einer massiven Wand mit gealterter Cool-Paint.",
+ "pros_and_cons": "Vorteile: bew\u00e4hrte Bauweise (hinterl\u00fcftete Fassade), robust \u00fcber Jahrzehnte, Regenschutz, Bekleidung kann beliebig gew\u00e4hlt werden. Nachteile: kaum neu - die bionische Kappe \u00e4ndert den Spaltvolumenstrom nur moderat; Kosten einer Vorhangfassade; bei heller Bekleidung ist der Zusatznutzen klein.",
+ "mechanical_limits": "Unterkonstruktion und Bekleidung m\u00fcssen Windsog aushalten; Insekten- und Sandschutz an \u00d6ffnungen n\u00f6tig (Gitter verstopfen). Ausfall = zugesetzte Zuluft\u00f6ffnungen, dann steigt die Spalttemperatur.",
+ "manufacturing_methods": "Standard-Vorhangfassade (Faserzement, Keramik, Aluminium) mit Aluminium-Unterkonstruktion, oben ein str\u00f6mungsg\u00fcnstig geformtes Abluftprofil (Venturi-/Kappenform), unten Zuluftschlitz mit Gitter.",
+ "cost_estimation": "~80-150 \u20ac/m\u00b2 montiert (vorgeh\u00e4ngte hinterl\u00fcftete Fassade), Kappenprofil +5-10 \u20ac/m.",
+ "validation_experiments": "CFD und Windkanalmessung der Kappenwirkung, Messfassade mit Anemometer im Spalt und W\u00e4rmeflussplatten, Vergleich mit/ohne Kappe \u00fcber einen Sommer.",
+ "industry_partners": "Hersteller vorgeh\u00e4ngter hinterl\u00fcfteter Fassaden, Aluminium-Profilhersteller, Fassadenplaner, Bauphysik-Institute.",
+ "_prompt_hash": "af248ba20d2b535d"
+}

@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild sind Kiefernzapfen: ihre Schuppen bestehen aus zwei Gewebeschichten, die bei Feuchte\u00e4nderung unterschiedlich quellen und die Schuppe biegen. Du baust Verschattungsklappen aus einem Zweischicht-Laminat (hygroskopische Zellulosefaserschicht auf stabiler Glasfaserschicht), die bei trockener Tagesluft schlie\u00dfen und bei feuchter Nachtluft \u00f6ffnen - ohne Motor. Das Modell zeigt aber nur ~2 % weniger W\u00e4rmestrom (8,5 statt 8,7 W/m\u00b2) als eine unbeschattete wei\u00dfe Wand: die Klappen werden selbst ~6 K w\u00e4rmer als die Luft, strahlen auf die Wand zur\u00fcck und bremsen die Konvektion, und nach UV-Alterung schlie\u00dfen sie nur noch teilweise.",
+ "pros_and_cons": "Vorteile: passive Adaptivit\u00e4t ohne Strom, architektonisch attraktiv, nachts offen f\u00fcr Ausblick und Ausk\u00fchlung. Nachteile: vor einer bereits wei\u00dfen Wand fast wirkungslos; hygroskopische Biokomposite verlieren unter UV und N\u00e4sse \u00fcber Jahre ihre Bewegung; funktioniert nur in Klimaten mit gro\u00dfer Tag-Nacht-Feuchteschwankung; Windflattern.",
+ "mechanical_limits": "Laminat unter zyklischer Quell-Schwind-Dehnung (~0,5 %) erm\u00fcdet, Delamination der Schichten ist das wahrscheinlichste Versagen; Windlasten auf die Klappen und Scharniere.",
+ "manufacturing_methods": "Laminieren von Furnier oder zellulosebasiertem Prepreg auf Glasfaser-Laminat, Zuschnitt und Montage auf Rahmen; alternativ 4D-Druck von Holz-Polymer-Filament.",
+ "cost_estimation": "Prototyp 20-50 k\u20ac; Serie ~150-300 \u20ac/m\u00b2 Fassadenfl\u00e4che.",
+ "validation_experiments": "Klimakammertest der Kr\u00fcmmung \u00fcber Feuchtezyklen, UV-Alterung mit Messung des Bewegungsverlusts, Feldtest am Geb\u00e4ude mit W\u00e4rmestrom- und Klappentemperaturmessung.",
+ "industry_partners": "Holzwerkstoff- und Faserverbundhersteller, Sonnenschutzfirmen, Forschung zu hygromorphen Materialien (z. B. Universit\u00e4t Stuttgart ICD).",
+ "_prompt_hash": "cb88a8ae51505d73"
+}

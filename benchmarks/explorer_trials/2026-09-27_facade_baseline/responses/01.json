@@ -1,0 +1,1175 @@
+{
+ "function_analysis": "The envelope must (1) reject most incident solar radiation (0.3-2.5 um) on roofs and sun-facing walls, (2) shed heat by long-wave emission to the sky (8-13 um window) and by convection to wind, (3) limit conduction of the remaining heat into the interior (resistance/storage), and (4) keep these properties for 20 years under UV, 40 K daily cycles, dust, rain and wind - all without electricity or supplied water. Key physics: against a conventional aged cool paint, the air-to-indoor temperature difference (~13 K) dominates wall heat gain, so only sub-ambient radiative cooling, added resistance or storage can go far beyond ~20% on walls; roofs see the sky and gain more from radiative cooling. Retention of solar reflectance against soiling is the main 20-year lever.",
+ "requirements": [
+  {
+   "name": "indoor_heat_gain_reduction",
+   "criterion": "Clearly reduces time-averaged summer daytime heat gain through the envelope (target >=20% of opaque-envelope gain) versus an aged conventional white cool paint."
+  },
+  {
+   "name": "passive_no_power_no_water",
+   "criterion": "Works without electricity, pumps, fans or supplied water; only sun, sky, wind, ambient air and rain."
+  },
+  {
+   "name": "weather_durability_20y",
+   "criterion": "Retains >=80% of its cooling benefit for 20 years of UV, thermal cycling, dust, rain and wind with at most light cleaning."
+  },
+  {
+   "name": "bionic_mechanism",
+   "criterion": "The working mechanism is genuinely derived from a named biological model."
+  },
+  {
+   "name": "building_practicality",
+   "criterion": "Applicable to real walls/roofs at acceptable cost, weight, fire safety and without glare or condensation problems."
+  }
+ ],
+ "mechanism_classes_considered": [
+  "radiative_control (solar reflection, thermal emission, angle-selective emission, shading)",
+  "trapped_gas_or_liquid (still-air cavities)",
+  "flow_redirection (ventilated cavities, wind-driven flushing)",
+  "phase_change (latent storage, sorption-evaporation from atmospheric moisture)",
+  "architected_lattice (closed-cell insulation, crack-tolerant platelet coatings)",
+  "other (convective shading, self-renewal, self-healing)"
+ ],
+ "analogues_considered": [
+  "Cyphochilus white beetle scales (disordered scattering network)",
+  "Saharan silver ant hairs (TIR + mid-IR emission)",
+  "Diatom frustules (hierarchical silica scattering)",
+  "Desert snail Sphincterochila (white shell + air pocket)",
+  "Saguaro/barrel cactus ribs (self-shading, view factors)",
+  "Small desert-tree leaflets (boundary-layer convection)",
+  "Termite mounds and prairie-dog burrows (passive ventilation)",
+  "Camel coat and heterothermy (insulation + storage)",
+  "Thorny devil skin (passive moisture harvesting)",
+  "Glaucous plant wax bloom (renewable reflective surface)",
+  "Pine cone scales (hygroscopic actuation)",
+  "Cork oak bark (closed-cell insulation)",
+  "Nacre (crack deflection)",
+  "Microbial calcite precipitation (self-healing)",
+  "Silvery fish skin (chaotic multilayer reflectors)"
+ ],
+ "objective_statement": "Time-averaged summer daytime heat gain into the conditioned interior through the opaque envelope (roof and sun-exposed walls), per m2 of envelope, averaged over a 20-year service life in a hot climate, including the loss of solar reflectance and emittance by soiling, UV ageing and weathering.",
+ "baseline_statement": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after 2-3 years of soiling and ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation, maintained per normal practice.",
+ "relevant_governing_quantities": [
+  "heat_flux",
+  "temperature",
+  "degradation_rate"
+ ],
+ "candidates": [
+  {
+   "order_id": "r001-01",
+   "title": "Cyphochilus-scale inorganic disordered-network white topcoat",
+   "summary": "A 200 um topcoat of a disordered, interconnected network of ~250 nm alumina/barium sulfate struts (filling fraction ~0.4) in a potassium-silicate binder, copying the anisotropic disordered chitin network of the white Cyphochilus beetle scale that reaches very high whiteness in a few micrometres. Fully inorganic, it keeps a solar reflectance of ~0.95 new and ~0.90 aged and a thermal emittance of ~0.93, so the roof or wall surface stays near or slightly below air temperature.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "sub_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged daytime opaque-envelope heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Concept (20-year mean) alpha=0.08, eps=0.95: roof dT=13+(0.08*600-0.95*80)/20=11.6 K (-39%); wall dT=13+(0.08*300-0.95*20)/20=13.25 K (-22%); roof/wall mix 50/50 -> ~30%.",
+    "value": 30.0,
+    "unit": "%"
+   },
+   "main_risk": "Dust deposition and micro-cracking of the porous network in the hot, dusty climate lower the aged solar reflectance toward 0.85, halving the advantage over cool paint.",
+   "novelty_vs_known": "Closest: BaSO4/porous-polymer radiative-cooling paints and PVDF-HFP porous films. New: a Cyphochilus-type anisotropic strut network with optimised filling fraction built entirely from inorganic phases in a silicate binder, so it reaches SR 0.95 in ~200 um without UV-degrading polymers.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "White beetle Cyphochilus spp.: scales ~5-10 um thick with a disordered chitin filament network (filament ~250 nm, filling fraction ~0.45) giving brilliant whiteness with minimal material.",
+   "domain": "Thermodynamics / radiative heat transfer",
+   "physical_mechanism": "Multiple scattering in a sub-micrometre disordered network gives broadband solar reflectance ~0.95; the silicate/sulfate phases emit strongly in 8-13 um. Absorbed solar per m2 drops from ~190 to ~50 W/m2 on a roof while longwave loss stays ~75 W/m2, so the outer surface temperature and the conductive heat flux through the insulated envelope drop. In the 1D steady model this enters as the outer boundary condition -k dT/dx = h_o(T_a - T_s) + alpha*I - eps*dR through the wall layers to the fixed indoor temperature.",
+   "parameters": [
+    {
+     "name": "solar_absorptance",
+     "value": 0.08,
+     "min_bound": 0.03,
+     "max_bound": 0.2,
+     "justification": "Aged 20-year mean of SR 0.92; Cyphochilus-type networks reach 0.95-0.97 new."
+    },
+    {
+     "name": "thermal_emittance",
+     "value": 0.95,
+     "min_bound": 0.85,
+     "max_bound": 0.98,
+     "justification": "Sulfate/silicate phases emit strongly across 8-13 um."
+    },
+    {
+     "name": "solar_irradiance",
+     "value": 600.0,
+     "min_bound": 300.0,
+     "max_bound": 1000.0,
+     "justification": "Daytime mean on a roof in a hot climate."
+    },
+    {
+     "name": "net_longwave_sky_loss",
+     "value": 80.0,
+     "min_bound": 20.0,
+     "max_bound": 120.0,
+     "justification": "Clear dry sky, horizontal surface near ambient temperature."
+    },
+    {
+     "name": "outer_heat_transfer_coefficient",
+     "value": 20.0,
+     "min_bound": 8.0,
+     "max_bound": 35.0,
+     "justification": "Combined convective coefficient for 2-4 m/s wind."
+    },
+    {
+     "name": "wall_u_value",
+     "value": 0.5,
+     "min_bound": 0.2,
+     "max_bound": 3.0,
+     "justification": "Typical insulated roof/wall; ratio result is insensitive to U."
+    },
+    {
+     "name": "coating_thickness",
+     "value": 0.0002,
+     "min_bound": 5e-05,
+     "max_bound": 0.0005,
+     "justification": "Thickness for SR>0.95 in network scatterers."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-02",
+   "title": "Silver-ant prism-fibre reflective-emissive mat",
+   "summary": "A thin mat of triangular-section glass microfibres (5-10 um, corrugated faces) fused onto a white mineral base, copying the hairs of the Saharan silver ant that reflect sunlight by total internal reflection and Mie scattering while raising mid-infrared emittance. The glass fibres are UV-proof, so the mat keeps a high solar reflectance and near-unity emittance.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged daytime opaque-envelope heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Concept 20-year mean alpha=0.15 (SR 0.93 new, dust trapping in the fibre mat), eps=0.95: roof dT=13+(90-76)/20=13.7 K (-28%); wall dT=13+(45-19)/20=14.3 K (-15%); mix -> ~22%.",
+    "value": 22.0,
+    "unit": "%"
+   },
+   "main_risk": "The fibre mat traps wind-blown dust that cannot be washed out by rare desert rain, so reflectance falls well below 0.85 within a few years.",
+   "novelty_vs_known": "Closest: silver-ant-inspired radiative cooling films (polymer micro-pyramids, Shi et al. 2015 analysis). New: inorganic fused-glass prism fibres on a mineral base for 20-year outdoor use on buildings.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Saharan silver ant Cataglyphis bombycina: dense triangular hairs with corrugated faces, total internal reflection in the visible/NIR and gradient-index emission in the mid-IR keep the ant ~5-10 K cooler.",
+   "domain": "Thermodynamics / radiative heat transfer",
+   "physical_mechanism": "Total internal reflection and Mie scattering at prism fibres raise solar reflectance; the fibre layer acts as an index-graded emitter with eps~0.95. Enters the 1D envelope conduction model as the outer net-flux boundary condition.",
+   "parameters": [
+    {
+     "name": "solar_absorptance",
+     "value": 0.15,
+     "min_bound": 0.05,
+     "max_bound": 0.3,
+     "justification": "20-year mean including dust trapped in fibres."
+    },
+    {
+     "name": "thermal_emittance",
+     "value": 0.95,
+     "min_bound": 0.85,
+     "max_bound": 0.98,
+     "justification": "Glass fibres with graded index emit strongly in 8-13 um."
+    },
+    {
+     "name": "solar_irradiance",
+     "value": 600.0,
+     "min_bound": 300.0,
+     "max_bound": 1000.0,
+     "justification": "Daytime mean on a roof."
+    },
+    {
+     "name": "net_longwave_sky_loss",
+     "value": 80.0,
+     "min_bound": 20.0,
+     "max_bound": 120.0,
+     "justification": "Clear dry sky, horizontal surface."
+    },
+    {
+     "name": "outer_heat_transfer_coefficient",
+     "value": 20.0,
+     "min_bound": 8.0,
+     "max_bound": 35.0,
+     "justification": "Wind-driven convection."
+    },
+    {
+     "name": "fibre_width",
+     "value": 8e-06,
+     "min_bound": 2e-06,
+     "max_bound": 2e-05,
+     "justification": "Silver ant hair width ~5-10 um."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-03",
+   "title": "Diatom-frustule silicate cooling paint",
+   "summary": "A mineral silicate paint whose main filler is calcined diatomite: amorphous-silica frustules with hierarchical 0.2-1 um pores that scatter sunlight strongly and emit broadly in the thermal infrared, blended with BaSO4. Silicate paints on mineral substrates are known to last 20+ years, and the all-inorganic formulation avoids UV yellowing.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "microbe"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged daytime opaque-envelope heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Concept 20-year mean alpha=0.12 (SR 0.92 new, 0.86 aged), eps=0.94: roof dT=13+(72-75)/20=12.85 K (-32%); wall dT=13+(36-18.8)/20=13.9 K (-18%); mix -> ~25%.",
+    "value": 25.0,
+    "unit": "%"
+   },
+   "main_risk": "Silica has a reststrahlen reflection band near 9 um and diatomite absorbs some NIR through impurities (Fe), so real SR/emittance may be only marginally better than a good TiO2 cool paint.",
+   "novelty_vs_known": "Closest: BaSO4 and CaCO3 radiative-cooling paints; diatomite as matting filler. New: diatom frustule porosity used as the primary multiscale scatterer in a durable potassium-silicate binder.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Diatoms: unicellular algae with silica frustules whose periodic and hierarchical pores manage light (strong scattering, UV protection).",
+   "domain": "Thermodynamics / radiative heat transfer",
+   "physical_mechanism": "Hierarchical pores (0.2-1 um) and frustule walls scatter the solar spectrum; amorphous silica plus silicate binder emits in the atmospheric window. Enters the 1D steady envelope model as the outer boundary condition.",
+   "parameters": [
+    {
+     "name": "solar_absorptance",
+     "value": 0.12,
+     "min_bound": 0.05,
+     "max_bound": 0.25,
+     "justification": "20-year mean for SR 0.92 new, 0.86 aged."
+    },
+    {
+     "name": "thermal_emittance",
+     "value": 0.94,
+     "min_bound": 0.85,
+     "max_bound": 0.97,
+     "justification": "Porous silica/silicate emits broadly."
+    },
+    {
+     "name": "solar_irradiance",
+     "value": 600.0,
+     "min_bound": 300.0,
+     "max_bound": 1000.0,
+     "justification": "Daytime mean on a roof."
+    },
+    {
+     "name": "net_longwave_sky_loss",
+     "value": 80.0,
+     "min_bound": 20.0,
+     "max_bound": 120.0,
+     "justification": "Clear dry sky."
+    },
+    {
+     "name": "outer_heat_transfer_coefficient",
+     "value": 20.0,
+     "min_bound": 8.0,
+     "max_bound": 35.0,
+     "justification": "Wind-driven convection."
+    },
+    {
+     "name": "pore_diameter",
+     "value": 5e-07,
+     "min_bound": 1e-07,
+     "max_bound": 2e-06,
+     "justification": "Diatomite pore sizes span 0.1-2 um."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-04",
+   "title": "Desert-snail white shell tile over sealed air cavity",
+   "summary": "Cladding tiles copy the shell of the desert snail Sphincterochila boissieri: a highly scattering white glazed ceramic/calcite outer shell over a sealed 20 mm still-air cavity with a low-emittance inner face, so the little heat absorbed by the shell is blocked from the wall. Glazed ceramic keeps its reflectance and resists weathering for decades.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "mm"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged daytime opaque-envelope heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Concept: tile alpha=0.20 (glazed white ceramic SR ~0.80, soils little), cavity with low-e face adds R=0.45 m2K/W, so wall U 0.50 -> 0.41. Wall: dT=13+(60-18)/20=15.1 K, q=0.41*15.1=6.2 vs 0.5*16.9=8.45 W/m2 (-27%); roof q=0.41*(13+(120-72)/20)=6.3 vs 9.5 (-34%); mix -> ~30%.",
+    "value": 30.0,
+    "unit": "%"
+   },
+   "main_risk": "Most of the gain comes from the added cavity resistance, which ordinary insulation provides more cheaply; sealed cavities also tend to leak and collect condensate over 20 years.",
+   "novelty_vs_known": "Closest: ventilated ceramic rainscreen cladding and radiant barriers. New: a sealed, unventilated shell cavity with low-e inner face under a glazed high-SR shell, i.e. reflection plus blocked conduction in one tile.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Desert snail Sphincterochila boissieri (Negev): white shell reflects ~90% of visible light and the snail retreats into the upper whorls, where an air-filled space insulates it from the hot ground and shell.",
+   "domain": "Thermodynamics / heat conduction",
+   "physical_mechanism": "Reflective outer shell cuts absorbed solar; a still-air cavity with a low-emittance face (radiative exchange suppressed) adds thermal resistance between shell and wall. 1D steady conduction through shell, cavity (effective conductivity) and wall with the sol-air boundary outside.",
+   "parameters": [
+    {
+     "name": "tile_solar_absorptance",
+     "value": 0.2,
+     "min_bound": 0.1,
+     "max_bound": 0.35,
+     "justification": "Glazed white ceramic, low soiling."
+    },
+    {
+     "name": "cavity_thermal_resistance",
+     "value": 0.45,
+     "min_bound": 0.15,
+     "max_bound": 0.7,
+     "justification": "20 mm air gap with low-e face (ISO 6946: ~0.4-0.6)."
+    },
+    {
+     "name": "cavity_thickness",
+     "value": 0.02,
+     "min_bound": 0.005,
+     "max_bound": 0.05,
+     "justification": "Shell whorl gap scaled to cladding."
+    },
+    {
+     "name": "tile_thickness",
+     "value": 0.008,
+     "min_bound": 0.004,
+     "max_bound": 0.02,
+     "justification": "Ceramic cladding tile."
+    },
+    {
+     "name": "wall_u_value",
+     "value": 0.5,
+     "min_bound": 0.2,
+     "max_bound": 3.0,
+     "justification": "Baseline wall."
+    },
+    {
+     "name": "outer_heat_transfer_coefficient",
+     "value": 20.0,
+     "min_bound": 8.0,
+     "max_bound": 35.0,
+     "justification": "Wind-driven convection."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-05",
+   "title": "Saguaro-rib asymmetric sky-facing facade corrugation",
+   "summary": "Facade panels with horizontal ribs like saguaro cactus pleats: the upward-tilted facets carry a high-reflectance, high-emittance radiative-cooling finish that sees the cold sky, the downward facets are polished aluminium (low emittance) that reject the hot ground's infrared. The ribs also self-shade at high summer sun angles.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "cm_plus"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged daytime wall heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Flat wall net longwave loss ~20 W/m2; with 45-degree upward emitting facets (sky view ~0.85) and low-e downward facets the effective dR rises to ~45 W/m2 of wall; effective alpha 0.12 incl. self-shading. Wall dT=13+(0.12*300-0.95*45)/20=12.7 K vs 16.9 K -> -25% (walls only).",
+    "value": 25.0,
+    "unit": "%"
+   },
+   "main_risk": "Dust settles on the upward-facing facets and bird droppings/soiling degrade them quickly; the downward low-e facets reflect ground IR but also absorb it if oxidised.",
+   "novelty_vs_known": "Closest: angle-selective thermal emitters and cactus-rib shading facades. New: combining rib self-shading with facet-selective emittance (sky-facing emitter, ground-facing low-e) on vertical walls where plain coatings see half hot ground.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Saguaro (Carnegiea gigantea) and barrel cacti: vertical pleats/ribs self-shade part of the stem and increase convective/radiative exchange area, keeping stem temperatures lower.",
+   "domain": "Thermodynamics / radiative heat transfer",
+   "physical_mechanism": "Geometry changes view factors: emitting facets face the sky, low-e facets face the ground. Effective net longwave loss per wall area and self-shading reduce the sol-air temperature of the wall; 1D steady conduction through wall with this effective outer boundary condition.",
+   "parameters": [
+    {
+     "name": "effective_solar_absorptance",
+     "value": 0.12,
+     "min_bound": 0.05,
+     "max_bound": 0.3,
+     "justification": "Facet absorptance with self-shading."
+    },
+    {
+     "name": "effective_net_longwave_loss",
+     "value": 45.0,
+     "min_bound": 15.0,
+     "max_bound": 80.0,
+     "justification": "Per wall area with sky-facing facets."
+    },
+    {
+     "name": "facet_tilt_angle",
+     "value": 0.785,
+     "min_bound": 0.3,
+     "max_bound": 1.2,
+     "justification": "45 degrees from vertical."
+    },
+    {
+     "name": "rib_depth",
+     "value": 0.05,
+     "min_bound": 0.02,
+     "max_bound": 0.15,
+     "justification": "Saguaro pleat depth scaled to panel."
+    },
+    {
+     "name": "outer_heat_transfer_coefficient",
+     "value": 20.0,
+     "min_bound": 8.0,
+     "max_bound": 35.0,
+     "justification": "Wind-driven convection."
+    },
+    {
+     "name": "solar_irradiance_wall",
+     "value": 300.0,
+     "min_bound": 150.0,
+     "max_bound": 600.0,
+     "justification": "West wall daytime mean."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-06",
+   "title": "Small-leaf convective shading screen",
+   "summary": "A light screen of many small (2-3 cm) white ceramic lamellae held 15 cm in front of the wall, modelled on the tiny leaflets of desert trees like palo verde and acacia, which stay within a few kelvin of air temperature because their thin boundary layers give very high convective coefficients. The wall sits in shade that is at air temperature instead of behind a hot shading element.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "other"
+    },
+    {
+     "axis": "length_scale",
+     "value": "cm_plus"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged daytime wall heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. h for a 2.5 cm plate at 2 m/s: ~Nu 0.664 Re^0.5 Pr^(1/3) -> ~30 W/m2K per side, so lamella excess temperature ~ alpha I/(2h)=0.2*600/60=2 K. Wall behind receives mostly diffuse/reflected light: wall dT=13+1.5 (screen longwave+diffuse)=14.5 K vs 16.9 K -> -14%.",
+    "value": 14.0,
+    "unit": "%"
+   },
+   "main_risk": "It is essentially a brise-soleil: the gain over a good cool-painted wall is small because the air-to-indoor temperature difference dominates, and wind loads/cost of a screen are high.",
+   "novelty_vs_known": "Closest: external louvres/brise-soleil and perforated screens (mashrabiya). New: sizing lamellae by the leaf boundary-layer rule so the screen stays at air temperature instead of re-radiating heat to the wall.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Desert trees with small leaflets (Parkinsonia, Acacia): small characteristic leaf size gives thin boundary layers and leaf temperatures near air temperature without transpiration.",
+   "domain": "Heat transfer / convection",
+   "physical_mechanism": "Shading removes direct solar absorption at the wall; small lamellae shed their absorbed heat by convection (h ~ L^-0.5), limiting their radiant heating of the wall. 1D steady model: wall conduction with an outer boundary at air temperature plus small radiative term from the screen.",
+   "parameters": [
+    {
+     "name": "lamella_width",
+     "value": 0.025,
+     "min_bound": 0.01,
+     "max_bound": 0.1,
+     "justification": "Leaflet-scale characteristic length."
+    },
+    {
+     "name": "lamella_convective_coefficient",
+     "value": 30.0,
+     "min_bound": 10.0,
+     "max_bound": 60.0,
+     "justification": "Laminar flat plate at 1-3 m/s."
+    },
+    {
+     "name": "screen_offset",
+     "value": 0.15,
+     "min_bound": 0.05,
+     "max_bound": 0.4,
+     "justification": "Gap for air flow behind screen."
+    },
+    {
+     "name": "shading_fraction",
+     "value": 0.85,
+     "min_bound": 0.5,
+     "max_bound": 0.95,
+     "justification": "Direct beam blocked on a west wall."
+    },
+    {
+     "name": "wall_u_value",
+     "value": 0.5,
+     "min_bound": 0.2,
+     "max_bound": 3.0,
+     "justification": "Baseline wall."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-07",
+   "title": "Termite-mound wind-and-stack ventilated rainscreen",
+   "summary": "A ventilated rainscreen with a 6 cm cavity whose top outlet is shaped like a prairie-dog/termite-mound chimney cap, so both the stack effect of the sun-heated cladding and wind-induced suction (Bernoulli, as in prairie-dog burrows) flush the cavity. The inner wall then sees air near ambient instead of the hot cladding.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "flow_redirection"
+    },
+    {
+     "axis": "length_scale",
+     "value": "cm_plus"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged daytime wall heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Cladding (alpha 0.3) at ~T_a+10 K; cavity flow ~0.3-0.5 m/s removes most of it; inner-wall surface effective sol-air ~T_a+2 K: wall dT=15 K vs 16.9 K -> -11%.",
+    "value": 11.0,
+    "unit": "%"
+   },
+   "main_risk": "Ventilated facades are well established and the added chimney shaping changes the cavity flow only modestly; the gain over a cool-painted solid wall is small.",
+   "novelty_vs_known": "Closest: standard ventilated rainscreen facades; Eastgate Centre termite analogy. New: wind-suction outlet caps sized after prairie-dog mound geometry to drive cavity flow even with low solar stack.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Macrotermes mounds and black-tailed prairie-dog burrows: shaped mound openings exploit wind-speed gradients and buoyancy to ventilate without muscular work.",
+   "domain": "Fluid dynamics / heat transfer",
+   "physical_mechanism": "Buoyancy- and wind-driven cavity flow removes heat absorbed by the cladding before it reaches the wall. 1D steady model along the cavity height: energy balance of cavity air heated by the cladding with flux to the wall.",
+   "parameters": [
+    {
+     "name": "cavity_depth",
+     "value": 0.06,
+     "min_bound": 0.02,
+     "max_bound": 0.15,
+     "justification": "Rainscreen cavity."
+    },
+    {
+     "name": "cavity_air_velocity",
+     "value": 0.4,
+     "min_bound": 0.05,
+     "max_bound": 1.5,
+     "justification": "Stack plus wind suction."
+    },
+    {
+     "name": "cladding_solar_absorptance",
+     "value": 0.3,
+     "min_bound": 0.1,
+     "max_bound": 0.6,
+     "justification": "Aged light cladding."
+    },
+    {
+     "name": "facade_height",
+     "value": 10.0,
+     "min_bound": 3.0,
+     "max_bound": 30.0,
+     "justification": "Cavity height."
+    },
+    {
+     "name": "wall_u_value",
+     "value": 0.5,
+     "min_bound": 0.2,
+     "max_bound": 3.0,
+     "justification": "Baseline wall."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-08",
+   "title": "Camel-coat insulation with inner PCM heat store",
+   "summary": "Like a camel that combines a thick insulating coat with daytime heat storage (adaptive heterothermy), the facade gets an exterior insulating layer and an interior 15 mm microencapsulated-PCM plaster (melting at 26 C) that absorbs the daytime heat that does leak through and releases it during passive night ventilation.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "phase_change"
+    },
+    {
+     "axis": "length_scale",
+     "value": "mm"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of daytime indoor heat gain through the wall vs aged cool paint",
+    "formula": "PCM plaster 15 mm, 30% PCM, rho 900, L=150 kJ/kg -> latent ~0.6 MJ/m2 per cycle; daytime wall gain 8.45 W/m2*10 h = 0.30 MJ/m2 -> the PCM could buffer the whole daytime wall gain if it resolidifies at night; realistic with partial night purge ~ -30% daytime gain, 0% daily-average gain without night purge; weighted estimate ~15%.",
+    "value": 15.0,
+    "unit": "%"
+   },
+   "main_risk": "In hot climates nights are often above 26 C, so the PCM never resolidifies and the storage stops working; the daily-average heat gain is unchanged by storage alone.",
+   "novelty_vs_known": "Closest: commercial PCM gypsum boards (Micronal). New: pairing with an external insulating 'coat' and sizing for the camel strategy; physically this is known technology.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Dromedary camel: thick dorsal coat insulates against solar heat, and the camel stores heat by letting body temperature rise ~6 K by day and dumping it at night.",
+   "domain": "Thermodynamics / latent heat storage",
+   "physical_mechanism": "Latent heat storage shifts and damps the heat flux into the room; steady models can represent it only as an effective heat sink at the inner layer during the melting period.",
+   "parameters": [
+    {
+     "name": "pcm_melting_temperature",
+     "value": 299.0,
+     "min_bound": 295.0,
+     "max_bound": 303.0,
+     "justification": "26 C near comfort limit."
+    },
+    {
+     "name": "pcm_latent_heat",
+     "value": 150000.0,
+     "min_bound": 100000.0,
+     "max_bound": 200000.0,
+     "justification": "Paraffin J/kg."
+    },
+    {
+     "name": "pcm_layer_thickness",
+     "value": 0.015,
+     "min_bound": 0.005,
+     "max_bound": 0.03,
+     "justification": "Plaster layer."
+    },
+    {
+     "name": "pcm_mass_fraction",
+     "value": 0.3,
+     "min_bound": 0.1,
+     "max_bound": 0.4,
+     "justification": "Microcapsule content."
+    },
+    {
+     "name": "wall_u_value",
+     "value": 0.5,
+     "min_bound": 0.2,
+     "max_bound": 3.0,
+     "justification": "Baseline wall."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-09",
+   "title": "Thorny-devil night-sorption evaporative skin",
+   "summary": "A 3-5 mm layer of hygroscopic clay (sepiolite/attapulgite with silica gel) behind a porous white ceramic skin adsorbs atmospheric moisture during humid nights and desorbs it by day, giving evaporative cooling without any water supply, as the thorny devil's skin channels harvest moisture passively.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "phase_change"
+    },
+    {
+     "axis": "length_scale",
+     "value": "100_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of daytime wall heat gain vs aged cool paint",
+    "formula": "Uptake ~0.12 kg/kg * 3 kg/m2 = 0.36 kg/m2 per night; latent 2.4 MJ/kg -> 0.86 MJ/m2 released over ~8 h = 30 W/m2; sol-air reduction 30/20=1.5 K of 16.9 K (wall) -> -9%; roof 1.5/19 -> -8%.",
+    "value": 8.0,
+    "unit": "%"
+   },
+   "main_risk": "Night humidity in hot-dry climates is too low for significant uptake and dust clogs pores; clays and gels lose capacity with salt and dust contamination within a few years.",
+   "novelty_vs_known": "Closest: sorption-based passive cooling (hydrogel/MOF atmospheric-water cooling, Lu et al.). New: inorganic clay sorbent behind a ceramic skin for durability.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Thorny devil (Moloch horridus): skin microchannels collect dew and soil moisture by capillarity without active drinking.",
+   "domain": "Heat and mass transfer",
+   "physical_mechanism": "Adsorption at night, desorption by day: the latent heat of desorption acts as a heat sink at the outer surface. Steady model: effective outer heat sink in the conduction problem.",
+   "parameters": [
+    {
+     "name": "sorbent_areal_mass",
+     "value": 3.0,
+     "min_bound": 1.0,
+     "max_bound": 8.0,
+     "justification": "kg/m2 of clay/gel."
+    },
+    {
+     "name": "water_uptake_fraction",
+     "value": 0.12,
+     "min_bound": 0.03,
+     "max_bound": 0.3,
+     "justification": "kg water per kg at 50% RH."
+    },
+    {
+     "name": "latent_heat_desorption",
+     "value": 2400000.0,
+     "min_bound": 2200000.0,
+     "max_bound": 2800000.0,
+     "justification": "J/kg."
+    },
+    {
+     "name": "effective_evaporative_flux",
+     "value": 30.0,
+     "min_bound": 5.0,
+     "max_bound": 60.0,
+     "justification": "W/m2 averaged over daytime."
+    },
+    {
+     "name": "outer_heat_transfer_coefficient",
+     "value": 20.0,
+     "min_bound": 8.0,
+     "max_bound": 35.0,
+     "justification": "Convection."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-10",
+   "title": "Self-renewing chalking mineral topcoat (cuticle-wax analogue)",
+   "summary": "A 300 um lime/potassium-silicate topcoat loaded with CaCO3 and BaSO4 that erodes at a controlled ~8 um per year, continually exposing a fresh white surface and shedding dust and biofilm, the way glaucous desert plants such as Dudleya continually regenerate their reflective epicuticular wax bloom. It holds solar reflectance near 0.85-0.88 for 20+ years where a conventional cool paint soils to 0.65-0.70.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "degradation_rate"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of 20-year time-averaged opaque-envelope heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. 20-year mean alpha 0.14 vs baseline 0.32: roof dT=13+(84-72)/20=13.6 K (-28%); wall dT=13+(42-18)/20=14.2 K (-16%); mix -> ~22%.",
+    "value": 22.0,
+    "unit": "%"
+   },
+   "main_risk": "Erosion rate depends strongly on local rain and wind; in very dry climates dust simply accumulates, and in wet climates the coating erodes through before 20 years and causes white runoff streaks.",
+   "novelty_vs_known": "Closest: traditional limewash (renewed yearly) and self-cleaning chalking TiO2 paints. New: an engineered erosion rate and thickness budget so that one application stays white for 20 years.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Chalk dudleya (Dudleya brittonii) and other glaucous desert plants: epicuticular wax crystals reflect strongly and are regenerated as they wear off.",
+   "domain": "Materials degradation / radiative heat transfer",
+   "physical_mechanism": "Solar reflectance loss per year is the governing quantity: a sacrificial surface layer removes deposited soil at a rate matching deposition. Steady model: diffusion/erosion balance of soiling in the surface layer, giving the steady-state reflectance.",
+   "parameters": [
+    {
+     "name": "erosion_rate",
+     "value": 2.5e-13,
+     "min_bound": 5e-14,
+     "max_bound": 1e-12,
+     "justification": "~8 um/yr in m/s."
+    },
+    {
+     "name": "coating_thickness",
+     "value": 0.0003,
+     "min_bound": 0.0001,
+     "max_bound": 0.0006,
+     "justification": "Erosion budget for 20+ years."
+    },
+    {
+     "name": "soiling_deposition_rate",
+     "value": 1e-09,
+     "min_bound": 1e-10,
+     "max_bound": 1e-08,
+     "justification": "kg/m2/s dust deposition in hot climates."
+    },
+    {
+     "name": "clean_solar_reflectance",
+     "value": 0.9,
+     "min_bound": 0.8,
+     "max_bound": 0.95,
+     "justification": "CaCO3/BaSO4 in silicate binder."
+    },
+    {
+     "name": "steady_state_solar_reflectance",
+     "value": 0.86,
+     "min_bound": 0.7,
+     "max_bound": 0.93,
+     "justification": "With continuous renewal."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-11",
+   "title": "Pine-cone hygromorph shading flaps",
+   "summary": "Facade shading flaps made of a bilayer (hygroscopic cellulose-fibre composite on a stable glass-fibre layer) that close and shade when the air is dry and hot by day and open at humid nights for view and night cooling, mimicking the moisture-driven opening of pine-cone scales without any motor.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "cm_plus"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of daytime wall heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Closed flaps block ~80% of direct sun: wall dT=13+(0.32*300*0.2-18)/20+1 K (flap re-radiation)=13.1 K vs 16.9 K -> -22% on shaded walls while the flaps actuate; with partial actuation and unshaded roofs ~15%.",
+    "value": 15.0,
+    "unit": "%"
+   },
+   "main_risk": "Hygroscopic bio-composites degrade under 20 years of UV and wetting cycles and lose their actuation amplitude; daytime RH is not always lower than night RH.",
+   "novelty_vs_known": "Closest: HygroSkin (Menges), thermobimetal 'Bloom' shading. New: a glass-fibre/cellulose bilayer tuned to close under dry-hot air.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Pine cone (Pinus) scales: bilayer of sclerenchyma fibres and sclereids with different hygroscopic swelling bends the scales when humidity changes.",
+   "domain": "Structural mechanics / heat transfer",
+   "physical_mechanism": "Differential hygroscopic swelling of a bilayer produces a curvature (Timoshenko bimorph) that opens/closes flaps; shading reduces absorbed solar on the wall. Steady model: bilayer curvature vs RH, or wall conduction with shaded boundary.",
+   "parameters": [
+    {
+     "name": "bilayer_thickness",
+     "value": 0.002,
+     "min_bound": 0.0005,
+     "max_bound": 0.005,
+     "justification": "Flap laminate."
+    },
+    {
+     "name": "hygroscopic_strain_coefficient",
+     "value": 0.02,
+     "min_bound": 0.005,
+     "max_bound": 0.05,
+     "justification": "Strain per unit RH change."
+    },
+    {
+     "name": "flap_length",
+     "value": 0.15,
+     "min_bound": 0.05,
+     "max_bound": 0.4,
+     "justification": "Shading flap."
+    },
+    {
+     "name": "shading_fraction_closed",
+     "value": 0.8,
+     "min_bound": 0.5,
+     "max_bound": 0.95,
+     "justification": "Direct sun blocked when closed."
+    },
+    {
+     "name": "wall_u_value",
+     "value": 0.5,
+     "min_bound": 0.2,
+     "max_bound": 3.0,
+     "justification": "Baseline wall."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-12",
+   "title": "Cork-oak bark closed-cell cladding with white mineral skin",
+   "summary": "A 60 mm expanded-cork cladding board finished with a white silicate render, modelled on the cork-oak bark that shields living tissue from heat and fire with closed 20-40 um suberised cells. Cork boards weather outdoors for decades; the added resistance cuts the conductive gain regardless of surface ageing.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "architected_lattice"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged opaque-envelope heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Added R=0.06/0.04=1.5 m2K/W: U 0.50 -> 0.286; white render alpha 0.3 similar to baseline: q ratio 0.286/0.5 -> -43%; roof/wall mix -> ~40%.",
+    "value": 40.0,
+    "unit": "%"
+   },
+   "main_risk": "It is ordinary external insulation: the same gain comes from any added insulation, so the bionic part adds little, and exposed cork greys and erodes under UV and rain.",
+   "novelty_vs_known": "Closest: ETICS/external insulation composite systems and expanded cork facade boards. New: little; only the cork-bark analogy.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Cork oak (Quercus suber) bark: closed prismatic cork cells with suberin walls, very low conductivity (~0.04 W/mK) and fire resistance.",
+   "domain": "Heat conduction",
+   "physical_mechanism": "Added closed-cell insulation increases the thermal resistance of the envelope; 1D steady conduction through layers.",
+   "parameters": [
+    {
+     "name": "cork_thickness",
+     "value": 0.06,
+     "min_bound": 0.02,
+     "max_bound": 0.15,
+     "justification": "Board thickness."
+    },
+    {
+     "name": "cork_conductivity",
+     "value": 0.04,
+     "min_bound": 0.036,
+     "max_bound": 0.05,
+     "justification": "Expanded cork."
+    },
+    {
+     "name": "render_solar_absorptance",
+     "value": 0.3,
+     "min_bound": 0.15,
+     "max_bound": 0.45,
+     "justification": "Aged white render."
+    },
+    {
+     "name": "wall_u_value",
+     "value": 0.5,
+     "min_bound": 0.2,
+     "max_bound": 3.0,
+     "justification": "Baseline wall."
+    },
+    {
+     "name": "outer_heat_transfer_coefficient",
+     "value": 20.0,
+     "min_bound": 8.0,
+     "max_bound": 35.0,
+     "justification": "Convection."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-13",
+   "title": "Nacre-like platelet reflective coating for crack tolerance",
+   "summary": "A reflective topcoat with aligned alumina/mica platelets (5-10 um wide, 0.3-0.5 um thick) in a compliant siloxane-silicate matrix, arranged brick-and-mortar like nacre, so thermal-cycling and substrate-crack stresses are deflected instead of opening through-cracks; the platelets also reflect sunlight. The coating keeps its integrity and reflectance for 20 years without repainting.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "architected_lattice"
+    },
+    {
+     "axis": "length_scale",
+     "value": "um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "stress"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of 20-year time-averaged envelope heat gain vs aged cool paint",
+    "formula": "Crack-induced failure and repaint cycles of cool paints lower the 20-year mean SR by ~0.05; keeping SR 0.05 higher: alpha 0.32 -> 0.27, roof dT=19.0 -> 17.5 K (-8%), wall 16.9 -> 16.15 K (-4%); mix ~6%.",
+    "value": 6.0,
+    "unit": "%"
+   },
+   "main_risk": "The benefit is indirect; platelet coatings still soil like conventional paints, so the heat-gain gain is small.",
+   "novelty_vs_known": "Closest: nacre-inspired composites, mica-pigmented elastomeric roof coatings. New: using nacre crack deflection specifically to extend cool-coating service life.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Nacre of abalone/pearl oyster: aragonite platelets in a thin organic mortar deflect cracks and give ~1000x the toughness of aragonite.",
+   "domain": "Structural mechanics",
+   "physical_mechanism": "Shear-lag load transfer through soft mortar lowers peak tensile stress in platelets and at the coating/substrate interface under thermal mismatch strain. Steady 1D shear-lag ODE along a platelet.",
+   "parameters": [
+    {
+     "name": "platelet_length",
+     "value": 8e-06,
+     "min_bound": 2e-06,
+     "max_bound": 2e-05,
+     "justification": "Nacre-like aspect ratio."
+    },
+    {
+     "name": "platelet_thickness",
+     "value": 4e-07,
+     "min_bound": 1e-07,
+     "max_bound": 1e-06,
+     "justification": "Aspect ratio ~20."
+    },
+    {
+     "name": "matrix_shear_modulus",
+     "value": 5000000.0,
+     "min_bound": 1000000.0,
+     "max_bound": 50000000.0,
+     "justification": "Siloxane mortar."
+    },
+    {
+     "name": "thermal_mismatch_strain",
+     "value": 0.0004,
+     "min_bound": 0.0001,
+     "max_bound": 0.001,
+     "justification": "40 K cycle x 1e-5 /K mismatch."
+    },
+    {
+     "name": "platelet_youngs_modulus",
+     "value": 150000000000.0,
+     "min_bound": 50000000000.0,
+     "max_bound": 400000000000.0,
+     "justification": "Alumina/mica."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-14",
+   "title": "Bacterial self-healing white calcite render",
+   "summary": "A white lime-calcite render containing Bacillus spores and calcium lactate: when rain enters a crack the bacteria precipitate calcite and seal it, preserving weather resistance and the white surface over 20 years without maintenance.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "other"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "microbe"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "degradation_rate"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of 20-year time-averaged envelope heat gain vs aged cool paint",
+    "formula": "Fewer cracks keep water and dirt out; SR gain vs aged paint maybe +0.02-0.03 -> roof dT 19.0 -> 18.4 K (-3%); wall -2%; ~3%.",
+    "value": 3.0,
+    "unit": "%"
+   },
+   "main_risk": "Spore viability over years in hot dry render is poor and crack healing does nothing for reflectance loss by soiling, so heat gain barely changes.",
+   "novelty_vs_known": "Closest: Jonkers self-healing bioconcrete. New: applied to a white reflective render in hot climates.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Microbially induced calcite precipitation (Bacillus pseudofirmus/cohnii) in natural calcite crusts.",
+   "domain": "Materials degradation",
+   "physical_mechanism": "Crack sealing by biomineralisation reduces water ingress and degradation rate; steady diffusion of water through cracked vs healed render.",
+   "parameters": [
+    {
+     "name": "crack_width",
+     "value": 0.0002,
+     "min_bound": 5e-05,
+     "max_bound": 0.0005,
+     "justification": "Healable crack width."
+    },
+    {
+     "name": "render_thickness",
+     "value": 0.01,
+     "min_bound": 0.005,
+     "max_bound": 0.02,
+     "justification": "Lime render."
+    },
+    {
+     "name": "healed_permeability_ratio",
+     "value": 0.1,
+     "min_bound": 0.01,
+     "max_bound": 0.5,
+     "justification": "Water permeability after healing vs cracked."
+    },
+    {
+     "name": "render_solar_absorptance",
+     "value": 0.25,
+     "min_bound": 0.15,
+     "max_bound": 0.4,
+     "justification": "Aged white calcite render."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-15",
+   "title": "Silver-fish chaotic multilayer platelet reflector",
+   "summary": "A silicate-bound topcoat of oriented platelets, each a stack of SiO2/ZnS (or SiO2/TiO2) layers with randomised thicknesses, copying the 'chaotic' guanine-cytoplasm stacks of herring and sardine skin that reflect broadband light without colour. Aligned parallel to the surface they act as a broadband solar mirror in a thin (60-80 um) inorganic coating with high thermal emittance from the binder.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "radiative_control"
+    },
+    {
+     "axis": "length_scale",
+     "value": "sub_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "heat_flux"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "reduction of time-averaged opaque-envelope heat gain vs aged cool paint",
+    "formula": "Estimate uses the sol-air balance q = U*(T_a - T_in + (alpha*I - eps*dR)/h_o) with T_a=38 C daytime mean, T_in=25 C, h_o=20 W/m2K; roof: I=600 W/m2 daytime mean, net longwave sky loss dR=80 W/m2; west wall: I=300 W/m2, dR=20 W/m2 (half sky view, hot ground). Baseline aged cool paint alpha=0.32, eps=0.90 gives roof dT=19.0 K, wall dT=16.9 K. Concept 20-year mean alpha 0.14 (SR 0.91 new, 0.84 aged), eps 0.92: roof dT=13+(84-73.6)/20=13.5 K (-29%); wall 13+(42-18.4)/20=14.2 K (-16%); mix ~22%.",
+    "value": 22.0,
+    "unit": "%"
+   },
+   "main_risk": "A few hundred nm layer stacks cannot cover the whole 0.3-2.5 um solar spectrum with high reflectance at all angles; real SR may be ~0.85, similar to a good TiO2 cool paint.",
+   "novelty_vs_known": "Closest: pearlescent effect pigments and dielectric mirror films. New: randomised (chaotic) layer thicknesses for colourless broadband solar reflection in a durable mineral coating.",
+   "baseline": "Conventional white acrylic/elastomeric cool facade/roof paint (solar reflectance ~0.80 new, ~0.65-0.70 after soiling and UV ageing, thermal emittance ~0.90) on the same wall/roof construction with the region's typical insulation.",
+   "inspiration_source": "Silvery fish (herring, sardine): stacks of guanine crystals with disordered thicknesses give broadband, polarisation-insensitive reflection.",
+   "domain": "Radiative heat transfer / optics",
+   "physical_mechanism": "Broadband reflection from disordered multilayers reduces absorbed solar; the binder emits in the atmospheric window. Optics are given as effective absorptance/emittance to the 1D steady envelope conduction model.",
+   "parameters": [
+    {
+     "name": "solar_absorptance",
+     "value": 0.14,
+     "min_bound": 0.05,
+     "max_bound": 0.3,
+     "justification": "20-year mean."
+    },
+    {
+     "name": "thermal_emittance",
+     "value": 0.92,
+     "min_bound": 0.8,
+     "max_bound": 0.97,
+     "justification": "Silicate binder emission."
+    },
+    {
+     "name": "layer_thickness_mean",
+     "value": 1.2e-07,
+     "min_bound": 5e-08,
+     "max_bound": 3e-07,
+     "justification": "Quarter-wave range for 0.4-1.5 um."
+    },
+    {
+     "name": "coating_thickness",
+     "value": 7e-05,
+     "min_bound": 3e-05,
+     "max_bound": 0.0002,
+     "justification": "Platelet topcoat."
+    },
+    {
+     "name": "solar_irradiance",
+     "value": 600.0,
+     "min_bound": 300.0,
+     "max_bound": 1000.0,
+     "justification": "Roof daytime mean."
+    }
+   ]
+  }
+ ],
+ "_prompt_hash": "ba4a97eedfcec440"
+}

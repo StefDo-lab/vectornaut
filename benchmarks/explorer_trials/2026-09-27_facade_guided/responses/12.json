@@ -1,0 +1,118 @@
+{
+  "function_analysis": "Same functions as stored: reject solar radiation (F1), emit into the 8-13 um window (F2), decouple wall/roof from the hot skin by insulation, trapped gas or ventilation (F3), keep F1-F3 for 20 years against soiling, UV and cycling (F4), passively (F5). In this round the orders ask for an architected lattice at sub-micron scale (only meaningful for heat flux as a nanoporous insulating skeleton, Knudsen suppression of gas conduction), a plant-derived trapped-gas cladding at cm scale, and a better self-renewal mechanism that does not depend on rain.",
+  "requirements": [
+    {"name": "indoor_heat_gain_reduction", "criterion": "Clearly lowers the summer-day heat flux into the interior (roughly >20 %) versus the aged conventional white cool coating on the same envelope."},
+    {"name": "fully_passive", "criterion": "Works without electricity, pumps, fans or water supply; only sun, sky, wind and rain act on it."},
+    {"name": "weather_durability_20yr", "criterion": "Keeps its optical and thermal function (and adhesion) for at least 20 years under hot-climate UV, thermal cycling, rain, dust/sand and soiling without major maintenance."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is actually derived from a biological model (plant, animal, microbe), not only labelled so."},
+    {"name": "building_practicality", "criterion": "Applicable as coating or facade structure on real buildings at acceptable cost, weight and glare, without toxic release."}
+  ],
+  "mechanism_classes_considered": ["architected_lattice", "trapped_gas_or_liquid", "radiative_control", "other"],
+  "analogues_considered": [
+    "Polar bear hair: porous core with sub-micron to micron pores; encapsulated aerogel fibres copying it (Science 2023) insulate at k ~0.02 W/mK",
+    "Cork oak (Quercus suber) bark: closed suberised cells full of air, a thick insulating layer that protects the cambium from fire heat",
+    "Birch bark: exfoliation of thin phellem sheets driven by growth strain, renewing a white betulin surface",
+    "Plane tree (Platanus) bark: plates shed by growth stress",
+    "Snake and reptile ecdysis: periodic shedding of an outer layer",
+    "Weevil/butterfly gyroid chitin lattices (photonic, but optical rather than thermal)"
+  ],
+  "objective_statement": "Summer-day (24 h) heat flux into the conditioned interior through the sun-exposed roof and facades of a building in a hot climate, averaged over a 20-year service life, including UV ageing, weathering and soiling of the outer surface (not the value of a freshly applied clean surface).",
+  "baseline_statement": "Conventional white acrylic/elastomeric cool-roof or facade coating (initial solar reflectance ~0.85, thermal emittance ~0.90) in its in-service aged and soiled condition (3-year aged solar reflectance ~0.65-0.70, as in CRRC ageing data), repainted every ~10 years, on the same insulated wall or roof.",
+  "relevant_governing_quantities": ["heat_flux", "temperature", "degradation_rate"],
+  "candidates": [
+    {
+      "order_id": "r002-01",
+      "title": "Polar-bear aerogel-fibre roof underlayer",
+      "summary": "A 15 mm mat of encapsulated aerogel fibres (silica-polyimide core with 50-300 nm pores inside a dense sheath) laid under the reflective roof finish, copying the porous-core hair of the polar bear, whose sub-micron pores suppress gas conduction. The sub-micron lattice halves the conductivity of conventional insulation, so a thin retrofit layer adds ~0.8 m2K/W without raising the roof edge much.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "architected_lattice"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean roof heat flux vs aged white coating on the same roof without the underlayer",
+        "formula": "R_add = t/k = 0.015/0.018 = 0.83 m2K/W; U = 1/(2.0+0.83) = 0.35 vs 0.5; same aged white finish on top (SR 0.67): q ratio ~ (1+15*2.0)/(1+15*2.83) = 31/43.5 = 0.71 -> -29 %",
+        "value": 29,
+        "unit": "%"
+      },
+      "main_risk": "It is added insulation: 30 mm of conventional PIR gives the same resistance far more cheaply, so the bionic lattice only buys thinness; aerogel mats under a roof finish can take up moisture and compress under foot traffic.",
+      "novelty_vs_known": "Closest known: aerogel blankets (Spaceloft) and conventional roof insulation; the polar-bear encapsulated-fibre form gives an elastic, dust-free mat. Novelty for the request is low; it is a thin-profile insulation retrofit.",
+      "baseline": "Conventional white acrylic cool coating, aged and soiled (SR 0.67, emittance 0.90), on the same roof (U = 0.5 W/m2K) without added layer.",
+      "inspiration_source": "Polar bear (Ursus maritimus) guard hair: hollow/porous medulla with sub-micron to micron pores that scatters light and reduces conduction; copied in encapsulated aerogel fibres.",
+      "domain": "Heat transfer / insulation",
+      "physical_mechanism": "Pores smaller than or comparable to the mean free path of air (~68 nm) raise the Knudsen number and suppress gas conduction; a thin, stiff solid skeleton keeps solid conduction low, giving k ~0.015-0.02 W/mK. Steady 1D series conduction interior - roof - aerogel mat - finish with a sol-air Robin boundary.",
+      "parameters": [
+        {"name": "aerogel_thickness", "value": 0.015, "min_bound": 0.005, "max_bound": 0.03, "justification": "Thin retrofit layer; polar bear fur is several cm, but a roof retrofit is limited in height."},
+        {"name": "aerogel_conductivity", "value": 0.018, "min_bound": 0.013, "max_bound": 0.03, "justification": "Silica aerogel blankets 0.015-0.021 W/mK; encapsulated fibres ~0.02."},
+        {"name": "pore_size", "value": 2e-07, "min_bound": 2e-08, "max_bound": 1e-06, "justification": "Polar-bear-type porous core scaled down to aerogel pore sizes."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Existing roof, as in baseline."},
+        {"name": "finish_solar_reflectance_aged", "value": 0.67, "min_bound": 0.55, "max_bound": 0.9, "justification": "Same aged white finish as the baseline on top of the mat."},
+        {"name": "external_heat_transfer_coefficient", "value": 15.0, "min_bound": 8.0, "max_bound": 30.0, "justification": "Combined outer film coefficient."}
+      ]
+    },
+    {
+      "order_id": "r002-02",
+      "title": "Cork-oak bark cladding with white mineral skin",
+      "summary": "A 40 mm facade cladding of expanded cork board, whose closed suberised cells trap air like the fire-protecting bark of the cork oak, finished with a white mineral silicate skin that sheds its soiled surface slowly like birch bark. The cork adds ~1 m2K/W of trapped-gas resistance and the white skin keeps the outer surface near ambient.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "cm_plus"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean west-facade heat flux vs aged white coating directly on the wall",
+        "formula": "R_cork = 0.04/0.04 = 1.0 m2K/W; skin aged alpha 0.28; I=180, R_net=40, h=15, dT=10 K: q = (0.28*180 + 150 - 36)/(1 + 15*3.0) = 3.57 W/m2 vs baseline (0.33*180 + 150 - 36)/(1 + 15*2.0) = 5.59 W/m2 -> -36 %",
+        "value": 36,
+        "unit": "%"
+      },
+      "main_risk": "The benefit is almost entirely added insulation, which conventional ETICS with mineral wool plus white render also gives; the white skin on cork may crack where the cork creeps and moisture cycling may damage the bond.",
+      "novelty_vs_known": "Closest known: exposed expanded-cork facade boards and ETICS with white render; new is only the combination with a slowly renewing white mineral skin. Novelty is low.",
+      "baseline": "Conventional white acrylic facade coating, aged and soiled (SR 0.67, emittance 0.90), directly on the same insulated wall (U = 0.5 W/m2K).",
+      "inspiration_source": "Cork oak (Quercus suber) bark: 3-5 cm of closed air-filled suberised cells insulating the living cambium against fire heat; birch bark for the renewing white surface.",
+      "domain": "Building physics / heat transfer",
+      "physical_mechanism": "Closed cells of 20-40 um hold still air, so conduction through the board is ~0.04 W/mK; the white skin limits absorbed solar. Steady 1D series conduction with sol-air Robin boundary.",
+      "parameters": [
+        {"name": "cork_thickness", "value": 0.04, "min_bound": 0.02, "max_bound": 0.1, "justification": "Comparable to natural cork oak bark thickness (3-5 cm)."},
+        {"name": "cork_conductivity", "value": 0.04, "min_bound": 0.036, "max_bound": 0.05, "justification": "Expanded cork board 0.037-0.045 W/mK."},
+        {"name": "skin_solar_reflectance_aged", "value": 0.72, "min_bound": 0.6, "max_bound": 0.85, "justification": "White silicate render, slowly chalking; aged slightly better than acrylic."},
+        {"name": "wall_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same wall as baseline."},
+        {"name": "solar_irradiance_daily_mean", "value": 180.0, "min_bound": 120.0, "max_bound": 250.0, "justification": "West facade, hot-climate summer day."},
+        {"name": "net_sky_longwave", "value": 40.0, "min_bound": 25.0, "max_bound": 60.0, "justification": "Vertical surface, half sky view."}
+      ]
+    },
+    {
+      "order_id": "r002-03",
+      "title": "Birch-bark thermal-fatigue exfoliating laminate",
+      "summary": "A white mineral laminate of ten 40 um BaSO4-silicate sheets separated by deliberately weak interlayers that fail by thermal-cycling fatigue after roughly 700 daily cycles, so one soiled sheet peels off about every two years, as birch bark sheds thin phellem sheets driven by growth strain. Daily temperature swings exist in every hot climate, so renewal no longer depends on rain.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "radiative_control"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "degradation_rate"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of service-life-mean roof heat flux vs aged white acrylic coating",
+        "formula": "Soiling SR(t) = 0.92 - 0.20*(1 - exp(-t/1 yr)); renewal every T = 2 yr -> mean loss = 0.20*(1 - (1/2)*(1 - e^-2)) = 0.113 -> mean SR 0.81, eps 0.92; baseline life-mean SR 0.70 (repainted every 10 yr), eps 0.90. q = U*(alpha*I + h*dT - eps*R_net)/(U+h): 0.5*(57 + 150 - 78.2)/15.5 = 4.15 vs 0.5*(90 + 150 - 76.5)/15.5 = 5.27 W/m2 -> -21 %",
+        "value": 21,
+        "unit": "%"
+      },
+      "main_risk": "Fatigue life of the weak interlayer scatters by an order of magnitude, so sheets peel far too early (whole-roof shedding) or not at all; peeled mineral flakes are litter.",
+      "novelty_vs_known": "Closest known: chalking self-cleaning paints and sacrificial coatings; new is sheet-wise exfoliation paced by thermal fatigue instead of rain erosion, copying bark shedding.",
+      "baseline": "Conventional white acrylic cool coating, aged and soiled (life-mean SR ~0.70 with repaint every 10 years, emittance 0.90) on the same roof.",
+      "inspiration_source": "Birch (Betula papyrifera) bark: thin phellem sheets with betulin crystals peel off in horizontal strips when the stem grows, exposing fresh white layers.",
+      "domain": "Surface degradation / radiative heat transfer",
+      "physical_mechanism": "Daily surface temperature swings of 20-35 K and the expansion mismatch between sheet and interlayer produce a cyclic interlayer shear stress; a weak interlayer with a designed Basquin fatigue curve fails after N ~700 cycles, so the soiled top sheet is shed and the absorbing dirt inventory is reset periodically. Modelled as steady dirt accumulation in a surface layer with an effective renewal velocity (sheet thickness / renewal period) and rain/wind wash-off; the dirt load sets the absorptance in the sol-air heat balance.",
+      "parameters": [
+        {"name": "sheet_thickness", "value": 4e-05, "min_bound": 1e-05, "max_bound": 0.0001, "justification": "Birch phellem sheets are tens of um; 40 um gives opacity loss of <2 % per shed sheet."},
+        {"name": "renewal_period", "value": 6.3e7, "min_bound": 3.2e7, "max_bound": 1.6e8, "justification": "About 2 years (700 daily cycles), 1-5 years range."},
+        {"name": "clean_solar_reflectance", "value": 0.92, "min_bound": 0.85, "max_bound": 0.97, "justification": "BaSO4/silicate sheets."},
+        {"name": "thermal_emittance", "value": 0.92, "min_bound": 0.85, "max_bound": 0.97, "justification": "Sulfate/silicate bands in 8-13 um."},
+        {"name": "number_of_sheets", "value": 10.0, "min_bound": 5.0, "max_bound": 20.0, "justification": "10 sheets x 2 years = 20-year service life."},
+        {"name": "daily_temperature_swing", "value": 30.0, "min_bound": 15.0, "max_bound": 45.0, "justification": "Roof surface swing in hot climates."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same roof as baseline."}
+      ]
+    }
+  ]
+}

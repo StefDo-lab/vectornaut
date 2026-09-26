@@ -1,0 +1,51 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady 1D roof conduction with linearised sol-air boundary; the electrostatic mechanism enters only through the assumed aged reflectance loss, so the simulation checks the thermal consequence of that assumption, not the electrostatics. Checks: ATO at 7 vol% above percolation gives surface resistivity ~1e6-1e9 Ohm/sq and charge relaxation times of seconds, so tribo-charge is removed. However, the soiling that darkens cool roofs is dominated by fine black carbon, organics and biofilm held by van der Waals and capillary forces (adhesion of a 1 um particle ~100 nN vs electrostatic image force ~1 nN for typical charges); electrostatic adhesion matters mostly for coarse (>10 um) mineral grains, which are bright and scatter anyway. I therefore reduce the claimed improvement: aged loss 0.16 instead of 0.15 (baseline 0.18). ATO also absorbs in the NIR, so clean SR 0.84 is kept. Hand result: design alpha = 0.16 + 0.16 = 0.32 -> q = 0.5*(96 + 150 - 76.5)/15.5 = 5.47 W/m2 vs 5.56 W/m2: ~-2 %. Dimensionless: ratio electrostatic to van der Waals adhesion for 1 um particles ~0.01. No structural concerns beyond the acrylic binder itself (repaint every ~10 years as the baseline). Simulation coefficient: U_eff = 0.484 W/m2K.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "surface_resistivity", "value": 1e8},
+    {"name": "ato_particle_size", "value": 2e-08},
+    {"name": "ato_volume_fraction", "value": 0.07},
+    {"name": "aged_reflectance_loss", "value": 0.16},
+    {"name": "clean_solar_reflectance", "value": 0.84},
+    {"name": "roof_u_value", "value": 0.5},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0},
+    {"name": "net_sky_longwave", "value": 85.0},
+    {"name": "thermal_emittance", "value": 0.9}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ElectrostaticToVanDerWaalsAdhesion1um", "value": 0.01},
+    {"name": "OuterFilmToRoofConductanceRatio", "value": 30.0}
+  ],
+  "simulation_coefficient": 0.484,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Surface soiling / roof heat transfer",
+    "independent_var": {"label": "Normalized position through roof (0 = interior, 1 = outer surface)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of roof heat gain vs aged white cool coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean roof heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["surface_resistivity", "ato_particle_size", "ato_volume_fraction"]
+  },
+  "metric": {"kind": "derivative_at", "location": "0", "scale": "roof_u_value", "unit": "W/m^2", "label": "Daily-mean heat flux into the interior"},
+  "baseline_parameters": [
+    {"name": "clean_solar_reflectance", "value": 0.85},
+    {"name": "aged_reflectance_loss", "value": 0.18}
+  ],
+  "baseline_description": "Conventional white acrylic cool coating, aged/soiled (SR 0.67, emittance 0.90), same roof"
+}

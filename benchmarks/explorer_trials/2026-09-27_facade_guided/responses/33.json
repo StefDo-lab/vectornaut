@@ -1,0 +1,154 @@
+{
+ "reviews": [
+  {
+   "order_id": "r003-01",
+   "plausible_simulated_benefit_pct": 5,
+   "plausible_objective_gain_pct": 3,
+   "plausible_gain_reasoning": "The solved pile model is sound; with dust lowering rod reflectance and rods also blocking the wall's sky loss, the 24-h wall heat flux falls only ~5 % against an already white wall (peak hour ~25 %); facades only, so ~3 % of the envelope objective.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Daily-mean objective hides the peak-hour benefit, which is the pile's real value",
+    "Rod reflectance 0.8 kept for 20 years although the pile traps dust",
+    "Volumetric air exchange of 500 W/m3K assumes steady wind through the pile"
+   ],
+   "killer_risks": [
+    "Dust, leaves and insects accumulate in the pile and cannot be cleaned",
+    "Brittle rods break; injury risk at reachable heights",
+    "Cost of 15 000 rods/m2 for a ~5 % daily gain"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.15,
+     "reason": "~5 % daily mean, far below 20 %"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive, wind-flushed"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.5,
+     "reason": "Mineral rods durable, but fouling of the pile and breakage"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.55,
+     "reason": "Spine shading and boundary-layer control are the cactus's actual mechanism"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.25,
+     "reason": "Unusual, hard to clean, costly"
+    }
+   ]
+  },
+  {
+   "order_id": "r003-02",
+   "plausible_simulated_benefit_pct": 10,
+   "plausible_objective_gain_pct": 5,
+   "plausible_gain_reasoning": "A ventilated highly reflective screen cuts the 24-h wall flux by ~10 % once the fabric soils (peak ~30 %), but a standard PTFE-glass membrane already gives ~11 % in the same model, and only facades are treated, so ~5 % of the envelope objective.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Life-mean screen absorptance 0.10 assumes a woven fabric stays clean",
+    "Screen temperature from a simplified two-sided balance",
+    "Benefit mostly from shading, which conventional screens provide"
+   ],
+   "killer_risks": [
+    "Voided glass fibres not manufacturable at scale; strength loss from voids",
+    "Flutter fatigue at clamps over 20 years",
+    "Fabric soiling and cost of the membrane structure"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.3,
+     "reason": "~10 % daily on facades"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.55,
+     "reason": "Glass is UV-stable, but fabric soiling and flutter fatigue over 20 years"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.5,
+     "reason": "Tussah silk nanovoid scattering is genuine; the thermal effect is ordinary shading"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.4,
+     "reason": "Membrane facades are established but costly"
+    }
+   ]
+  },
+  {
+   "order_id": "r003-03",
+   "plausible_simulated_benefit_pct": 27,
+   "plausible_objective_gain_pct": 18,
+   "plausible_gain_reasoning": "Closed glass cells lower clean SR to ~0.90 and surface dirt still adheres, so a life-mean SR of ~0.84 vs ~0.70 for the repainted acrylic gives ~27 % less roof flux; on facades the same coat gives ~15 %, so ~18 % over the envelope.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Life-mean aged loss 0.06 depends on cells staying closed under sand abrasion",
+    "Clean SR of a closed-cell glass/BaSO4 structure not demonstrated",
+    "Dry-climate sky radiation; humid climates reduce the emittance benefit"
+   ],
+   "killer_risks": [
+    "Brittle layer cracks on non-rigid substrates and under hail",
+    "Sand abrasion opens the cells and turns it into a dirt-trapping porous surface",
+    "Firing step limits it to factory-made panels"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.6,
+     "reason": "~27 % on roofs, ~15 % on facades"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.55,
+     "reason": "Inorganic and sealed, promising, but brittle and unproven over 20 years"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.45,
+     "reason": "Birch phellem (closed air cells with crystals) genuinely supplies the sealed-scattering idea"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.55,
+     "reason": "Feasible on mineral substrates or as fired panels at moderate cost"
+    }
+   ]
+  }
+ ]
+}

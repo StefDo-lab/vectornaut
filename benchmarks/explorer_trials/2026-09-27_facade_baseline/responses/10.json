@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild sind Kieselalgen (Diatomeen): ihre Silikatschalen mit hierarchischen Poren (0,2-1 \u00b5m) streuen Licht stark. Du nutzt kalzinierte Diatomeenerde zusammen mit BaSO4 als Hauptf\u00fcllstoff in einer Kaliwasserglas-Silikatfarbe. Im 1D-Dachmodell sinkt der W\u00e4rmestrom in den Raum um ~29 % (6,9 statt 9,7 W/m\u00b2) gegen\u00fcber gealterter Acryl-Cool-Roof-Farbe; an W\u00e4nden etwa halb so viel.",
+ "pros_and_cons": "Vorteile: rein mineralisch, Silikatfarben halten auf mineralischen Untergr\u00fcnden 20+ Jahre, g\u00fcnstiger, verf\u00fcgbarer Rohstoff, diffusionsoffen. Nachteile: Eisen-Verunreinigungen senken die Reflexion; Silica-Reststrahlenband bei 9 \u00b5m senkt die Emission; por\u00f6se Oberfl\u00e4che verschmutzt; der Unterschied zu guten BaSO4-K\u00fchlfarben ist klein.",
+ "mechanical_limits": "Schicht ist mechanisch gering belastet; Silikatfarben verkieseln mit dem Untergrund, daher gute Haftung auf Putz/Beton, schlechte auf Metall/Kunststoff. Ausfall = Kreiden > Klasse 2, Reflexion < 0,80, Abbl\u00e4ttern.",
+ "manufacturing_methods": "Standard-Farbenfertigung: Dispergieren von kalzinierter, gebleichter Diatomeenerde und BaSO4 in Kaliwasserglas mit wenig Dispersionsanteil (Dispersionssilikatfarbe); Auftrag per Rolle/Spritzen in 2-3 Schichten, ~300 \u00b5m trocken.",
+ "cost_estimation": "Rezepturentwicklung 10-30 k\u20ac; Material ~2-4 \u20ac/m\u00b2, applied 8-12 \u20ac/m\u00b2, also \u00e4hnlich einer Premium-Fassadenfarbe.",
+ "validation_experiments": "UV-VIS-NIR-Reflexion und FTIR-Emission, QUV/Xenon-Bewitterung, Soiling-Test, 2-Jahres-Feldtest auf Dach und Westwand in hei\u00dfem Klima, W\u00e4rmestrommessung an Testboxen gegen Acryl-Cool-Paint.",
+ "industry_partners": "Silikatfarbenhersteller, Diatomit-Lieferanten, Cool-Roof-Beschichter, bauphysikalische Pr\u00fcfinstitute.",
+ "_prompt_hash": "ec4f654b613c1a0f"
+}

@@ -1,0 +1,99 @@
+{
+ "governing_equation": "d2T_dx2 = 0",
+ "boundary_conditions": [
+  "dT_dx(0) = -(outer_heat_transfer_coefficient*(T_air - T(0)) + wall_solar_absorptance*(1 - shading_fraction_closed*actuation_availability)*solar_irradiance + flap_radiative_coefficient*flap_solar_absorptance*shading_fraction_closed*actuation_availability*solar_irradiance/(2*flap_convective_coefficient) - wall_emittance*net_longwave_sky_loss*(1 - shading_fraction_closed*actuation_availability))/wall_conductance",
+  "T(1) = T_indoor"
+ ],
+ "independent_variables": [
+  "x"
+ ],
+ "dependent_variables": [
+  "T"
+ ],
+ "parameters": [
+  {
+   "name": "wall_conductance",
+   "value": 0.526,
+   "min_bound": 0.2,
+   "max_bound": 5.0,
+   "justification": "Conductance of wall/roof layers plus inner film, 1/(1/U - 1/h_o) for U=0.5 W/m2K and h_o=20 W/m2K; x normalised over the wall thickness."
+  },
+  {
+   "name": "T_air",
+   "value": 311.15,
+   "min_bound": 300.0,
+   "max_bound": 320.0,
+   "justification": "Daytime mean summer air temperature 38 C."
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15,
+   "min_bound": 293.0,
+   "max_bound": 303.0,
+   "justification": "Conditioned indoor air 25 C."
+  },
+  {
+   "name": "actuation_availability",
+   "value": 0.8,
+   "min_bound": 0.3,
+   "max_bound": 1.0,
+   "justification": "Fraction of sunny hours in which the flaps are actually closed."
+  },
+  {
+   "name": "wall_solar_absorptance",
+   "value": 0.32,
+   "min_bound": 0.1,
+   "max_bound": 0.6,
+   "justification": "Wall behind keeps aged cool paint."
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 300.0,
+   "min_bound": 150.0,
+   "max_bound": 600.0,
+   "justification": "West wall."
+  },
+  {
+   "name": "flap_solar_absorptance",
+   "value": 0.35,
+   "min_bound": 0.1,
+   "max_bound": 0.7,
+   "justification": "Light composite flap."
+  },
+  {
+   "name": "flap_radiative_coefficient",
+   "value": 5.0,
+   "min_bound": 2.0,
+   "max_bound": 7.0,
+   "justification": "Flap-wall longwave exchange."
+  },
+  {
+   "name": "flap_convective_coefficient",
+   "value": 10.0,
+   "min_bound": 5.0,
+   "max_bound": 30.0,
+   "justification": "15 cm flap at 1-2 m/s."
+  },
+  {
+   "name": "wall_emittance",
+   "value": 0.9,
+   "min_bound": 0.8,
+   "max_bound": 0.95,
+   "justification": "Paint."
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 20.0,
+   "min_bound": 0.0,
+   "max_bound": 60.0,
+   "justification": "Vertical wall."
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 15.0,
+   "min_bound": 5.0,
+   "max_bound": 35.0,
+   "justification": "Partly sheltered wall behind flaps."
+  }
+ ]
+}

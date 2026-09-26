@@ -1,0 +1,113 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameter check. The claimed effective net longwave loss of 45 W/m2 per wall area is optimistic: a flat vertical emitter sees half sky and half hot ground (ground ~50-60 C by day), so its net longwave exchange is only ~5-20 W/m2; 45-degree facets see ~0.85 sky, but in a corrugation they also see each other and part of the ground-facing facets; I estimate 30 W/m2 (including eps~0.95). Upward-tilted facets also collect more beam and diffuse sun than a vertical wall, which offsets part of the self-shading; I set the effective absorptance (referred to the vertical-wall irradiance) to 0.15 instead of 0.12. Baseline: flat wall with aged cool paint: absorptance 0.32, net longwave 0.9*20 = 18 W/m2. Dimensionless: facet sky view factor (1+cos(45deg))/2 = 0.85; Biot envelope 0.026. Simulation coefficient: effective sol-air excess of the design (0.15*300-30)/20 = 0.75 K vs baseline (96-18)/20 = 3.9 K. Model: steady 1D conduction, analytical. Expected gain ~19% (west wall). Mechanical: corrugated metal/fibre-cement panels are standard; upward facets collect dust and bird droppings, which is the main durability risk. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "effective_solar_absorptance",
+   "value": 0.15
+  },
+  {
+   "name": "effective_net_longwave_loss",
+   "value": 30.0
+  },
+  {
+   "name": "facet_tilt_angle",
+   "value": 0.785
+  },
+  {
+   "name": "rib_depth",
+   "value": 0.05
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "solar_irradiance_wall",
+   "value": 300.0
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "facet_sky_view_factor",
+   "value": 0.85
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.026
+  }
+ ],
+ "simulation_coefficient": 0.75,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of west-wall heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of west-wall heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "effective_solar_absorptance",
+   "facet_tilt_angle",
+   "rib_depth"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "effective_solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "effective_net_longwave_loss",
+   "value": 18.0
+  }
+ ],
+ "baseline_description": "flat wall with aged conventional white acrylic cool paint"
+}

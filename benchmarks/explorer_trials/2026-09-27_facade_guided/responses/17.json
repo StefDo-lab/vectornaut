@@ -1,0 +1,49 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady 1D series conduction interior -> wall -> cork board -> white mineral skin with sol-air Robin boundary; q = [alpha*I + h*dT - eps*R_net]/(1 + h*R_tot). Checks: expanded cork board k = 0.040 W/mK (0.037-0.045 typical), 40 mm -> R = 1.0 m2K/W; aged SR 0.72 for a white silicate render is plausible (slightly better than acrylic at 0.67, because mineral renders are less thermoplastic and pick up less dirt). Facade conditions I = 180 W/m2, R_net = 40 W/m2 are appropriate for a west facade. Hand solution: design (50.4 + 150 - 36)/(1 + 45) = 3.57 W/m2; baseline (SR 0.67 directly on the wall) (59.4 + 150 - 36)/31 = 5.59 W/m2; gain ~36 %. About 33 of the 36 points come from the added 1.0 m2K/W, which any ETICS with 40 mm mineral wool gives; the skin contributes ~3 points. Structural: cork boards are dimensionally stable, rot-resistant and have been used as exposed facades for decades; a thin mineral skin on cork needs a reinforcing mesh, otherwise it cracks at board joints; cork creeps little. Fire: cork is combustible (Euroclass E), which restricts use on taller buildings. Simulation coefficient: effective conductance 1/(R_tot + 1/h) = 0.33 W/m2K.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "cork_thickness", "value": 0.04},
+    {"name": "cork_conductivity", "value": 0.04},
+    {"name": "skin_solar_reflectance_aged", "value": 0.72},
+    {"name": "wall_u_value", "value": 0.5},
+    {"name": "solar_irradiance_daily_mean", "value": 180.0},
+    {"name": "net_sky_longwave", "value": 40.0},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "skin_thermal_emittance", "value": 0.9}
+  ],
+  "dimensionless_numbers": [
+    {"name": "OuterFilmBiotDesign", "value": 45.0},
+    {"name": "OuterFilmBiotBaseline", "value": 30.0}
+  ],
+  "simulation_coefficient": 0.33,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Building physics / facade insulation",
+    "independent_var": {"label": "Normalized thermal position (0 = interior, 1 = skin)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of facade heat gain vs aged white coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean facade heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 15.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["cork_thickness", "skin_solar_reflectance_aged", "skin_thermal_emittance"]
+  },
+  "metric": {"kind": "derivative_at", "location": "0", "scale": "1 / (1 / wall_u_value + cork_thickness / cork_conductivity)", "unit": "W/m^2", "label": "Daily-mean heat flux into the interior"},
+  "baseline_parameters": [
+    {"name": "cork_thickness", "value": 0.0},
+    {"name": "skin_solar_reflectance_aged", "value": 0.67}
+  ],
+  "baseline_description": "Aged white acrylic coating (SR 0.67) directly on the same wall"
+}

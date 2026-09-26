@@ -1,0 +1,54 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady 1D conduction through the wall; the outer wall surface behind a ventilated screen receives the transmitted sun, convection to cavity air at ambient temperature and linearised longwave exchange with the screen, whose temperature follows from its own two-sided balance T_f = T_a + (alpha_f*I - eps_f*R_net)/(2*h_f) (screen back-face exchange with the wall neglected in the screen balance, a small error). Adjustments: screen absorptance 0.07 is a clean-fabric value; over 20 years dust on a woven fabric raises it; I use a life-mean 0.10. Transmittance 0.10 is consistent with a dense scattering weave. Baseline (bare painted wall) is represented in the same equation by tau = 1, alpha_f = 0 (no screen), cavity coefficient 10 plus radiative 5 = 15 W/m2K outer film, and screen_convection_coefficient = 2.5 so that the radiative term becomes the wall's own sky loss eps_w*R_net = 36 W/m2; this reproduces the direct sol-air result 5.59 W/m2. Hand result: design T_f - T_a = (18 - 36)/20 = -0.9 K; wall gradient = (0.33*0.1*180 + 5*10 + 5*9.1)/10.5 = 9.66 K -> q = 4.83 W/m2 vs 5.59 W/m2: -14 %. Peak hour (I=700, T_a=43 C): ~-35 %. A conventional PTFE-coated glass fabric (alpha 0.15, tau 0.12) gives ~5.0 W/m2 (-11 %), so the voided fibre adds only ~3 points. Dimensionless: screen Biot-type ratio h_r/(h_c + h_r) = 0.5. Structural: glass-fibre fabrics in tension carry wind loads (tensile strength ~3-4 kN/5 cm), UV-stable; risks are fibre fatigue at clamps under flutter, and the unproven drawing of voided fibres. Simulation coefficient: total wall-side conductance h_c + h_r = 10 W/m2K.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "screen_solar_absorptance", "value": 0.1},
+    {"name": "screen_solar_transmittance", "value": 0.1},
+    {"name": "void_diameter", "value": 3e-07},
+    {"name": "screen_thermal_emittance", "value": 0.9},
+    {"name": "cavity_convection_coefficient", "value": 5.0},
+    {"name": "wall_u_value", "value": 0.5},
+    {"name": "solar_irradiance_daily_mean", "value": 180.0},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "wall_solar_absorptance", "value": 0.33},
+    {"name": "radiative_exchange_coefficient", "value": 5.0},
+    {"name": "screen_convection_coefficient", "value": 10.0},
+    {"name": "net_sky_longwave", "value": 40.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "RadiativeShareWallSide", "value": 0.5},
+    {"name": "ScreenTemperatureExcessK", "value": -0.9}
+  ],
+  "simulation_coefficient": 10.0,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Radiative facade shading / building physics",
+    "independent_var": {"label": "Normalized position through wall (0 = interior, 1 = outer surface)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of facade heat gain vs aged white paint"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean facade heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 5.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["screen_solar_absorptance", "screen_solar_transmittance", "void_diameter", "screen_thermal_emittance"]
+  },
+  "metric": {"kind": "derivative_at", "location": "0", "scale": "wall_u_value", "unit": "W/m^2", "label": "Daily-mean heat flux into the interior"},
+  "baseline_parameters": [
+    {"name": "screen_solar_transmittance", "value": 1.0},
+    {"name": "screen_solar_absorptance", "value": 0.0},
+    {"name": "screen_convection_coefficient", "value": 2.5},
+    {"name": "cavity_convection_coefficient", "value": 10.0}
+  ],
+  "baseline_description": "Bare wall with aged white acrylic paint (SR 0.67), outer film 15 W/m2K, sky loss 36 W/m2"
+}

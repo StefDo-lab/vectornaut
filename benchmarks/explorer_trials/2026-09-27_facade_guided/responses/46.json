@@ -1,0 +1,92 @@
+{
+ "governing_equation": "d2c_dx2 = -(domain_depth / dirt_penetration_depth) * dc_dx",
+ "boundary_conditions": [
+  "-(dirt_penetration_depth * (uv_photon_flux_annual_mean * quantum_yield_cobinder_oxidation * cobinder_molar_volume / (avogadro_number * cobinder_volume_fraction)) / domain_depth) * dc_dx(0) = deposition_flux - wash_off_velocity * c(0)",
+  "c(1) = 0"
+ ],
+ "independent_variables": [
+  "x"
+ ],
+ "dependent_variables": [
+  "c"
+ ],
+ "parameters": [
+  {
+   "name": "domain_depth",
+   "value": 5e-05,
+   "min_bound": 2e-05,
+   "max_bound": 0.0002,
+   "justification": "Modelled surface layer depth (x = z/domain_depth, x=0 is the eroding surface); 10 dirt penetration depths so that c(1)=0 holds."
+  },
+  {
+   "name": "deposition_flux",
+   "value": 2e-11,
+   "min_bound": 2e-12,
+   "max_bound": 2e-10,
+   "justification": "Deposition of light-absorbing fines (soot, organics, dark mineral dust) ~1.7 mg/m2/day in a hot, dusty city; the same for design and baseline."
+  },
+  {
+   "name": "wash_off_velocity",
+   "value": 1.6e-13,
+   "min_bound": 1e-14,
+   "max_bound": 1e-12,
+   "justification": "Removal of surface dirt by rain and wind expressed as a surface velocity: k_w/dirt_penetration_depth ~ 1/year in a semi-arid climate."
+  },
+  {
+   "name": "dirt_absorption_coefficient",
+   "value": 316.0,
+   "min_bound": 100.0,
+   "max_bound": 1000.0,
+   "justification": "Solar absorptance added per areal load of absorbing dirt (m2/kg), calibrated so that the conventional acrylic coating reaches the CRRC-type aged loss of 0.18 (0.85 -> 0.67)."
+  },
+  {
+   "name": "solar_irradiance_daily_mean",
+   "value": 300.0,
+   "min_bound": 200.0,
+   "max_bound": 350.0,
+   "justification": "Clear hot-climate summer day on a roof, ~7 kWh/m2/day."
+  },
+  {
+   "name": "external_heat_transfer_coefficient",
+   "value": 15.0,
+   "min_bound": 8.0,
+   "max_bound": 30.0,
+   "justification": "Combined outer film coefficient."
+  },
+  {
+   "name": "net_sky_longwave",
+   "value": 85.0,
+   "min_bound": 40.0,
+   "max_bound": 120.0,
+   "justification": "Net longwave loss at ambient under dry clear sky."
+  },
+  {
+   "name": "ambient_temperature",
+   "value": 308.15,
+   "min_bound": 298.15,
+   "max_bound": 318.15,
+   "justification": "Daily-mean outdoor air temperature."
+  },
+  {
+   "name": "indoor_temperature",
+   "value": 298.15,
+   "min_bound": 293.15,
+   "max_bound": 301.15,
+   "justification": "Conditioned interior at 25 C."
+  },
+  {
+   "name": "avogadro_number",
+   "value": 6.022e+23,
+   "min_bound": 6e+23,
+   "max_bound": 6.05e+23,
+   "justification": "Converts photon count to moles of oxidised co-binder repeat units; erosion velocity v = photon flux x quantum yield x molar volume / (N_A x co-binder fraction) ~5.6e-13 m/s (18 um/yr)."
+  },
+  {
+   "name": "dirt_penetration_depth",
+   "value": 5e-06,
+   "min_bound": 1e-06,
+   "max_bound": 2e-05,
+   "justification": "Absorbing fines sit in the top few um of a chalky surface."
+  }
+ ]
+}

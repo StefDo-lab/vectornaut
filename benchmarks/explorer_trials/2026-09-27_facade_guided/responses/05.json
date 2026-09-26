@@ -1,0 +1,15 @@
+{
+  "governing_equation": "d2T_dx2 = 0",
+  "boundary_conditions": [
+    "T(0) = indoor_temperature",
+    "dT_dx(1) / (1 / wall_u_value + gap_effective_resistance) = (1 - shell_solar_reflectance_aged) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - T(1)) - shell_thermal_emittance * net_sky_longwave"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"],
+  "parameters": [
+    {"name": "indoor_temperature", "value": 298.15, "min_bound": 293.15, "max_bound": 301.15, "justification": "Conditioned interior at 25 C (x=0 interior side, the wall U-value includes the interior film)."},
+    {"name": "ambient_temperature", "value": 308.15, "min_bound": 298.15, "max_bound": 318.15, "justification": "Daily-mean outdoor air on a hot summer day."},
+    {"name": "shell_thermal_emittance", "value": 0.9, "min_bound": 0.85, "max_bound": 0.95, "justification": "Ceramic glazes are silicate glasses with hemispherical emittance ~0.9."},
+    {"name": "net_sky_longwave", "value": 85.0, "min_bound": 30.0, "max_bound": 120.0, "justification": "Net longwave loss at ambient for a horizontal surface under a dry clear sky; a vertical facade sees about half sky and half warm ground/buildings, ~30-45 W/m2."}
+  ]
+}

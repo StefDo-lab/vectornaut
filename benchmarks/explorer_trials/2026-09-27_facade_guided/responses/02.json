@@ -1,0 +1,13 @@
+{
+  "governing_equation": "d2T_dx2 = 0",
+  "boundary_conditions": [
+    "T(0) = indoor_temperature",
+    "roof_u_value * dT_dx(1) = (1 - solar_reflectance + aged_reflectance_loss) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - T(1)) - thermal_emittance * net_sky_longwave"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"],
+  "parameters": [
+    {"name": "indoor_temperature", "value": 298.15, "min_bound": 293.15, "max_bound": 301.15, "justification": "Conditioned interior at 25 C (x=0 is the interior side; roof_u_value includes the interior film)."},
+    {"name": "ambient_temperature", "value": 308.15, "min_bound": 298.15, "max_bound": 318.15, "justification": "Daily-mean outdoor air temperature on a hot-climate summer day (35 C; max ~44 C)."}
+  ]
+}

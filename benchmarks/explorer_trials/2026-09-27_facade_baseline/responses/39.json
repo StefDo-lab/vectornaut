@@ -1,0 +1,100 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Model: classic shear-lag of a platelet of length L in a mortar under the thermal-mismatch strain of the coating: s'' = beta^2 (s - E_p*eps), with stress-free platelet ends s(0)=s(1)=0 (x normalised by L). beta^2 = 2 G_m L^2/(E_p t_p t_m) = 5.33 for the audited values, beta = 2.31; the maximum platelet stress is E_p*eps*(1 - 1/cosh(beta/2)) = 0.43*E_p*eps = 26 MPa, below the strength of alumina/mica platelets (~300 MPa+). Baseline: conventional continuous mineral (silicate) film of the same phases, represented by a rigidly bonded/long platelet: shear_lag_factor 5000 (beta ~ 71), giving s_max ~ E_p*eps = 60 MPa, i.e. the level at which brittle silicate paints craze. Mortar shear strain = eps*L/(2*t_m) = 4e-4*8e-6/4e-8 = 8 percent - high for a hybrid mortar; creep/ageing of the mortar under UV is the real limit. Important: this computes a mechanical stress in the coating, not the heat gain. Its link to the objective is indirect (fewer cracks -> slower reflectance and weathering loss); the thermal benefit estimate of ~6 percent is not simulated. Dimensionless: beta = 2.31, platelet aspect ratio 20. Simulation coefficient: beta^2 = 5.33. Solver: analytical (linear ODE, closed form). Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "platelet_length",
+   "value": 8e-06
+  },
+  {
+   "name": "platelet_thickness",
+   "value": 4e-07
+  },
+  {
+   "name": "matrix_shear_modulus",
+   "value": 50000000.0
+  },
+  {
+   "name": "thermal_mismatch_strain",
+   "value": 0.0004
+  },
+  {
+   "name": "platelet_youngs_modulus",
+   "value": 150000000000.0
+  },
+  {
+   "name": "mortar_thickness",
+   "value": 2e-08
+  },
+  {
+   "name": "shear_lag_factor",
+   "value": 5.33
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "shear_lag_beta",
+   "value": 2.31
+  },
+  {
+   "name": "platelet_aspect_ratio",
+   "value": 20.0
+  }
+ ],
+ "simulation_coefficient": 5.33,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Structural mechanics",
+  "independent_var": {
+   "label": "Normalised position along platelet",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Platelet tensile stress",
+   "unit": "Pa"
+  },
+  "primary_metric": {
+   "label": "Maximum platelet stress (solver)"
+  },
+  "reference_metric": {
+   "label": "Maximum platelet stress (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of peak mineral-phase stress vs continuous silicate film"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of peak mineral-phase stress vs continuous silicate film",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Maximum platelet stress (solver)",
+  "reference_metric": "Maximum platelet stress (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "platelet_length",
+   "platelet_thickness",
+   "matrix_shear_modulus",
+   "mortar_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "max_abs",
+  "unit": "Pa",
+  "label": "Maximum platelet tensile stress"
+ },
+ "baseline_parameters": [
+  {
+   "name": "shear_lag_factor",
+   "value": 5000.0
+  }
+ ],
+ "baseline_description": "continuous (non-segmented) conventional silicate/mineral film under the same thermal-mismatch strain"
+}

@@ -1,0 +1,752 @@
+{
+ "reviews": [
+  {
+   "order_id": "r001-01",
+   "plausible_simulated_benefit_pct": 25,
+   "plausible_objective_gain_pct": 17,
+   "plausible_gain_reasoning": "Roof only: a 20-year mean SR of 0.86-0.88 for an inorganic porous white coat (not the audited 0.90) vs 0.68 aged paint cuts roof sol-air excess by ~5 K of ~19 K, about 25-30%; walls gain only ~15% because they see hot ground, so the envelope-average objective is ~17%.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Assumed 20-year mean solar absorptance 0.10 drives the result; no inorganic silicate-bound network has demonstrated SR>=0.90 after years of desert dust",
+    "The simulated case is a roof (dR=80 W/m2); the objective mixes roofs and walls, and walls gain much less",
+    "Daytime-mean T_air - T_indoor = 13 K is mild; for 15-18 K the relative gain shrinks",
+    "Steady model ignores night-time and thermal-mass effects (minor for a coating)"
+   ],
+   "killer_risks": [
+    "Soiling: porous high-SR surfaces lose 0.05-0.15 SR in dusty climates without rain cleaning",
+    "Low index contrast between BaSO4/alumina and a silicate binder makes SR 0.95 at 200 um hard; filling the pores with binder collapses scattering",
+    "Glare from SR>0.9 facades in dense urban settings"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.65,
+     "reason": "~25% on roofs, ~15% on walls; borderline versus the 20% target."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Fully passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.5,
+     "reason": "Inorganic phases are UV-stable, but porous networks soil and abrade; retaining >=80% of the benefit for 20 years is unproven."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.55,
+     "reason": "Cyphochilus scattering optimisation (filling fraction, strut size) is a genuine design principle, but the product is essentially a BaSO4/alumina cooling paint."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.7,
+     "reason": "Paint-like application and cost; glare and substrate compatibility limits."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-02",
+   "plausible_simulated_benefit_pct": 14,
+   "plausible_objective_gain_pct": 8,
+   "plausible_gain_reasoning": "Dust trapping in a fibre mat pushes the mean absorptance to ~0.22, which leaves ~15% on roofs and ~8% as envelope average.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Absorptance 0.18 assumed; a loose fibre mat collects dust that rain cannot remove",
+    "Emittance 0.93 plausible but not the lever",
+    "Roof-only case"
+   ],
+   "killer_risks": [
+    "Brittle glass fibres break under hail, sand abrasion and cleaning; loose glass-fibre fragments are a health nuisance",
+    "Manufacture of triangular corrugated fibres at facade scale is costly",
+    "Reflectance falls below that of plain white paint once soiled"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.35,
+     "reason": "Moderate gain on roofs only while clean."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.2,
+     "reason": "Fibre mats soil and break; 20-year retention implausible."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.7,
+     "reason": "Silver-ant hair optics is a real biological mechanism, faithfully borrowed."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.3,
+     "reason": "Fragile, costly, fibre-shedding, hard to clean."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-03",
+   "plausible_simulated_benefit_pct": 18,
+   "plausible_objective_gain_pct": 12,
+   "plausible_gain_reasoning": "Real diatomite has Fe impurities and silica's 9 um reststrahlen band; a realistic aged SR ~0.82 and eps ~0.91 give ~18-22% on roofs and ~12% envelope average.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Assumed absorptance 0.14 (SR 0.86 20-year mean) is at the high end for a diatomite-based paint",
+    "Emittance 0.92 slightly optimistic for silica-rich coatings",
+    "Roof-only case"
+   ],
+   "killer_risks": [
+    "Diatomite whiteness varies by deposit; calcined grades contain cristobalite (respirable crystalline silica hazard in production)",
+    "Porous surface soils in dusty climates",
+    "Marginal optical advantage over good TiO2/BaSO4 paints"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.5,
+     "reason": "~20% on roofs, ~10% on walls."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.7,
+     "reason": "Silicate paints have a proven 20+ year track record on mineral substrates; soiling still lowers SR."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.3,
+     "reason": "Diatomite is a biogenic filler; the frustule photonics is not engineered, so the bionic mechanism is weak."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.85,
+     "reason": "Cheap, standard paint process, mineral substrates."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-04",
+   "plausible_simulated_benefit_pct": 15,
+   "plausible_objective_gain_pct": 10,
+   "plausible_gain_reasoning": "A sealed cladding cavity does not stay sealed and its low-e face soils, so R ~0.2 m2K/W and tile SR ~0.75 are realistic: ~15% on walls; most of it is insulation any cladding cavity or insulation board would give.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": false,
+   "baseline_issue": "The simulation baseline is the same wall without any cavity; the fair conventional alternative for a clad wall is a ventilated ceramic rainscreen or added insulation of equal R.",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Cavity resistance 0.40 m2K/W with a durable low-e face is the main driver",
+    "Baseline wall has no cavity, so insulation is credited as a coating benefit",
+    "West-wall case only"
+   ],
+   "killer_risks": [
+    "Seals of 'sealed' cavities fail within years; condensate and dust enter",
+    "Weight (~20-30 kg/m2) and substructure cost",
+    "Glaze crazing and hail breakage"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.45,
+     "reason": "~15% on walls, below the 20% target once cavity degradation is included."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.6,
+     "reason": "Glazed ceramic keeps its reflectance for decades; cavity seals and low-e face do not."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.45,
+     "reason": "Desert-snail shell with air pocket is a real biological strategy, but the realised physics is ordinary cladding plus air gap."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.5,
+     "reason": "Heavy and costly compared with a coating."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-05",
+   "plausible_simulated_benefit_pct": 10,
+   "plausible_objective_gain_pct": 5,
+   "plausible_gain_reasoning": "In real streets the upward facets see buildings and trees, not open sky, and they collect dust; a net longwave gain of ~10 W/m2 and ~10% wall heat-flux reduction is plausible, ~5% envelope average (walls only).",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Effective net longwave loss 30 W/m2 per wall area assumes an unobstructed sky view",
+    "Effective absorptance 0.15 ignores the higher irradiance on up-tilted facets",
+    "Low-e downward facets assumed to stay low-e for 20 years"
+   ],
+   "killer_risks": [
+    "Dust and bird droppings on up-tilted facets erase the radiative-cooling finish",
+    "Urban canyons block the sky view",
+    "Glare from up-tilted reflective facets onto neighbours"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.3,
+     "reason": "~10% on walls only."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.35,
+     "reason": "Up-facing facets soil and aluminium oxidises."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.35,
+     "reason": "Cactus ribs supply self-shading, but the facet-selective emittance is a technical idea, not taken from the cactus."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.5,
+     "reason": "Roll-formed panels are feasible; cleaning and glare are problems."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-06",
+   "plausible_simulated_benefit_pct": 12,
+   "plausible_objective_gain_pct": 6,
+   "plausible_gain_reasoning": "Shading an already white wall removes only the ~4 K sol-air excess while the 13 K air-to-indoor difference remains; with sheltered convection a ~12% wall reduction and ~6% envelope average (roofs untouched) is plausible.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Shading fraction 0.85 on a west wall under low afternoon sun needs dense lamellae that also block view and daylight",
+    "Sheltered h 12 W/m2K behind the screen",
+    "Walls only"
+   ],
+   "killer_risks": [
+    "Brise-soleil cost and wind loads for a modest gain",
+    "Birds nesting and dust on lamellae",
+    "Daylight loss"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.3,
+     "reason": "~12% on walls, nothing on roofs."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.8,
+     "reason": "Ceramic lamellae and metal substructure last decades."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.4,
+     "reason": "The leaf-size boundary-layer rule is real plant physiology, but the product is a conventional shading screen."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.5,
+     "reason": "Costly substructure; affects views and daylight."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-07",
+   "plausible_simulated_benefit_pct": 9,
+   "plausible_objective_gain_pct": 5,
+   "plausible_gain_reasoning": "Ventilated rainscreens reduce wall heat gain by ~5-15% against a light solid wall; the bionic outlet cap changes cavity flow only modestly, so ~9% on walls and ~5% envelope average.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "air_heating_fraction 0.5 and cavity coefficients are assumed, not solved from the cavity flow",
+    "The wind-suction cap's effect on velocity is not modelled",
+    "Walls only"
+   ],
+   "killer_risks": [
+    "Insect/sand screens at inlets clog and stop the flow",
+    "Cost of a curtain wall for a small gain"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.25,
+     "reason": "~9% on walls only."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive, wind and buoyancy driven."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.85,
+     "reason": "Rainscreen facades are proven for decades."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.25,
+     "reason": "Termite-mound ventilation is a contested analogy (mounds are not steady chimneys); prairie-dog Bernoulli effect is real but plays a minor role here."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.6,
+     "reason": "Standard but expensive construction."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-08",
+   "plausible_simulated_benefit_pct": 2,
+   "plausible_objective_gain_pct": 1,
+   "plausible_gain_reasoning": "With a conditioned room at 25 C a 26 C PCM leaves ~8 W/m2 flux during melting, and in hot climates the PCM rarely resolidifies at night, so the daily heat gain barely changes.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "pcm_clamp_coefficient 1000 W/m2K holds the inner face at 26 C only while PCM is melting; the steady model hides that the store is full after one day without night discharge",
+    "The 'camel coat' insulation is not included",
+    "Daytime-only metric"
+   ],
+   "killer_risks": [
+    "Night temperatures above the melting point in hot climates: PCM stays liquid",
+    "Paraffin flammability in interiors",
+    "Load shifting, not load reduction"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.1,
+     "reason": "Shifts peak rather than reducing daily gain."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 0.6,
+     "reason": "Needs night ventilation, often only achievable with fans or mechanical cooling."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.6,
+     "reason": "Microencapsulated PCM survives many cycles but leakage and capacity loss over 20 years are likely."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.3,
+     "reason": "Camel heterothermy is a loose analogy to thermal storage."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.5,
+     "reason": "Commercial products exist; fire classification issues."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-09",
+   "plausible_simulated_benefit_pct": 4,
+   "plausible_objective_gain_pct": 3,
+   "plausible_gain_reasoning": "Hot-dry nights give low uptake, hot-humid days weak desorption; ~10-15 W/m2 mean latent cooling removes <1 K of sol-air excess, about 4% on walls and 3% envelope average, falling as dust and salts clog the sorbent.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "effective_evaporative_flux 15 W/m2 is an assumed input, not computed from sorption kinetics",
+    "Diffusion-limited uptake through the ceramic skin",
+    "Walls only"
+   ],
+   "killer_risks": [
+    "Clays and gels lose capacity with dust, salts and shrink-swell cracking within a few years",
+    "Very climate-specific"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.15,
+     "reason": "Small effect."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 0.8,
+     "reason": "No water supply; relies on atmospheric humidity."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.2,
+     "reason": "Sorbent capacity degrades; cracking of the skin."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.3,
+     "reason": "The thorny devil harvests liquid water by capillarity, not sorption cooling; the mechanism is borrowed only loosely."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.4,
+     "reason": "Heavy panels, limited climate range."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-10",
+   "plausible_simulated_benefit_pct": 16,
+   "plausible_objective_gain_pct": 11,
+   "plausible_gain_reasoning": "Renewal by chalking can hold SR ~0.78-0.82 only where rain or wind scour the surface; SR_ss 0.80 gives ~16-19% on roofs and ~11% envelope average, less in rainless deserts.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "steady_state_solar_reflectance 0.82 is assumed; the erosion/soiling balance was not simulated",
+    "Erosion rate strongly climate-dependent",
+    "Roof-only case"
+   ],
+   "killer_risks": [
+    "In rainless deserts dust accumulates faster than 8 um/yr erosion removes it",
+    "White runoff streaks and chalk rub-off on facades",
+    "In wet climates the layer erodes through before 20 years"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.5,
+     "reason": "~16% roofs, ~8% walls."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.5,
+     "reason": "Erosion budget is fine but the self-cleaning effect is unreliable in dry climates."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.3,
+     "reason": "Wax-bloom regeneration is an active plant process; chalking lime is traditional whitewash physics."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.7,
+     "reason": "Very cheap; streaking and rub-off."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-11",
+   "plausible_simulated_benefit_pct": 2,
+   "plausible_objective_gain_pct": 1,
+   "plausible_gain_reasoning": "Warm flaps re-radiate to the wall and shelter it from wind, and UV-aged hygromorphs lose actuation; in front of a white wall the net gain is ~0-3%.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "actuation_availability 0.6 is optimistic after UV ageing",
+    "Flap temperature and sheltered convection nearly cancel the shading",
+    "Walls only"
+   ],
+   "killer_risks": [
+    "Cellulose-based bilayers delaminate and lose curvature within a few years outdoors",
+    "Wind flutter and hinge wear",
+    "Small daytime/night humidity swing in humid climates"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.05,
+     "reason": "Near-zero gain against a white wall."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive, humidity driven."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.15,
+     "reason": "Hygromorph composites degrade under UV and wetting long before 20 years."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.8,
+     "reason": "Pine-cone bilayer actuation is a genuine biological mechanism."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.3,
+     "reason": "Complex, costly, maintenance-heavy."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-12",
+   "plausible_simulated_benefit_pct": 40,
+   "plausible_objective_gain_pct": 35,
+   "plausible_gain_reasoning": "60 mm of cork (R 1.5 m2K/W) really cuts conductive gain by ~40% whatever the surface does, but that is conventional external insulation: against an equal-R EPS or mineral-wool ETICS the gain is ~0.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": false,
+   "baseline_issue": "The simulation baseline is the same wall without added insulation; the fair conventional alternative for an insulating cladding is a conventional ETICS of equal R-value, against which the gain is ~0.",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "The gain is entirely the added thermal resistance; the surface stays like the baseline paint",
+    "Cork conductivity 0.04 W/mK at outdoor moisture",
+    "West-wall case"
+   ],
+   "killer_risks": [
+    "Combustible (Euroclass E): excluded on many facades above a few storeys",
+    "Cork greying and erosion if the render cracks",
+    "Cost of an insulation system rather than a coating"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.9,
+     "reason": "~40% lower conductive gain, independent of soiling."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.7,
+     "reason": "Cork ETICS are certified for long service; render maintenance needed."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.15,
+     "reason": "Cork bark is used only as a material; no bionic mechanism beyond ordinary insulation."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.55,
+     "reason": "Standard ETICS installation; fire restrictions and cost."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-13",
+   "plausible_simulated_benefit_pct": 20,
+   "plausible_objective_gain_pct": 2,
+   "plausible_gain_reasoning": "Segmented platelet coatings do tolerate thermal-mismatch strain better than a continuous brittle mineral film (~20% lower peak stress is plausible once mortar stiffening is included), but conventional elastomeric paints do not crack this way, and the heat-gain benefit via longer SR retention is ~2%.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": false,
+   "baseline_issue": "The stress baseline is a continuous rigid silicate film (shear_lag_factor 5000), not the conventional compliant acrylic/elastomeric cool paint.",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Baseline chosen as a rigidly bonded continuous film",
+    "Mortar shear strain ~8% assumed elastic over 20 years",
+    "Heat benefit not simulated"
+   ],
+   "killer_risks": [
+    "UV embrittlement of the siloxane mortar",
+    "Soiling unaffected by crack tolerance"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.05,
+     "reason": "No direct heat-gain reduction."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.5,
+     "reason": "Better crack tolerance for mineral coatings; soiling still limits the benefit."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.6,
+     "reason": "Nacre brick-and-mortar is a genuine (if textbook) biological mechanism."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.7,
+     "reason": "Effect-pigment technology, paint-like application."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-14",
+   "plausible_simulated_benefit_pct": 30,
+   "plausible_objective_gain_pct": 0.5,
+   "plausible_gain_reasoning": "Healing lowers moisture ingress where cracks dominate, but real healing is partial and limited to 1-2 events; it does nothing for solar reflectance, so the heat-gain effect is ~0.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": false,
+   "baseline_issue": "The baseline is the same render with unhealed cracks, not the conventional cool paint.",
+   "proxy_by_construction": true,
+   "proxy_reason": "The 60% gain follows directly from the assumed healed_permeability_ratio 0.1 because the crack term dominates the effective diffusivity.",
+   "key_assumption_issues": [
+    "healed_permeability_ratio 0.1 is an input that sets the result",
+    "Spore viability in hot dry render",
+    "Heat benefit not simulated"
+   ],
+   "killer_risks": [
+    "Spores and nutrients exhausted after one or two healing events",
+    "Hot-dry climates lack the wetting needed for healing"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.02,
+     "reason": "No effect on heat gain."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 0.9,
+     "reason": "Passive; rain supplies the water."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.4,
+     "reason": "Self-healing is limited in number and in hot dry conditions."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.7,
+     "reason": "Microbial calcite precipitation is a genuine microbial mechanism."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.5,
+     "reason": "Costlier render; no thermal benefit to justify it."
+    }
+   ]
+  },
+  {
+   "order_id": "r001-15",
+   "plausible_simulated_benefit_pct": 16,
+   "plausible_objective_gain_pct": 10,
+   "plausible_gain_reasoning": "A realistic coating of chaotic multilayer platelets reaches SR ~0.85-0.88 new (UV absorption, gaps, angles) and ~0.80 aged; that gives ~16-19% on roofs and ~10% envelope average.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Assumed absorptance 0.16 (SR 0.84 mean) is optimistic for platelet coatings",
+    "Emittance 0.92 of the silicate binder",
+    "Roof-only case"
+   ],
+   "killer_risks": [
+    "Specular sheen causes glare on facades",
+    "Surface platelets lose orientation under sand abrasion",
+    "Pigment cost"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.45,
+     "reason": "~16% roofs, ~8% walls."
+    },
+    {
+     "name": "passive_no_power_no_water",
+     "coverage": 1.0,
+     "reason": "Passive."
+    },
+    {
+     "name": "weather_durability_20y",
+     "coverage": 0.6,
+     "reason": "Inorganic platelets are UV-stable; soiling and abrasion limit the benefit."
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.6,
+     "reason": "Chaotic guanine reflectors of silvery fish are a genuine, non-trivial biological mechanism."
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.6,
+     "reason": "Paint-like; glare and cost issues."
+    }
+   ]
+  }
+ ],
+ "_prompt_hash": "0179042597ea360e"
+}

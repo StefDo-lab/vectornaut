@@ -1,0 +1,126 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameters physical. The sealed-cavity resistance of 0.45 m2K/W assumes a low-emittance face (eps~0.05) that stays clean for 20 years; inside a sealed cavity dust and oxidation raise it, and perfect sealing of cladding over 20 years is unlikely; I reduce it to 0.40 m2K/W (ISO 6946 20 mm cavity with eps_eff ~0.1). Glazed white ceramic: SR ~0.80 new, low soiling; 20-year mean alpha 0.22. Modelled as the west-wall case (I=300 W/m2, dR=20 W/m2) because the concept is a cladding tile. The tile and cavity are lumped into a series conductance G_eff = 1/(1/wall_conductance + cavity_thermal_resistance) = 0.425 W/m2K; the tile's own conduction resistance (8 mm, k~1.3) is negligible (0.006 m2K/W). Dimensionless: cavity Rayleigh number for 20 mm gap and ~3 K difference Ra ~ g*beta*dT*d^3/(nu*alpha) ~ 9.8*(1/310)*3*8e-6/(1.6e-5*2.2e-5) ~ 2.2e3 (near onset of convection, conduction-dominated); Biot envelope 0.021. Simulation coefficient: effective series conductance G_eff = 0.425 W/m2K. Metric: heat flux to the room at x=1, scale -G_eff. Baseline: same wall, no cavity, aged cool paint (alpha 0.32). Expected gain ~24%; note that roughly two thirds of this comes from the added cavity resistance, which ordinary insulation would also deliver. Mechanical: tiles need wind-load-rated fixings; hail can crack glazed ceramic; acceptable. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "tile_solar_absorptance",
+   "value": 0.22
+  },
+  {
+   "name": "cavity_thermal_resistance",
+   "value": 0.4
+  },
+  {
+   "name": "cavity_thickness",
+   "value": 0.02
+  },
+  {
+   "name": "tile_thickness",
+   "value": 0.008
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 300.0
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 20.0
+  },
+  {
+   "name": "tile_thermal_emittance",
+   "value": 0.9
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "cavity_Rayleigh",
+   "value": 2200.0
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.021
+  }
+ ],
+ "simulation_coefficient": 0.425,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of west-wall heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of west-wall heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "tile_solar_absorptance",
+   "cavity_thermal_resistance",
+   "cavity_thickness",
+   "tile_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-1/(1/wall_conductance + cavity_thermal_resistance)",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "tile_solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "cavity_thermal_resistance",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "same wall with aged conventional white acrylic cool paint, no cavity"
+}

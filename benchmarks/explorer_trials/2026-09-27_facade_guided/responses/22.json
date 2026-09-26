@@ -1,0 +1,154 @@
+{
+ "reviews": [
+  {
+   "order_id": "r002-01",
+   "plausible_simulated_benefit_pct": 24,
+   "plausible_objective_gain_pct": 10,
+   "plausible_gain_reasoning": "Aerogel k rises to ~0.022 W/mK with moisture and compression under a roof finish, so ~0.7 m2K/W is realistic, ~24 % less roof flux; but this is ordinary added insulation that 20-30 mm PIR also provides, the reflective finish is unchanged, and only the roof is treated, so its distinct contribution to the envelope objective is ~10 %.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Gain is purely the added thermal resistance t/k; it would be the same for any insulation of equal R",
+    "Dry aerogel conductivity for 20 years under a roof finish",
+    "Roof only; facades untreated"
+   ],
+   "killer_risks": [
+    "Cost 3-5x conventional insulation of equal R",
+    "Moisture ingress and compression under foot traffic raise k and debond the finish",
+    "The white finish on top soils exactly like the baseline"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.45,
+     "reason": "~24 % on the roof only, via insulation"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.4,
+     "reason": "Aerogel under a roof finish for 20 years is unproven; finish still needs repainting"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.25,
+     "reason": "Knudsen suppression is generic aerogel physics; the polar-bear hair is an insulation model from a cold climate"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.3,
+     "reason": "Expensive, fragile, not walkable"
+    }
+   ]
+  },
+  {
+   "order_id": "r002-02",
+   "plausible_simulated_benefit_pct": 30,
+   "plausible_objective_gain_pct": 12,
+   "plausible_gain_reasoning": "Cork board R and the mineral skin are realistic, giving ~30 % less facade flux, but ~90 % of it is the added 1 m2K/W that standard ETICS gives; facades only, so ~12 % of the envelope objective.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Gain is dominated by added insulation (1.0 m2K/W), not by the bionic surface",
+    "Aged SR 0.72 for the mineral skin assumed; no renewal mechanism actually modelled",
+    "West-facade conditions only"
+   ],
+   "killer_risks": [
+    "Combustibility (Euroclass E) limits use on multi-storey buildings",
+    "Render cracking at board joints",
+    "Higher cost than mineral-wool ETICS for the same effect"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.5,
+     "reason": "~30 % on facades, via insulation"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.65,
+     "reason": "Exposed cork facades have decades of record; render on cork is the weak point"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.3,
+     "reason": "Uses a biological material; trapped-air insulation is generic, the birch renewal is only asserted"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.5,
+     "reason": "Established products, but combustible and costly"
+    }
+   ]
+  },
+  {
+   "order_id": "r002-03",
+   "plausible_simulated_benefit_pct": 10,
+   "plausible_objective_gain_pct": 7,
+   "plausible_gain_reasoning": "If sheets really shed every 2-4 years the life-mean SR could be ~0.76-0.81, but fatigue lives scatter by a factor 3-10 and edges delaminate first, so I expect patchy, partly premature shedding with a mean gain of ~10 % on roof flux and ~7 % on the envelope.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": true,
+   "proxy_reason": "The gain follows from the assumed 2-year vs 10-year renewal periods; the thermal-fatigue pacing that should set the period is not modelled.",
+   "key_assumption_issues": [
+    "Renewal period is an input, not derived from interlayer fatigue",
+    "Same saturating soiling law for porous mineral sheet and acrylic",
+    "Assumes each shed exposes a clean, undamaged sheet"
+   ],
+   "killer_risks": [
+    "Uncontrolled large-area delamination under wind suction",
+    "Mineral flake litter on roofs, gutters and neighbours",
+    "Narrow strength window: fails early or never"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.3,
+     "reason": "~10 % expected, well below 20 %"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive, driven by daily thermal cycling"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.3,
+     "reason": "Designed to fail; 20-year function relies on precise fatigue control"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.55,
+     "reason": "Sheet-wise bark shedding is a genuine biological renewal mechanism"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.3,
+     "reason": "Complex laminate, litter, non-walkable"
+    }
+   ]
+  }
+ ]
+}

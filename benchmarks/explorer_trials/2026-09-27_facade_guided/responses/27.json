@@ -1,0 +1,17 @@
+{
+  "governing_equation": "d2T_dx2 = 0",
+  "boundary_conditions": [
+    "T(0) = indoor_temperature",
+    "wall_u_value * dT_dx(1) = wall_solar_absorptance * screen_solar_transmittance * solar_irradiance_daily_mean + cavity_convection_coefficient * (ambient_temperature - T(1)) + radiative_exchange_coefficient * (ambient_temperature + (screen_solar_absorptance * solar_irradiance_daily_mean - screen_thermal_emittance * net_sky_longwave) / (2 * screen_convection_coefficient) - T(1))"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"],
+  "parameters": [
+    {"name": "indoor_temperature", "value": 298.15, "min_bound": 293.15, "max_bound": 301.15, "justification": "Conditioned interior; x=0 interior, x=1 outer wall surface behind the screen."},
+    {"name": "ambient_temperature", "value": 308.15, "min_bound": 298.15, "max_bound": 318.15, "justification": "Daily-mean outdoor and cavity air."},
+    {"name": "wall_solar_absorptance", "value": 0.33, "min_bound": 0.1, "max_bound": 0.9, "justification": "The wall behind keeps its aged white paint."},
+    {"name": "radiative_exchange_coefficient", "value": 5.0, "min_bound": 3.0, "max_bound": 6.5, "justification": "Linearised longwave exchange between wall and screen, 4*sigma*T^3/(1/e1+1/e2-1) with e ~0.9."},
+    {"name": "screen_convection_coefficient", "value": 10.0, "min_bound": 2.0, "max_bound": 20.0, "justification": "Convection on each face of the ventilated screen; the screen temperature is its own balance T_a + (alpha_f*I - eps_f*R_net)/(2*h_f)."},
+    {"name": "net_sky_longwave", "value": 40.0, "min_bound": 25.0, "max_bound": 60.0, "justification": "Vertical surface, half sky view."}
+  ]
+}

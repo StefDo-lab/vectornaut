@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist die W\u00fcstenschnecke Sphincterochila boissieri: ihre wei\u00dfe Schale reflektiert das meiste Sonnenlicht, und die Schnecke sitzt in einem luftgef\u00fcllten Hohlraum der oberen Windungen, der sie gegen die hei\u00dfe Schale isoliert. Du baust Fassadenfliesen aus wei\u00df glasierter Keramik mit einer versiegelten 20-mm-Luftkammer und einer low-e-Innenfl\u00e4che. Im Westwand-Modell sinkt der W\u00e4rmestrom in den Raum um ~24 % (6,6 statt 8,7 W/m\u00b2) gegen\u00fcber einer gealterten Cool-Paint-Wand - etwa zwei Drittel davon kommen allerdings vom zus\u00e4tzlichen Hohlraumwiderstand, den auch normale D\u00e4mmung liefern w\u00fcrde.",
+ "pros_and_cons": "Vorteile: glasierte Keramik verschmutzt wenig und h\u00e4lt Jahrzehnte; robuste, bekannte Befestigungstechnik (vorgeh\u00e4ngte Fassade); Reflexion bleibt stabil. Nachteile: versiegelte Kammern werden \u00fcber 20 Jahre undicht, Kondensat im Hohlraum; Zusatzgewicht (~20 kg/m\u00b2); der Nutzen ist gr\u00f6\u00dftenteils D\u00e4mmwirkung, nicht Bionik; teurer als Farbe.",
+ "mechanical_limits": "Fliesen m\u00fcssen Windsog (1-2 kPa) und Hagel aushalten; Glasurrisse durch Temperaturwechsel (Haarrisse) m\u00f6glich; Dichtungen (Silikon/Butyl) altern unter UV und 30-40 K Zyklen - das ist das wahrscheinlichste Ausfallkriterium.",
+ "manufacturing_methods": "Stranggepresste oder gepresste Keramikhohlk\u00f6rper-Fliesen (wie Terrakotta-Fassadenplatten mit Hohlkammern), wei\u00dfe Glasur, innenseitig aufgedampfte oder aufgeklebte Aluminiumfolie als low-e-Schicht; Montage auf Unterkonstruktion.",
+ "cost_estimation": "Werkzeug f\u00fcr Hohlkammer-Strangpressen 50-150 k\u20ac; Serie ~60-120 \u20ac/m\u00b2 montiert (vorgeh\u00e4ngte Keramikfassade), also 5-10x eine Farbe.",
+ "validation_experiments": "Hot-Box-Messung (U-Wert) nach EN ISO 8990 mit und ohne low-e; Langzeit-Dichtheitstest; Bewitterung mit Temperaturwechseln; Feldtest an Testwand mit W\u00e4rmeflussplatten.",
+ "industry_partners": "Hersteller keramischer Fassadensysteme (Terrakotta), Fassadenbauer, Bauphysik-Institute.",
+ "_prompt_hash": "49e7c8ca508e78bf"
+}

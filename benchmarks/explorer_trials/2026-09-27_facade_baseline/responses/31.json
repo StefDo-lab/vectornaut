@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist der bl\u00e4ulich-wei\u00dfe Wachsreif von W\u00fcstenpflanzen wie Dudleya brittonii: die reflektierenden Wachskristalle werden laufend nachgebildet, wenn sie abgetragen werden. Du baust eine 300 \u00b5m dicke Kalk-/Kaliwasserglas-Deckschicht mit CaCO3 und BaSO4, die kontrolliert ~8 \u00b5m pro Jahr abkreidet und so immer eine frische wei\u00dfe Oberfl\u00e4che freilegt. Mit einer realistisch korrigierten 20-Jahres-Mittelreflexion von 0,82 (statt 0,68 bei gealterter Cool-Paint) sinkt der Dach-W\u00e4rmestrom in den Raum um ~23 % (7,5 statt 9,7 W/m\u00b2).",
+ "pros_and_cons": "Vorteile: sehr g\u00fcnstig, rein mineralisch, traditionell bew\u00e4hrt (Kalkanstrich im Mittelmeerraum), selbstreinigend durch Abkreiden. Nachteile: Erosionsrate h\u00e4ngt stark von Regen und Wind ab; in sehr trockenen Regionen bleibt Staub liegen, in feuchten ist die Schicht vor 20 Jahren verbraucht; wei\u00dfe Ablaufspuren an Fassaden; Abrieb f\u00e4rbt ab.",
+ "mechanical_limits": "Weiche Schicht, geringe Spannungen; kritisch sind Haftung auf dem Untergrund und ungleichm\u00e4\u00dfiger Abtrag (Kanten, Tropfkanten). Ausfall = lokale Durchwitterung auf den Untergrund oder Reflexion < 0,75.",
+ "manufacturing_methods": "Sumpfkalk- oder Silikat-Bindemittel mit CaCO3/BaSO4-F\u00fcllstoff, Erosionsrate \u00fcber Bindemittelanteil einstellen; Auftrag in 3-4 Schichten per B\u00fcrste oder Spritze.",
+ "cost_estimation": "Material < 2 \u20ac/m\u00b2, Auftrag 5-10 \u20ac/m\u00b2 - billiger als Cool-Paint.",
+ "validation_experiments": "Beschleunigter Abrieb- und Beregnungstest zur Erosionsrate, Staubbeaufschlagung und Reflexionsmessung \u00fcber Zyklen, Feldtest 3 Jahre in trockenem und feuchtem Hei\u00dfklima.",
+ "industry_partners": "Kalk- und Silikatfarbenhersteller, Denkmalpflege-Fachbetriebe, Cool-Roof-Programme in hei\u00dfen L\u00e4ndern.",
+ "_prompt_hash": "961fcff5895758e4"
+}

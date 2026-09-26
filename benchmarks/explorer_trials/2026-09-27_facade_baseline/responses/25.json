@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist das Dromedar: dickes R\u00fcckenfell gegen die Sonne und W\u00e4rmespeicherung am Tag (K\u00f6rpertemperatur darf steigen), Abgabe in der Nacht. Du kombinierst eine Au\u00dfenfassade mit einem 15-mm-PCM-Innenputz (mikroverkapseltes Paraffin, Schmelzpunkt 26 \u00b0C). Das station\u00e4re Modell zeigt, dass der PCM-Putz die Innenoberfl\u00e4che beim Schmelzen auf ~26 \u00b0C h\u00e4lt: der W\u00e4rmestrom in einen auf 25 \u00b0C klimatisierten Raum sinkt nur um ~5 % (8,0 statt 8,5 W/m\u00b2) - und das nur, solange das PCM nachts wieder erstarrt.",
+ "pros_and_cons": "Vorteile: marktreife Produkte (PCM-Gipsplatten), Spitzenlastverschiebung, mehr Komfort in nicht klimatisierten R\u00e4umen. Nachteile: in hei\u00dfen Klimazonen mit Nachttemperaturen > 26 \u00b0C erstarrt das PCM nicht, dann bringt es nichts; die Tagesw\u00e4rmelast wird nur verschoben, nicht reduziert; Brandschutz (Paraffin); das 'Fell' ist normale D\u00e4mmung.",
+ "mechanical_limits": "PCM-Putz ist mechanisch wie Gipsputz belastet; Kapselleckage und Entmischung \u00fcber viele Zyklen m\u00f6glich (Herstellerangaben ~10.000 Zyklen). Ausfall = Verlust an Latentw\u00e4rmekapazit\u00e4t > 20 % oder Brandklassenproblem.",
+ "manufacturing_methods": "Mikroverkapseltes Paraffin (Melaminharzkapseln) in Gips- oder Lehmputz, maschinell aufgetragen; Au\u00dfenseite konventionelle D\u00e4mmung + Cool Paint.",
+ "cost_estimation": "PCM-Putz ~20-40 \u20ac/m\u00b2 Material, montiert ~40-60 \u20ac/m\u00b2 Wandfl\u00e4che.",
+ "validation_experiments": "Testr\u00e4ume mit und ohne PCM in hei\u00dfem Klima, Messung von Innenoberfl\u00e4chentemperatur, W\u00e4rmestrom und Nachtentladung; DSC-Zyklustests; Geb\u00e4udesimulation (EnergyPlus) mit realen Nachttemperaturen.",
+ "industry_partners": "PCM-Hersteller, Putz- und Trockenbauhersteller, Bauphysik-Institute.",
+ "_prompt_hash": "58cabedf9f9d3748"
+}

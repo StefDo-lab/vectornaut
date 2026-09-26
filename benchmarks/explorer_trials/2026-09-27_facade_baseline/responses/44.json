@@ -1,0 +1,50 @@
+{
+ "governing_equation": "d2T_dx2 = 0",
+ "boundary_conditions": [
+  "dT_dx(0) = -(outer_heat_transfer_coefficient*(T_air - T(0)) + solar_absorptance*solar_irradiance - thermal_emittance*net_longwave_sky_loss)/wall_conductance",
+  "T(1) = T_indoor"
+ ],
+ "independent_variables": [
+  "x"
+ ],
+ "dependent_variables": [
+  "T"
+ ],
+ "parameters": [
+  {
+   "name": "wall_conductance",
+   "value": 0.526,
+   "min_bound": 0.2,
+   "max_bound": 5.0,
+   "justification": "Conductance of wall/roof layers plus inner film, 1/(1/U - 1/h_o) for U=0.5 W/m2K and h_o=20 W/m2K; x normalised over the wall thickness."
+  },
+  {
+   "name": "T_air",
+   "value": 311.15,
+   "min_bound": 300.0,
+   "max_bound": 320.0,
+   "justification": "Daytime mean summer air temperature 38 C."
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15,
+   "min_bound": 293.0,
+   "max_bound": 303.0,
+   "justification": "Conditioned indoor air 25 C."
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 80.0,
+   "min_bound": 20.0,
+   "max_bound": 120.0,
+   "justification": "Roof, clear dry sky."
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0,
+   "min_bound": 8.0,
+   "max_bound": 35.0,
+   "justification": "Convection."
+  }
+ ]
+}

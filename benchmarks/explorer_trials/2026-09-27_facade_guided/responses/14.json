@@ -1,0 +1,50 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady 1D series conduction interior -> roof (U=0.5 incl. interior film) -> aerogel mat -> aged white finish, sol-air Robin boundary; q = [alpha*I + h*dT - eps*R_net]/(1 + h*R_tot). Checks: aerogel k = 0.018 W/mK is in the range of commercial silica aerogel blankets (0.015-0.021) and published encapsulated aerogel fibres; pore size 200 nm vs air mean free path 68 nm gives Knudsen number Kn = 0.34, i.e. partial suppression of gas conduction (k_gas ~0.026/(1+2*1.6*Kn*... ) ~ 0.012 W/mK), consistent with the stated k. R_add = 0.015/0.018 = 0.83 m2K/W. Hand solution: design q = (0.33*300 + 150 - 0.9*85)/(1 + 15*2.83) = 172.5/43.5 = 3.97 W/m2; baseline (no mat) 172.5/31 = 5.56 W/m2; gain ~29 %. The gain is pure added thermal resistance; conventional PIR (k 0.022-0.025) of 20 mm would give ~0.85 m2K/W as well, at a fraction of the cost, so the lattice mainly buys thickness. Aerogel under a roof finish must be protected against water; silica aerogel is hydrophobised, but the sheath and adhesive bond under daily 30 K cycling for 20 years are unproven; compressive strength of aerogel blankets (~0.1 MPa at 10 % strain) limits foot traffic. Simulation coefficient: effective conductance 1/(R_tot + 1/h) = 0.35 W/m2K.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "aerogel_thickness", "value": 0.015},
+    {"name": "aerogel_conductivity", "value": 0.018},
+    {"name": "pore_size", "value": 2e-07},
+    {"name": "roof_u_value", "value": 0.5},
+    {"name": "finish_solar_reflectance_aged", "value": 0.67},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0},
+    {"name": "net_sky_longwave", "value": 85.0},
+    {"name": "finish_thermal_emittance", "value": 0.9}
+  ],
+  "dimensionless_numbers": [
+    {"name": "KnudsenNumberPores", "value": 0.34},
+    {"name": "OuterFilmBiotDesign", "value": 42.5},
+    {"name": "OuterFilmBiotBaseline", "value": 30.0}
+  ],
+  "simulation_coefficient": 0.35,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Building heat transfer / insulation",
+    "independent_var": {"label": "Normalized thermal position (0 = interior, 1 = outer finish)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of roof heat gain vs aged white coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean roof heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 15.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["aerogel_thickness", "aerogel_conductivity", "pore_size"]
+  },
+  "metric": {"kind": "derivative_at", "location": "0", "scale": "1 / (1 / roof_u_value + aerogel_thickness / aerogel_conductivity)", "unit": "W/m^2", "label": "Daily-mean heat flux into the interior"},
+  "baseline_parameters": [
+    {"name": "aerogel_thickness", "value": 0.0}
+  ],
+  "baseline_description": "Aged white acrylic cool coating (SR 0.67) on the same roof without underlayer"
+}

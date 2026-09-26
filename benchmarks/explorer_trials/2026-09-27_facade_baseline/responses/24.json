@@ -1,0 +1,133 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Critical check: in a conditioned room at 25 C, an inner PCM layer melting at 26 C holds the inner surface at ~26 C, so the heat flux to the room during melting is h_i*(26-25) = 8 W/m2 whatever arrives from outside; without PCM the west wall delivers ~8.4 W/m2. The steady model therefore shows only a small gain; the latent store merely absorbs the wall flux and must be discharged at night. In hot climates night air is often 28-32 C, so the PCM does not resolidify without mechanical cooling - then the daily heat gain is unchanged and only the peak is shifted. The 'camel coat' exterior insulation was not quantified by the candidate and is not included; any insulation benefit would be conventional. Capacity check: 0.015 m*900 kg/m3*0.3*150 kJ/kg = 0.61 MJ/m2, enough to absorb ~20 h of 8.4 W/m2, so capacity is not limiting - resolidification is. Dimensionless: Stefan number cp*dT/L = 2000*5/150000 = 0.067 (latent-dominated); Biot envelope 0.027. Simulation coefficient: effective inner clamp coupling 1000 W/m2K. Metric: heat flux to the room = h_i*(T(1) - T_indoor), via value_at x=1 with transform. Baseline: no PCM (clamp 0). Expected gain ~5% during melting hours only. Mechanical: PCM plaster fire class and capsule leakage over 20 years are concerns but not safety-critical. Audit passed with the caveat that the steady model overstates daily benefit whenever resolidification fails.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "pcm_melting_temperature",
+   "value": 299.15
+  },
+  {
+   "name": "pcm_latent_heat",
+   "value": 150000.0
+  },
+  {
+   "name": "pcm_layer_thickness",
+   "value": 0.015
+  },
+  {
+   "name": "pcm_mass_fraction",
+   "value": 0.3
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.548
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  },
+  {
+   "name": "inner_film_coefficient",
+   "value": 8.0
+  },
+  {
+   "name": "pcm_clamp_coefficient",
+   "value": 1000.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 300.0
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.9
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 20.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "Stefan_number",
+   "value": 0.067
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.027
+  }
+ ],
+ "simulation_coefficient": 1000.0,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of daytime west-wall heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of daytime west-wall heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "pcm_melting_temperature",
+   "pcm_layer_thickness",
+   "pcm_mass_fraction"
+  ]
+ },
+ "metric": {
+  "kind": "value_at",
+  "location": "1",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room",
+  "transform": "inner_film_coefficient*(m - T_indoor)"
+ },
+ "baseline_parameters": [
+  {
+   "name": "pcm_clamp_coefficient",
+   "value": 0.0
+  }
+ ],
+ "baseline_description": "same wall with aged conventional cool paint and no PCM"
+}

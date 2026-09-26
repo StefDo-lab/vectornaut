@@ -1,0 +1,19 @@
+{
+  "governing_equation": "d2a_ds2 = -(renewal_period / soiling_time_constant) * da_ds",
+  "boundary_conditions": [
+    "a(0) = 0",
+    "da_ds(1) = (renewal_period / soiling_time_constant) * (soiling_saturation_loss - a(1))"
+  ],
+  "independent_variables": ["s"],
+  "dependent_variables": ["a"],
+  "parameters": [
+    {"name": "soiling_time_constant", "value": 3.2e7, "min_bound": 1e7, "max_bound": 1e8, "justification": "Soiling of white roof surfaces saturates within ~1 year (CRRC: most of the 3-year loss occurs in year 1). s = t/renewal_period is the normalized age of the exposed sheet; a is the soiling-induced solar absorptance increase; the equation is the time derivative of da/dt = (soiling_saturation_loss - a)/soiling_time_constant, and the Robin condition at s=1 restates that first-order law."},
+    {"name": "soiling_saturation_loss", "value": 0.2, "min_bound": 0.08, "max_bound": 0.3, "justification": "Saturated reflectance loss of a porous white mineral surface in a dusty hot city, a little worse than acrylic (0.18)."},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0, "min_bound": 200.0, "max_bound": 350.0, "justification": "Horizontal roof, clear hot summer day."},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0, "min_bound": 8.0, "max_bound": 30.0, "justification": "Combined outer film coefficient."},
+    {"name": "net_sky_longwave", "value": 85.0, "min_bound": 40.0, "max_bound": 120.0, "justification": "Dry clear sky."},
+    {"name": "ambient_temperature", "value": 308.15, "min_bound": 298.15, "max_bound": 318.15, "justification": "Daily-mean outdoor air."},
+    {"name": "indoor_temperature", "value": 298.15, "min_bound": 293.15, "max_bound": 301.15, "justification": "Conditioned interior."},
+    {"name": "renewal_period", "value": 6.3e7, "min_bound": 3.2e7, "max_bound": 3.2e8, "justification": "Design: ~2 years per shed sheet; upper bound widened to 10 years, the repaint interval of the conventional baseline."}
+  ]
+}

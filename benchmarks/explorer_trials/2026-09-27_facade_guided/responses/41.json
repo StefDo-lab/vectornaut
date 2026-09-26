@@ -1,0 +1,104 @@
+{
+ "reviews": [
+  {
+   "order_id": "r004-01",
+   "plausible_simulated_benefit_pct": 1,
+   "plausible_objective_gain_pct": 1,
+   "plausible_gain_reasoning": "Cool-roof soiling is dominated by fine soot, organics and biofilm held by van der Waals and capillary forces, so charge dissipation changes the aged SR by at most ~0.01, i.e. ~1 % less roof heat flux and ~1 % on the envelope.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": true,
+   "proxy_reason": "The gain equals the assumed aged-loss change (0.16 vs 0.18); the electrostatic mechanism is not modelled at all.",
+   "key_assumption_issues": [
+    "Aged reflectance loss is an input, not an outcome of the electrostatic physics",
+    "ATO NIR absorption lowers clean SR",
+    "Acrylic binder baseline durability unchanged"
+   ],
+   "killer_risks": [
+    "No measurable soiling benefit for the relevant fine absorbing particles",
+    "Antimony release by weathering",
+    "Percolating network breaks at microcracks"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.05,
+     "reason": "~1 %"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.3,
+     "reason": "Acrylic topcoat still needs repainting within 20 years"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.0,
+     "reason": "No biological model; labelled technology"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.4,
+     "reason": "Cheap, but antimony-bearing and ineffective"
+    }
+   ]
+  },
+  {
+   "order_id": "r004-03",
+   "plausible_simulated_benefit_pct": 27,
+   "plausible_objective_gain_pct": 18,
+   "plausible_gain_reasoning": "A glaze over closed-cell scattering rows should keep a life-mean SR of ~0.84 on roofs (horizontal glazes still collect dust and droppings) with emittance ~0.92, i.e. ~27 % less roof heat flux than the repainted acrylic (life-mean ~0.70); applied to roofs and facades ~18 % of the envelope objective.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Clean SR 0.90 of glazed multi-row closed cells not demonstrated; glaze-cell interfaces reduce scattering contrast",
+    "Life-mean aged loss 0.05 on horizontal roofs",
+    "Dry-climate sky radiation assumed"
+   ],
+   "killer_risks": [
+    "Hail and impact crack the brittle glaze and open cells",
+    "Crazing from expansion mismatch over 7000 thermal cycles",
+    "Only factory panels: no retrofit on existing roofs; glare from the specular glaze"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.6,
+     "reason": "~27 % on roofs, ~15 % on facades"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.7,
+     "reason": "Glazed ceramics have a decades-long record; hail and crazing are the risks"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.45,
+     "reason": "Multi-row closed crystal-bearing cells under a sealed surface do come from birch periderm, but the result is close to a white glazed tile"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.5,
+     "reason": "Feasible on existing tile lines, but new panels only and some glare"
+    }
+   ]
+  }
+ ]
+}

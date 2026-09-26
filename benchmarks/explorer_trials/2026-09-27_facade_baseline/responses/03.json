@@ -1,0 +1,122 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameter check: all positive and physical. The 20-year mean solar absorptance of 0.08 (SR 0.92) is optimistic for a porous white surface in a dusty hot climate; field data for BaSO4/porous cooling coatings show SR losses of 0.03-0.08 within 1-2 years from dust, so I raise it to 0.10 (SR 0.90 mean). Emittance 0.95 is plausible for BaSO4/silicate but alumina has a reststrahlen dip near 11-15 um; kept at 0.94. net_longwave_sky_loss 80 W/m2 for a horizontal roof at near-ambient surface temperature in a dry climate is plausible by day (60-100 W/m2); for vertical walls it would be ~20 W/m2 - this model represents the roof case. wall_conductance 0.526 W/m2K = 1/(1/0.5 - 1/20). Dimensionless: Biot number of the envelope Bi = wall_conductance/h_o = 0.026 (the outer surface is controlled by the external balance). Radiative fraction of absorbed load. Simulation coefficient: effective sol-air excess temperature of the design (alpha*I - eps*dR)/h_o = (60-75.2)/20 = -0.76 K, i.e. the roof surface runs slightly below air temperature; baseline (0.32*600-0.9*80)/20 = +6.0 K. Model: steady 1D conduction d2T/dx2=0 with Robin/flux outer boundary and fixed indoor temperature; linear, closed-form solution. Metric: heat flux to the room q = -wall_conductance*dT/dx at x=1. Baseline: aged conventional cool paint alpha=0.32, eps=0.90. Expected q_design = 0.526*(260+60-75.2)/20.526 = 6.27 W/m2 vs q_base = 0.526*(260+192-72)/20.526 = 9.74 W/m2 -> 35.6% (roof). Stress/material check: surface temperature ~37-38 C; silicate/alumina coating far below any thermal limit; the porous network's mechanical weakness (abrasion by sand) is a durability, not a safety, issue. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "solar_absorptance",
+   "value": 0.1
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.94
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 600.0
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 80.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "coating_thickness",
+   "value": 0.0002
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "Biot_envelope",
+   "value": 0.026
+  },
+  {
+   "name": "solar_to_convective_ratio_design",
+   "value": 0.23
+  },
+  {
+   "name": "solar_to_convective_ratio_baseline",
+   "value": 0.74
+  }
+ ],
+ "simulation_coefficient": -0.76,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of roof heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of roof heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "solar_absorptance",
+   "thermal_emittance",
+   "coating_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.9
+  }
+ ],
+ "baseline_description": "aged conventional white acrylic cool roof paint (SR 0.68, eps 0.90)",
+ "_prompt_hash": "a30c3650a2ee2649"
+}

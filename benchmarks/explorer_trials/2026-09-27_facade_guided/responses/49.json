@@ -1,0 +1,104 @@
+{
+ "reviews": [
+  {
+   "order_id": "r005-02",
+   "plausible_simulated_benefit_pct": 12,
+   "plausible_objective_gain_pct": 5,
+   "plausible_gain_reasoning": "With photo-yellowing, mould and moisture the panel's life-mean SR is likely ~0.6 and k ~0.045, giving ~12 % less facade flux, essentially from the added resistance that conventional ETICS gives more cheaply; facades only, so ~5 % of the envelope objective.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Gain is almost entirely the added panel resistance",
+    "Outdoor 20-year optical and hygric stability of cellulose assumed",
+    "Dry laboratory conductivity values"
+   ],
+   "killer_risks": [
+    "Cellulose outdoors swells, moulds, yellows and loses strength well within 20 years",
+    "Combustible cladding",
+    "Lab-scale, chemically intensive production"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.35,
+     "reason": "~12 % on facades, mostly insulation"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.15,
+     "reason": "Unprotected cellulose will not last 20 years outdoors"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.3,
+     "reason": "Uses the wood cell-wall lattice itself, but the benefit is generic insulation"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.25,
+     "reason": "Lab-scale, combustible, costly"
+    }
+   ]
+  },
+  {
+   "order_id": "r005-03",
+   "plausible_simulated_benefit_pct": 17,
+   "plausible_objective_gain_pct": 12,
+   "plausible_gain_reasoning": "Anatase chalking paints do stay whiter, and UV pacing is more reliable than rain, but chalk and dirt stay on the surface in calm dry periods and fine soot sticks to the rough chalk, so a life-mean SR of ~0.79 vs ~0.70 is realistic, i.e. ~17 % less roof flux and ~12 % over the envelope.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": true,
+   "proxy_reason": "The gain follows from the erosion-velocity ratio (quantum yields chosen to reproduce empirical chalking rates, baseline yield set to give 0.5 um/yr) with k_abs calibrated to the baseline loss.",
+   "key_assumption_issues": [
+    "Erosion rate set by an effective quantum yield uncertain by ~5x",
+    "Same wash-off and dirt absorption for chalky and smooth surfaces",
+    "Photocatalytic soot oxidation not modelled"
+   ],
+   "killer_risks": [
+    "Chalk rubs off and stains facades and gutters below",
+    "Photocatalysis attacks sealants, membranes and adjacent organic materials",
+    "Release of TiO2 fines with the chalk"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.35,
+     "reason": "~17 % on roofs"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive, UV-driven"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.4,
+     "reason": "Mineral reserve lasts, but a permanently chalking surface and attack on joints"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.45,
+     "reason": "Sacrificial white renewal is the bark principle; the driver is technological photocatalysis"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.35,
+     "reason": "Staining, rub-off, fines release"
+    }
+   ]
+  }
+ ]
+}

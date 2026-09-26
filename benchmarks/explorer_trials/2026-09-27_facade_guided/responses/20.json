@@ -1,0 +1,62 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: soiling kinetics of the exposed sheet over one renewal cycle in normalized age s = t/T (first-order saturating soiling written as a second-order linear BVP: a(0)=0 fresh sheet, Robin at s=1 restating da/dt = (a_sat - a)/tau). Closed form a(s) = a_sat*(1 - exp(-T*s/tau)); the metric is the cycle-mean absorptance increase, transformed into the daily-mean roof heat flux with the same sol-air/U model as the other roof concepts. Checks: tau = 1 year and a_sat = 0.20 are consistent with CRRC-type ageing (most loss in year 1). Design T = 2 years: mean a = 0.2*(1 - 0.5*(1 - e^-2)) = 0.114 -> mean SR 0.81. Baseline: acrylic cool coat repainted every 10 years (T = 3.2e8 s), a_sat 0.18, SR 0.85: mean a = 0.18*(1 - 0.1*(1 - e^-10)) = 0.162 -> mean SR 0.69, eps 0.90. Hand result: design q = 0.5*(0.194*300 + 150 - 0.92*85)/15.5 = 4.19 W/m2, baseline 0.5*(0.312*300 + 150 - 76.5)/15.5 = 5.39 W/m2, gain ~22 %. Important caveats: (1) the renewal period is an input; the thermal-fatigue pacing that should produce it is not modelled, and interlayer fatigue lives scatter by a factor of 3-10, so the design could shed after months or never; (2) the gain is quite sensitive to T: T = 4 years gives mean SR ~0.77 and ~15 %. Structural: interlayer must be weak enough to fail in ~700 cycles of ~30 K swing but strong enough to survive wind suction (~1-2 kPa) and hail, a narrow window; shed flakes (~100 g/m2 per sheet) are inert mineral litter. Simulation coefficient: T/tau = 1.97 (number of soiling time constants per renewal).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "sheet_thickness", "value": 4e-05},
+    {"name": "renewal_period", "value": 6.3e7},
+    {"name": "clean_solar_reflectance", "value": 0.92},
+    {"name": "thermal_emittance", "value": 0.92},
+    {"name": "number_of_sheets", "value": 10.0},
+    {"name": "daily_temperature_swing", "value": 30.0},
+    {"name": "roof_u_value", "value": 0.5},
+    {"name": "soiling_time_constant", "value": 3.2e7},
+    {"name": "soiling_saturation_loss", "value": 0.2},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "net_sky_longwave", "value": 85.0},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "indoor_temperature", "value": 298.15}
+  ],
+  "dimensionless_numbers": [
+    {"name": "RenewalToSoilingTimeRatioDesign", "value": 1.97},
+    {"name": "RenewalToSoilingTimeRatioBaseline", "value": 9.9}
+  ],
+  "simulation_coefficient": 1.97,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Surface soiling kinetics / roof heat gain",
+    "independent_var": {"label": "Normalized age of the exposed sheet (t / renewal period)", "unit": "-"},
+    "dependent_var": {"label": "Soiling-induced solar absorptance increase", "unit": "-"},
+    "primary_metric": {"label": "Cycle-mean daily heat flux into the interior"},
+    "reference_metric": {"label": "Analytical cycle-mean daily heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of service-life interior heat gain vs aged white coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of service-life-averaged roof heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Cycle-mean daily heat flux into the interior",
+    "reference_metric": "Analytical cycle-mean daily heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 10.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "number_of_sheets * renewal_period >= 20 years"],
+    "design_variables": ["sheet_thickness", "renewal_period", "clean_solar_reflectance", "thermal_emittance", "number_of_sheets"]
+  },
+  "metric": {
+    "kind": "mean",
+    "location": null,
+    "scale": null,
+    "unit": "W/m^2",
+    "label": "Cycle-mean daily heat flux into the interior",
+    "transform": "roof_u_value * ((1 - clean_solar_reflectance + m) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - indoor_temperature) - thermal_emittance * net_sky_longwave) / (roof_u_value + external_heat_transfer_coefficient)"
+  },
+  "baseline_parameters": [
+    {"name": "renewal_period", "value": 3.2e8},
+    {"name": "soiling_saturation_loss", "value": 0.18},
+    {"name": "clean_solar_reflectance", "value": 0.85},
+    {"name": "thermal_emittance", "value": 0.90}
+  ],
+  "baseline_description": "White acrylic cool coating repainted every 10 years (SR 0.85 new, saturated loss 0.18)"
+}

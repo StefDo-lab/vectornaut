@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist die silbrige Haut von Hering und Sardine: Stapel aus Guaninkristallen mit ungeordneten Schichtdicken reflektieren breitbandig und farblos ('chaotischer Spiegel'). Du baust eine Silikat-Deckschicht mit ausgerichteten Pl\u00e4ttchen, die jeweils aus SiO2/ZnS- bzw. SiO2/TiO2-Schichten zuf\u00e4lliger Dicke bestehen. Nach Korrektur auf eine gealterte Mittelreflexion von 0,84 sinkt der Dach-W\u00e4rmestrom in den Raum um ~26 % (7,2 statt 9,7 W/m\u00b2) gegen\u00fcber gealterter Cool-Paint.",
+ "pros_and_cons": "Vorteile: d\u00fcnne Schicht (60-80 \u00b5m), anorganisch, bekannte Effektpigment-Technologie, gerichtete Reflexion verringert Staubhaftung etwas. Nachteile: UV-Absorption von TiO2/ZnS, Winkelabh\u00e4ngigkeit, Glanz/Blendung an Fassaden, teure Pigmente; Vorteil gegen\u00fcber BaSO4-Farben unsicher.",
+ "mechanical_limits": "Pl\u00e4ttchen robust; Schwachstelle ist die Haftung und Ausrichtung im Binder; bei Sandabrieb verlieren die Pl\u00e4ttchen ihre Orientierung an der Oberfl\u00e4che. Ausfall = Reflexion < 0,80.",
+ "manufacturing_methods": "Nasschemische Beschichtung von Glimmer- oder Glasflakes mit alternierenden Schichten (wie Perlglanzpigmente) mit gezielt gestreuten Schichtdicken, dann in Silikatbinder dispergieren und per Spritzen mit Scherorientierung auftragen.",
+ "cost_estimation": "Pigment ~30-60 \u20ac/kg, ~0,08 kg/m\u00b2 -> 3-5 \u20ac/m\u00b2; appliziert ~12-20 \u20ac/m\u00b2.",
+ "validation_experiments": "Spektrale und winkelaufgel\u00f6ste Reflexion (Goniospektrometer), FTIR-Emission, Bewitterung mit Staub, Feldtest Dach und Wand in hei\u00dfem Klima.",
+ "industry_partners": "Effektpigmenthersteller, Hersteller von Dach- und Fassadenfarben, optische Beschichtungsinstitute.",
+ "_prompt_hash": "568962bad59b94e0"
+}

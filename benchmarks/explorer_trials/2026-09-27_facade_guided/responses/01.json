@@ -1,0 +1,123 @@
+{
+  "function_analysis": "The building envelope in a hot climate receives solar radiation (up to ~1000 W/m2 on roofs, 500-800 W/m2 on east/west facades), longwave radiation from sky and surroundings, and convective heat from hot ambient air (35-45 C). Interior heat gain is the conduction through the envelope driven by the outer surface (sol-air) temperature. Functions needed: (F1) reject as much incident solar radiation as possible (high solar reflectance 0.3-2.5 um); (F2) dump heat by longwave emission, ideally into the 8-13 um atmospheric window (high emittance) so the surface approaches or drops below ambient; (F3) decouple the wall/roof from the hot outer skin (insulating or ventilated layers, thermal mass/time lag); (F4) keep F1/F2 over 20 years despite UV, heat cycling, rain, sand and above all soiling, which is what degrades conventional white coatings from SR ~0.85 to ~0.65 within 2-3 years; (F5) all of it passively, without electricity and without water supply.",
+  "requirements": [
+    {"name": "indoor_heat_gain_reduction", "criterion": "Clearly lowers the summer-day heat flux into the interior (roughly >20 %) versus the aged conventional white cool coating on the same envelope."},
+    {"name": "fully_passive", "criterion": "Works without electricity, pumps, fans or water supply; only sun, sky, wind and rain act on it."},
+    {"name": "weather_durability_20yr", "criterion": "Keeps its optical and thermal function (and adhesion) for at least 20 years under hot-climate UV, thermal cycling, rain, dust/sand and soiling without major maintenance."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is actually derived from a biological model (plant, animal, microbe), not only labelled so."},
+    {"name": "building_practicality", "criterion": "Applicable as coating or facade structure on real buildings at acceptable cost, weight and glare, without toxic release."}
+  ],
+  "mechanism_classes_considered": ["radiative_control", "trapped_gas_or_liquid", "flow_redirection", "porous_transport", "phase_change", "architected_lattice", "other"],
+  "analogues_considered": [
+    "Cyphochilus / Lepidiota white beetle scales: disordered chitin networks give brilliant whiteness in 5-10 um thin layers",
+    "Saharan silver ant (Cataglyphis bombycina): triangular hairs reflecting by total internal reflection and enhancing mid-IR emission",
+    "Desert snail Sphincterochila boissieri: highly reflective white calcite shell plus air-filled upper whorls that insulate the retreated animal",
+    "Birch (Betula) bark: white betulin crystal layers that keep reflecting sunlight and exfoliate, renewing the surface",
+    "Termite mounds: stack-driven ventilation and thermal mass (well known)",
+    "Saguaro ribs: self-shading and convective area",
+    "Paraheliotropic leaves: edge-on orientation to midday sun",
+    "Camel fur: outer insulating layer carrying the heat away from the skin",
+    "Pine cone hygromorphs: humidity-driven passive actuation",
+    "Technology: porous ceramic and BaSO4 radiative cooling paints, ventilated rainscreens, radiant barriers"
+  ],
+  "objective_statement": "Summer-day (24 h) heat flux into the conditioned interior through the sun-exposed roof and facades of a building in a hot climate, averaged over a 20-year service life, including UV ageing, weathering and soiling of the outer surface (not the value of a freshly applied clean surface).",
+  "baseline_statement": "Conventional white acrylic/elastomeric cool-roof or facade coating (initial solar reflectance ~0.85, thermal emittance ~0.90) in its in-service aged and soiled condition (3-year aged solar reflectance ~0.65-0.70, as in CRRC ageing data), repainted every ~10 years, on the same insulated wall or roof.",
+  "relevant_governing_quantities": ["heat_flux", "temperature", "degradation_rate"],
+  "candidates": [
+    {
+      "order_id": "r001-01",
+      "title": "Beetle-scale inorganic scattering coat",
+      "summary": "A 300 um coating of a disordered network of sub-micron alumina/BaSO4 particles and voids, bound by potassium silicate instead of a polymer, copying the anisotropic disordered chitin network of Cyphochilus scales that scatters all visible light in a very thin layer. The inorganic binder should give high solar reflectance (~0.95) and high 8-13 um emittance (silicate/alumina phonon bands) with UV stability over decades.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "radiative_control"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean roof heat flux into the interior vs aged white acrylic cool coating",
+        "formula": "q = U*(T_a + (alpha*I - eps*R_net)/h - T_in); U=0.5, T_a=35 C, T_in=25 C, I_mean=300 W/m2, R_net=85 W/m2, h=15 W/m2K. Baseline alpha=0.33, eps=0.90: T_sa=36.5 C, q=5.75 W/m2. Coat aged alpha=0.08, eps=0.94: T_sa=31.3 C, q=3.13 W/m2. Reduction = 1 - 3.13/5.75",
+        "value": 45,
+        "unit": "%"
+      },
+      "main_risk": "The porous surface picks up dust and dirt; if its aged solar reflectance falls from 0.95 to below ~0.85 most of the advantage over the aged white coating is lost.",
+      "novelty_vs_known": "Closest known: polymer-based Cyphochilus-inspired films (PMMA, cellulose) and BaSO4-acrylic radiative cooling paints; new is the fully inorganic silicate-bound version aimed at 20-year UV stability, with the particle/void size tuned to the beetle's ~250 nm filament spacing.",
+      "baseline": "Conventional white acrylic/elastomeric cool coating in aged, soiled condition (solar reflectance ~0.67, emittance 0.90) on the same insulated roof.",
+      "inspiration_source": "Cyphochilus white beetle scales: anisotropic disordered chitin filament network (~250 nm filaments, ~60 % air) producing whiteness in 5-10 um thickness.",
+      "domain": "Thermodynamics / radiative heat transfer",
+      "physical_mechanism": "Multiple scattering in a disordered particle-void network gives high solar reflectance; the silicate and alumina phases absorb and emit strongly at 8-13 um, so the surface emits into the atmospheric window. The outer surface energy balance alpha*I + h*(T_a - T_s) - eps*R_net = q_cond sets a sol-air temperature near or below ambient, which drives far less conduction through the insulated roof into the interior. Modelled as steady 1D conduction through the roof layers with a Robin boundary using an effective sol-air temperature.",
+      "parameters": [
+        {"name": "solar_reflectance", "value": 0.95, "min_bound": 0.85, "max_bound": 0.99, "justification": "Disordered sub-micron scattering networks (beetle scale, BaSO4 paints) reach 0.95-0.98 when clean."},
+        {"name": "aged_reflectance_loss", "value": 0.03, "min_bound": 0.01, "max_bound": 0.15, "justification": "Inorganic surface without soft binder picks up less dirt than acrylic; porosity may increase pick-up, hence wide bound."},
+        {"name": "thermal_emittance", "value": 0.94, "min_bound": 0.85, "max_bound": 0.98, "justification": "Silicate and alumina phonon bands cover much of 8-13 um; porous fine-grained layers avoid reststrahlen dips."},
+        {"name": "coating_thickness", "value": 0.0003, "min_bound": 0.0001, "max_bound": 0.001, "justification": "Beetle scales need ~10 um, but a coating must be opaque in the NIR and survive erosion, so 0.1-1 mm."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Moderately insulated roof in a hot climate; uninsulated slabs reach 2-3 W/m2K."},
+        {"name": "external_heat_transfer_coefficient", "value": 15.0, "min_bound": 8.0, "max_bound": 30.0, "justification": "Combined convective and linearised radiative exchange at 2-4 m/s wind."},
+        {"name": "solar_irradiance_daily_mean", "value": 300.0, "min_bound": 200.0, "max_bound": 350.0, "justification": "Clear summer day in hot climate, ~7 kWh/m2/day on a horizontal roof."},
+        {"name": "net_sky_longwave", "value": 85.0, "min_bound": 40.0, "max_bound": 120.0, "justification": "Net longwave loss of a black surface at ambient temperature under dry clear sky; humid climates lower."}
+      ]
+    },
+    {
+      "order_id": "r001-02",
+      "title": "Desert-snail double-shell cladding",
+      "summary": "A cladding of white-glazed ceramic shells hung 40 mm in front of the wall, forming closed air chambers whose back face carries a low-emittance layer, copying the desert snail Sphincterochila boissieri, whose white calcite shell reflects most sunlight and whose air-filled upper whorls insulate the animal. Glazed ceramic keeps its reflectance because rain washes a smooth glaze, and fired ceramic lasts decades.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "cm_plus"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean facade heat flux into the interior vs aged white coating on the same wall",
+        "formula": "Shell aged alpha=0.25 (glazed SR 0.75), eps=0.9: T_shell ~ 35 + (0.25*300 - 0.9*85)/15 = 34.9 C; added chamber resistance with low-e face R_gap=0.5 m2K/W: U = 1/(2.0+0.5) = 0.40; q = 0.40*(34.9-25) = 3.96 W/m2 vs baseline 5.75 W/m2 -> -31 % (horizontal-irradiance numbers; similar ratio on west facades)",
+        "value": 30,
+        "unit": "%"
+      },
+      "main_risk": "It is essentially an added air-gap insulation plus a reflective skin; a thicker conventional insulation layer under the white coat could deliver the same benefit more cheaply, and unventilated chambers heat up if the glaze soils.",
+      "novelty_vs_known": "Closest known: ventilated rainscreens and radiant barriers; differs in using sealed, rain-washed glazed shells with low-e backs, i.e. the snail's reflect-plus-air-chamber combination. Novelty is modest.",
+      "baseline": "Conventional white acrylic facade coating, aged and soiled (SR ~0.67, emittance 0.90), directly on the same insulated wall (U=0.5 W/m2K).",
+      "inspiration_source": "Desert snail Sphincterochila boissieri (Negev): white shell reflects ~90 % of solar radiation, and the animal retreats behind air-filled whorls that act as insulation.",
+      "domain": "Building physics / heat transfer",
+      "physical_mechanism": "The outer shell rejects most solar radiation and runs near ambient temperature; the closed air chamber with a low-e face suppresses radiative exchange across the gap so that the gap adds ~0.5 m2K/W thermal resistance. Steady 1D series conduction: shell (Robin with sol-air temperature) - air gap (effective conductivity) - wall - interior.",
+      "parameters": [
+        {"name": "shell_solar_reflectance_aged", "value": 0.75, "min_bound": 0.6, "max_bound": 0.9, "justification": "White glazed ceramic tiles, rain-washed; glaze resists dirt better than paint."},
+        {"name": "air_gap_thickness", "value": 0.04, "min_bound": 0.01, "max_bound": 0.1, "justification": "Snail whorl analogue scaled to facade; 20-50 mm maximises still-air resistance before convection sets in."},
+        {"name": "gap_effective_resistance", "value": 0.5, "min_bound": 0.15, "max_bound": 0.8, "justification": "ISO 6946: 40 mm vertical gap with one low-e face ~0.5 m2K/W, without low-e ~0.18."},
+        {"name": "wall_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Insulated masonry wall in a hot climate."},
+        {"name": "external_heat_transfer_coefficient", "value": 15.0, "min_bound": 8.0, "max_bound": 30.0, "justification": "Combined outer coefficient."},
+        {"name": "solar_irradiance_daily_mean", "value": 300.0, "min_bound": 150.0, "max_bound": 350.0, "justification": "Horizontal clear-day mean; west facades 150-250 W/m2."}
+      ]
+    },
+    {
+      "order_id": "r001-03",
+      "title": "Birch-bark self-renewing white coat",
+      "summary": "A thick (0.8 mm) layered white coating of BaSO4/CaCO3 pigment in a deliberately chalking, weakly bound silicate matrix that erodes about 20 um per year under rain, like birch bark whose betulin-filled outer layers keep reflecting sunlight and exfoliate, so the soiled surface is continuously removed and a fresh, highly reflective surface is exposed. It aims at the real lever in hot climates: the loss of reflectance by soiling that halves the benefit of cool coatings.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "radiative_control"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "degradation_rate"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean roof heat flux into the interior vs aged white acrylic coating, service-life average",
+        "formula": "Steady renewed SR 0.88 (alpha 0.12), eps 0.92 vs baseline alpha 0.33, eps 0.90: T_sa = 35 + (36 - 78.2)/15 = 32.2 C -> q = 0.5*7.2 = 3.6 W/m2 vs 5.75 W/m2 -> -37 %",
+        "value": 35,
+        "unit": "%"
+      },
+      "main_risk": "Erosion rate depends strongly on local rainfall; in arid hot climates with little rain the surface will not renew and soils like any other, while in wet climates it may erode through before 20 years.",
+      "novelty_vs_known": "Closest known: historic self-cleaning chalking TiO2 paints and photocatalytic coatings; new is a thick sacrificial, layered radiative-cooling coating designed for a target erosion rate over 20 years, with benign BaSO4/CaCO3 runoff.",
+      "baseline": "Conventional white acrylic/elastomeric cool coating in aged, soiled condition (SR ~0.67, emittance 0.90) on the same roof.",
+      "inspiration_source": "Birch (Betula pendula / B. papyrifera) bark: white betulin crystals in stacked phellem layers reflect sunlight and protect the stem from overheating; the outer layers peel off and expose fresh white bark.",
+      "domain": "Thermodynamics / surface degradation",
+      "physical_mechanism": "Solar reflectance is lost by accumulation of absorbing dirt in the top micrometres. If the top layer erodes at a rate comparable to the dirt deposition depth per cleaning cycle, the steady-state dirt load stays low. Modelled as steady 1D advection-diffusion of dirt concentration in a surface layer receding at velocity v (erosion) with deposition flux at the surface; the steady dirt inventory sets the absorptance, which then enters the sol-air heat flux balance.",
+      "parameters": [
+        {"name": "erosion_rate", "value": 6.3e-13, "min_bound": 1e-13, "max_bound": 3e-12, "justification": "~20 um/year (6.3e-13 m/s), similar to chalking paints; 0.8 mm lasts ~40 years."},
+        {"name": "coating_thickness", "value": 0.0008, "min_bound": 0.0003, "max_bound": 0.002, "justification": "Sacrificial reserve for >20 years plus opacity."},
+        {"name": "clean_solar_reflectance", "value": 0.92, "min_bound": 0.85, "max_bound": 0.97, "justification": "BaSO4/CaCO3 layers reach 0.92-0.97."},
+        {"name": "dirt_penetration_depth", "value": 5e-6, "min_bound": 1e-6, "max_bound": 2e-5, "justification": "Soot and dust particles sit in the top few um of a porous surface."},
+        {"name": "thermal_emittance", "value": 0.92, "min_bound": 0.85, "max_bound": 0.97, "justification": "Sulfate/carbonate/silicate bands in 8-13 um."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same envelope as baseline."}
+      ]
+    }
+  ]
+}

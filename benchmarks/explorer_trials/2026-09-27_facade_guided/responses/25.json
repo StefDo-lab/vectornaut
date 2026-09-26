@@ -1,0 +1,53 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady 1D energy balance in a porous spine pile (x=0 wall surface, x=1 pile tips, z = x*L): k_eff*T''/L^2 = H_v*(T - T_a) - S(x), with Beer-Lambert absorption of the non-reflected sun S = (1-rho)*kappa*I*exp(-kappa*L*(1-x)). Wall boundary: conduction from the pile plus transmitted sun absorbed by the painted wall minus the wall's sky loss through the gap fraction exp(-kappa*L) equals the wall conduction U*(T(0)-T_in). Tip boundary: film exchange and part of the sky loss. Checks: kappa*L = 2.4 (9 % gap fraction) for 2 mm rods at ~8 mm spacing is consistent; H_v = 500 W/m3K = h_rod (~20 W/m2K at 1-2 m/s) x specific surface (~25 m2/m3); k_eff = 0.2 W/mK. Fin parameter sqrt(H_v*L^2/k_eff) = sqrt(500*0.0016/0.2) = 2.0, i.e. the pile dumps most absorbed heat to the air before it reaches the wall. Baseline: bare painted wall = no rods (kappa = 0) with air exchange raised to H_v = 1125 so that the wall-to-air coupling sqrt(k_eff*H_v) = 15 W/m2K equals the normal outer film coefficient; this reproduces the direct sol-air result for the painted wall (5.56 vs 5.59 W/m2). My own numerical solution: daily mean (I=180, T_a=35 C) q = 5.19 vs 5.56 W/m2 (-7 %); peak hour (I=700, T_a=43 C) wall surface 47.0 C vs 54.9 C and q = 11.0 vs 15.0 W/m2 (-27 %). So the pile mainly cuts the peak load; the daily-mean gain against an already white wall is small because the pile also blocks the wall's sky loss. Structural: glass-ceramic rods 2 mm x 40 mm cantilevers carry wind drag easily but are brittle against impact; stainless wire alternative. Maintenance: dust, leaves and nesting birds (the pile resembles anti-bird spikes, which deters birds). Simulation coefficient: fin parameter 2.0.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "pile_depth", "value": 0.04},
+    {"name": "extinction_coefficient", "value": 60.0},
+    {"name": "rod_solar_reflectance", "value": 0.8},
+    {"name": "pile_effective_conductivity", "value": 0.2},
+    {"name": "volumetric_air_exchange_coefficient", "value": 500.0},
+    {"name": "wall_u_value", "value": 0.5},
+    {"name": "solar_irradiance_daily_mean", "value": 180.0},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "wall_solar_absorptance", "value": 0.33},
+    {"name": "wall_thermal_emittance", "value": 0.9},
+    {"name": "net_sky_longwave", "value": 40.0},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "pile_top_emittance", "value": 0.5}
+  ],
+  "dimensionless_numbers": [
+    {"name": "OpticalDepthPile", "value": 2.4},
+    {"name": "PileFinParameter", "value": 2.0}
+  ],
+  "simulation_coefficient": 2.0,
+  "solver_method": "scipy",
+  "ui_metadata": {
+    "domain_name": "Porous-media heat transfer / facade shading",
+    "independent_var": {"label": "Normalized distance from wall to pile tips", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior (from wall surface temperature)"},
+    "reference_metric": {"label": "Reference daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of facade heat gain vs aged white paint"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean facade heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior (from wall surface temperature)",
+    "reference_metric": "Reference daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 5.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["pile_depth", "extinction_coefficient", "rod_solar_reflectance"]
+  },
+  "metric": {"kind": "value_at", "location": "0", "scale": null, "unit": "W/m^2", "label": "Daily-mean heat flux into the interior (from wall surface temperature)", "transform": "wall_u_value * (m - indoor_temperature)"},
+  "baseline_parameters": [
+    {"name": "extinction_coefficient", "value": 0.0},
+    {"name": "volumetric_air_exchange_coefficient", "value": 1125.0}
+  ],
+  "baseline_description": "Bare wall with aged white paint (SR 0.67), outer coupling 15 W/m2K"
+}

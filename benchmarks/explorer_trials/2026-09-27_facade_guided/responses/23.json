@@ -1,0 +1,118 @@
+{
+  "function_analysis": "Stored functions F1-F5 apply (reject solar, emit to the sky window, decouple the envelope from the hot skin, keep it for 20 years against soiling/UV/cycling, passively). This round asks for concepts judged on temperature (surface or wall temperature, which drives the heat flux and the peak cooling load) and for a plant-derived sub-micron scattering surface that fixes the soiling weakness of open-porous white coats.",
+  "requirements": [
+    {"name": "indoor_heat_gain_reduction", "criterion": "Clearly lowers the summer-day heat flux into the interior (roughly >20 %) versus the aged conventional white cool coating on the same envelope."},
+    {"name": "fully_passive", "criterion": "Works without electricity, pumps, fans or water supply; only sun, sky, wind and rain act on it."},
+    {"name": "weather_durability_20yr", "criterion": "Keeps its optical and thermal function (and adhesion) for at least 20 years under hot-climate UV, thermal cycling, rain, dust/sand and soiling without major maintenance."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is actually derived from a biological model (plant, animal, microbe), not only labelled so."},
+    {"name": "building_practicality", "criterion": "Applicable as coating or facade structure on real buildings at acceptable cost, weight and glare, without toxic release."}
+  ],
+  "mechanism_classes_considered": ["trapped_gas_or_liquid", "radiative_control", "porous_transport"],
+  "analogues_considered": [
+    "Cactus spines and pubescence (Ferocactus, Cephalocereus senilis; Nobel 1978): shade the apex and hold a still boundary layer, lowering apex maximum temperature by several K",
+    "Chinese tussah silkmoth (Antheraea pernyi) cocoon fibres: sub-micron air voids along the fibre give strong solar reflection and high mid-IR emissivity (Shi, Yu et al. 2018)",
+    "Birch bark phellem: betulin crystals inside closed, dead, air-filled cells make the bark white",
+    "Chalk dudleya (Dudleya brittonii) epicuticular wax: very high UV/visible reflectance",
+    "White flower petals: air-filled mesophyll scattering"
+  ],
+  "objective_statement": "Summer-day (24 h) heat flux into the conditioned interior through the sun-exposed roof and facades of a building in a hot climate, averaged over a 20-year service life, including UV ageing, weathering and soiling of the outer surface (not the value of a freshly applied clean surface).",
+  "baseline_statement": "Conventional white acrylic/elastomeric cool-roof or facade coating (initial solar reflectance ~0.85, thermal emittance ~0.90) in its in-service aged and soiled condition (3-year aged solar reflectance ~0.65-0.70, as in CRRC ageing data), repainted every ~10 years, on the same insulated wall or roof.",
+  "relevant_governing_quantities": ["heat_flux", "temperature", "degradation_rate"],
+  "candidates": [
+    {
+      "order_id": "r003-01",
+      "title": "Cactus-spine pile facade shade",
+      "summary": "A 40 mm deep pile of white, UV-stable glass-ceramic rods (2 mm diameter) standing off the facade like the dense spine cover of barrel and old-man cacti, which shades the apex and holds a slow boundary layer, lowering its peak temperature. The pile intercepts ~90 % of direct sun in a volume that wind flushes with ambient air, so the absorbed heat is dumped to the air before it reaches the wall.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "cm_plus"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "temperature"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean west-facade heat flux vs aged white paint on the wall (peak-hour wall temperature in brackets)",
+        "formula": "Pile extinction kappa*L = 2.4 -> 9 % of sun reaches the wall; rods reflect 80 %. Peak (I=700, T_a=43 C): baseline wall excess (0.33*700 - 36)/15 = 13 K; design wall excess ~3 K -> peak flux (T_w - T_in) 31 K -> 21 K, -32 %. Daily mean (I=180, R_net=40): baseline excess 1.6 K vs design ~0.4 K (the pile also blocks the wall's sky view) -> q 11.6 -> 10.4 K*U, -10 %",
+        "value": 10,
+        "unit": "%"
+      },
+      "main_risk": "Against an already white wall the daily-mean gain is small (~10 %), because the pile also blocks the wall's radiative loss to the sky; dust, leaves and birds collect in the pile.",
+      "novelty_vs_known": "Closest known: perforated metal or ceramic brise-soleil and ventilated rainscreens; new is a deep, isotropic, wind-flushed spine pile that shades all sun angles without orientation-specific design, taken from cactus spine cover.",
+      "baseline": "Conventional white acrylic facade coating, aged and soiled (SR 0.67, emittance 0.90), directly on the same insulated wall (U = 0.5 W/m2K).",
+      "inspiration_source": "Cactus spine cover (Ferocactus acanthodes, Cephalocereus senilis): dense spines and hairs shade the stem apex and slow air near it; measured apex maximum temperatures drop by several K (Nobel 1978).",
+      "domain": "Heat transfer in porous media / building physics",
+      "physical_mechanism": "The pile is a porous layer that absorbs the solar fraction not reflected by the rods with an exponential (Beer-Lambert) profile and exchanges heat with wind-driven ambient air through a volumetric coefficient. Steady 1D energy balance in the pile: k_eff*T'' - H_v*(T - T_a) + S(x) = 0 with S = (1 - rho_rod)*kappa*I*exp(-kappa*(L - z)); the wall side couples to the wall conductance and receives the transmitted sun.",
+      "parameters": [
+        {"name": "pile_depth", "value": 0.04, "min_bound": 0.02, "max_bound": 0.1, "justification": "Spine cover depth of barrel cacti is 2-5 cm."},
+        {"name": "extinction_coefficient", "value": 60.0, "min_bound": 20.0, "max_bound": 150.0, "justification": "kappa = n*d projected rod area per volume; 2 mm rods at ~8 mm spacing give ~60 1/m (kappa*L = 2.4)."},
+        {"name": "rod_solar_reflectance", "value": 0.8, "min_bound": 0.6, "max_bound": 0.9, "justification": "White glass-ceramic rods, rain-washed and smooth."},
+        {"name": "pile_effective_conductivity", "value": 0.2, "min_bound": 0.05, "max_bound": 1.0, "justification": "Still-air plus radiative plus wind-dispersive conductivity of an open pile."},
+        {"name": "volumetric_air_exchange_coefficient", "value": 500.0, "min_bound": 100.0, "max_bound": 3000.0, "justification": "h_rod*specific surface: h ~20 W/m2K on 2 mm rods times ~25 m2/m3 surface density."},
+        {"name": "wall_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same wall as baseline."},
+        {"name": "solar_irradiance_daily_mean", "value": 180.0, "min_bound": 120.0, "max_bound": 250.0, "justification": "West facade, hot summer day."}
+      ]
+    },
+    {
+      "order_id": "r003-02",
+      "title": "Tussah-silk nanovoid glass-fibre shade screen",
+      "summary": "A tensioned facade screen woven from glass fibres drawn with sub-micron longitudinal air voids, copying the fibres of the Chinese tussah silkmoth cocoon whose nanovoids scatter sunlight strongly and whose silk emits well in the mid-IR. The voided fibres make a thin fabric reflect ~83 % of sunlight while absorbing only ~7 %, so the ventilated screen stays near ambient temperature and the wall behind it sees mostly a cool screen instead of the sun.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "radiative_control"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "temperature"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean west-facade heat flux vs aged white paint on the wall (peak wall temperature in brackets)",
+        "formula": "Screen alpha 0.07, tau 0.10, eps 0.9, ventilated both sides h_c 10: peak screen excess (49 - 20)/20 = 1.5 K; wall receives 0.1*700*0.33 = 23 W/m2 + longwave from screen -> wall excess ~3 K vs 13 K for the bare painted wall; peak flux -32 %. Daily mean: wall excess ~0.4 K vs 1.6 K -> q -10 %.",
+        "value": 10,
+        "unit": "%"
+      },
+      "main_risk": "Drawing glass fibres with stable sub-micron voids at scale is unproven, and an ordinary PTFE-coated glass fabric screen already gives most of the benefit, so the bionic fibre adds only a few percent.",
+      "novelty_vs_known": "Closest known: PTFE-coated glass-fibre facade membranes and solar screens; new is the intrinsically white voided fibre (no coating that soils or yellows), from the tussah silk nanovoid structure.",
+      "baseline": "Conventional white acrylic facade coating, aged and soiled (SR 0.67, emittance 0.90), directly on the same insulated wall.",
+      "inspiration_source": "Antheraea pernyi (Chinese tussah silkmoth) cocoon fibres: randomly distributed sub-micron air voids along the fibre give high solar reflectance by transverse Anderson localisation and high mid-IR emissivity, keeping the pupa cool.",
+      "domain": "Radiative heat transfer / building physics",
+      "physical_mechanism": "Sub-micron voids along glass fibres scatter visible and NIR light strongly, so a thin fabric reflects most sunlight and transmits ~10 %; the glass emits in 8-13 um. The screen, ventilated on both sides, stays within a few K of ambient; the wall behind it receives only the transmitted fraction plus longwave from a near-ambient screen. Modelled as steady 1D conduction through the wall with a Robin boundary at the wall surface that contains the transmitted solar, convection to cavity air and linearised longwave exchange with the screen at its own balance temperature.",
+      "parameters": [
+        {"name": "screen_solar_absorptance", "value": 0.07, "min_bound": 0.03, "max_bound": 0.2, "justification": "Voided glass fabric; conventional PTFE-glass membranes absorb 0.10-0.20."},
+        {"name": "screen_solar_transmittance", "value": 0.1, "min_bound": 0.03, "max_bound": 0.3, "justification": "Dense weave with high scattering."},
+        {"name": "void_diameter", "value": 3e-07, "min_bound": 1e-07, "max_bound": 1e-06, "justification": "Tussah silk voids are ~100-1000 nm; Mie optimum for sunlight near 200-400 nm."},
+        {"name": "screen_thermal_emittance", "value": 0.9, "min_bound": 0.8, "max_bound": 0.95, "justification": "Silicate glass emits strongly in 8-13 um."},
+        {"name": "cavity_convection_coefficient", "value": 5.0, "min_bound": 2.0, "max_bound": 15.0, "justification": "Ventilated cavity between screen and wall."},
+        {"name": "wall_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same wall as baseline."},
+        {"name": "solar_irradiance_daily_mean", "value": 180.0, "min_bound": 120.0, "max_bound": 250.0, "justification": "West facade, hot summer day."}
+      ]
+    },
+    {
+      "order_id": "r003-03",
+      "title": "Birch-phellem closed-cell white coat",
+      "summary": "A white mineral coat whose surface consists of closed, air-filled glass micro-cells (20-50 um) with sub-micron BaSO4 crystals embedded in the cell walls, copying birch bark, whose whiteness comes from betulin crystals inside closed dead phellem cells. The closed cells scatter like the open-porous beetle coat but give a smooth, sealed surface that dust cannot penetrate and rain can wash, fixing the main risk of open porous white coats.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "radiative_control"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean roof heat flux vs aged white acrylic cool coating",
+        "formula": "Clean SR 0.93, life-mean soiling loss 0.05 (sealed, smooth, rain-washed like glazes) -> SR 0.88, eps 0.93; q = 0.5*(0.12*300 + 150 - 0.93*85)/15.5 = 3.45 W/m2 vs baseline 0.5*(0.33*300 + 150 - 76.5)/15.5 = 5.56 W/m2 -> -38 %",
+        "value": 38,
+        "unit": "%"
+      },
+      "main_risk": "Closed cells break at the surface under sand abrasion and thermal cycling, reopening a porous, dirt-trapping surface; closing cells also lowers the scattering contrast, so clean SR may stay below 0.93.",
+      "novelty_vs_known": "Closest known: open-porous radiative cooling paints and hollow-glass-microsphere roof coatings; new is the combination of closed cells for dirt exclusion with sub-micron crystals in the cell walls for scattering, as in birch phellem.",
+      "baseline": "Conventional white acrylic cool coating, aged and soiled (SR 0.67, emittance 0.90), on the same roof.",
+      "inspiration_source": "Birch (Betula pendula) bark: dead phellem cells filled with air and with betulin crystals (~sub-micron) in and on the cell walls make a white, water-repellent, sealed outer bark.",
+      "domain": "Radiative heat transfer",
+      "physical_mechanism": "Sub-micron BaSO4 crystals in the thin walls of closed glass cells scatter sunlight (index contrast 1.64/1.5 against air in the cells gives strong multiple scattering); the closed smooth surface limits dust penetration so soiling stays superficial and washable; silicate glass and sulfate emit in 8-13 um. Same steady 1D roof conduction with sol-air boundary as the reference concepts.",
+      "parameters": [
+        {"name": "solar_reflectance", "value": 0.93, "min_bound": 0.85, "max_bound": 0.97, "justification": "Scattering in closed-cell walls with sub-micron crystals; slightly lower than an open network."},
+        {"name": "aged_reflectance_loss", "value": 0.05, "min_bound": 0.02, "max_bound": 0.15, "justification": "Sealed smooth surface soils like glazed ceramics, which lose 0.03-0.08."},
+        {"name": "thermal_emittance", "value": 0.93, "min_bound": 0.85, "max_bound": 0.97, "justification": "Silicate glass and sulfate bands."},
+        {"name": "cell_size", "value": 3e-05, "min_bound": 1e-05, "max_bound": 0.0001, "justification": "Birch phellem cells are 20-40 um."},
+        {"name": "crystal_size", "value": 4e-07, "min_bound": 1e-07, "max_bound": 1e-06, "justification": "Mie optimum for solar scattering."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same roof as baseline."}
+      ]
+    }
+  ]
+}

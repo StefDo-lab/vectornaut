@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild sind die Rippen von Saguaro- und Fasskakteen: sie beschatten sich selbst und vergr\u00f6\u00dfern die Austauschfl\u00e4che. Du baust gerippte Fassadenpaneele, deren nach oben geneigte Facetten eine hochreflektierende, hochemittierende K\u00fchlbeschichtung tragen und den kalten Himmel sehen, w\u00e4hrend die nach unten weisenden Facetten poliertes Aluminium (niedrige Emission) sind und die Infrarotstrahlung des hei\u00dfen Bodens nicht aufnehmen. Im Westwand-Modell sinkt der W\u00e4rmestrom in den Raum um ~19 % (7,0 statt 8,7 W/m\u00b2) gegen\u00fcber einer glatten Cool-Paint-Wand.",
+ "pros_and_cons": "Vorteile: nutzt an vertikalen W\u00e4nden die Himmelssicht, die glatte Farben kaum haben; Paneeltechnik (Trapezblech, Faserzement) ist etabliert. Nachteile: nach oben geneigte Facetten sammeln Staub und Vogelkot; Blendung; Aluminiumfacetten oxidieren; der Gewinn h\u00e4ngt stark von der Umgebungsbebauung ab (in Stra\u00dfenschluchten fast null).",
+ "mechanical_limits": "Paneele m\u00fcssen Windsog und Hagel aushalten; die Beschichtung auf den oberen Facetten ist der Schwachpunkt (Staub, Abrieb). Ausfall = Emission/Reflexion der Oberfacetten unter 0,85 oder Korrosion des Aluminiums.",
+ "manufacturing_methods": "Rollformen von beschichtetem Aluminium-Coil mit asymmetrischem Profil; die oberen Facetten werden per Coil-Coating mit einer anorganischen K\u00fchlbeschichtung versehen, die unteren bleiben blank/anodisiert.",
+ "cost_estimation": "Rollformwerkzeug 30-80 k\u20ac; Serie ~40-70 \u20ac/m\u00b2 montiert (\u00e4hnlich Trapezblechfassade plus Beschichtung).",
+ "validation_experiments": "Winkelaufgel\u00f6ste Emissionsmessung, Testwand mit W\u00e4rmeflussplatten in hei\u00dfem Klima, Vergleich glatt vs. gerippt, Staubablagerungsmessung \u00fcber 2 Jahre, Ray-Tracing der Sichtfaktoren im urbanen Kontext.",
+ "industry_partners": "Coil-Coater, Hersteller von Metallfassaden, Bauphysik-Institute, Hochschulen mit Strahlungsk\u00fchlungsforschung.",
+ "_prompt_hash": "b0842f415d245de7"
+}

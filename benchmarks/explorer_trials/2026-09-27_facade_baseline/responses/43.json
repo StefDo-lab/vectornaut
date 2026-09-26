@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist die mikrobiell induzierte Calcitf\u00e4llung: Bacillus-Sporen im Putz werden bei N\u00e4sse aktiv und verschlie\u00dfen Risse mit Kalkspat. Du baust einen wei\u00dfen Kalk-Calcit-Putz mit Sporen und Calciumlactat. Das Modell zeigt ~60 % weniger Feuchteeintrag durch gerissenen Putz, wenn die Risse heilen - dieser Wert folgt aber fast direkt aus der angenommenen Restdurchl\u00e4ssigkeit der geheilten Risse. Auf die W\u00e4rmelast im Innenraum wirkt das Konzept praktisch nicht (0-3 %), weil Rissheilung die Sonnenreflexion nicht erh\u00e4lt.",
+ "pros_and_cons": "Vorteile: l\u00e4ngere Putzlebensdauer, weniger Feuchtesch\u00e4den, mineralisch und ungiftig. Nachteile: kein K\u00fchlgewinn; Sporen und N\u00e4hrstoff reichen nur f\u00fcr wenige Heilzyklen; im trockenen Hei\u00dfklima fehlt die n\u00f6tige Feuchte; teurer als Normalputz.",
+ "mechanical_limits": "Putz wie Kalkputz belastet; heilbar sind Risse bis ~0,3-0,5 mm; gr\u00f6\u00dfere Bewegungsrisse nicht. Ausfall = Rissbreite \u00fcber Heilgrenze oder ersch\u00f6pfte N\u00e4hrstoffe.",
+ "manufacturing_methods": "Sporen und Calciumlactat in Bl\u00e4hton- oder Polymerkapseln verkapseln, dem Trockenm\u00f6rtel zugeben, normal maschinell verputzen.",
+ "cost_estimation": "Mehrkosten ~5-15 \u20ac/m\u00b2 gegen\u00fcber Normalputz.",
+ "validation_experiments": "Rissheilungstests (Wasserpermeabilit\u00e4t vor/nach), Sporenviabilit\u00e4t nach Lagerung bei 50-60 \u00b0C, Feldmuster in hei\u00dfem Klima mit Beregnungszyklen.",
+ "industry_partners": "Hersteller selbstheilender Baustoffe (Bio-Beton-Start-ups), Putzhersteller, TU-Forschungsgruppen zu Biomineralisation.",
+ "_prompt_hash": "0de265f86a1d2204"
+}

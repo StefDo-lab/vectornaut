@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist die Borke der Korkeiche: geschlossene, suberinhaltige Zellen (20-40 \u00b5m) mit sehr niedriger W\u00e4rmeleitf\u00e4higkeit sch\u00fctzen das lebende Gewebe vor Hitze und Feuer. Du bekleidest die Wand mit 60 mm expandierter Korkplatte und wei\u00dfem Silikatputz. Im Westwand-Modell sinkt der W\u00e4rmestrom in den Raum um ~44 % (4,8 statt 8,7 W/m\u00b2) - ehrlich gesagt ist das der ganz normale Effekt einer Au\u00dfend\u00e4mmung; die Bionik liefert hier keinen Zusatznutzen gegen\u00fcber EPS oder Mineralwolle.",
+ "pros_and_cons": "Vorteile: gro\u00dfer, robuster Effekt unabh\u00e4ngig von Verschmutzung; Kork ist nachwachsend, dauerhaft, diffusionsoffen, schalld\u00e4mmend; zertifizierte WDVS mit Kork existieren. Nachteile: nicht neu; brennbar (Euroklasse E) - kritisch bei Hochh\u00e4usern; teurer als EPS; der Putz muss wei\u00df gehalten werden.",
+ "mechanical_limits": "Druckfestigkeit von Korkplatten ~0,1 MPa, ausreichend f\u00fcr WDVS; Putzrisse bei Temperaturwechseln an Plattenst\u00f6\u00dfen; Ausfall = Putzabl\u00f6sung, Feuchteeintrag, Windsog-Abriss bei schlechter Verd\u00fcbelung.",
+ "manufacturing_methods": "Expandierter Kork (Backkork) aus Korkgranulat im Autoklav, Platten verklebt und ged\u00fcbelt, Armierungsputz mit Gewebe, wei\u00dfer Silikat-Oberputz.",
+ "cost_estimation": "~60-100 \u20ac/m\u00b2 montiert (Kork-WDVS), also D\u00e4mmkosten, nicht Beschichtungskosten.",
+ "validation_experiments": "Hot-Box-U-Wert-Messung, Bewitterung von WDVS-Musterw\u00e4nden (ETAG 004 / EAD 040083), Brandtest, Feldmessung an sanierten Geb\u00e4uden.",
+ "industry_partners": "Korkplattenhersteller (Portugal), WDVS-Systemanbieter, Stuckateurbetriebe, Bauphysik-Institute.",
+ "_prompt_hash": "b9c16522957e3c4f"
+}

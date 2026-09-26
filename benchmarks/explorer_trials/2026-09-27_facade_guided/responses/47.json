@@ -1,0 +1,169 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Model: steady advection-diffusion of absorbing dirt in a surface layer that recedes at the photo-chalking velocity v = photon flux x quantum yield x molar volume / (N_A x co-binder fraction); surface deposition minus wash-off; clean deep boundary; the areal dirt load is transformed into the daily-mean roof heat flux (same sol-air model as the other roof concepts). Adjustment: with the proposed quantum yield 1e-5 the formula gives 18 um/yr, about twice the chalking rates measured for anatase-pigmented paints in Florida/Arizona (5-10 um/yr); I calibrate the effective quantum yield to 5e-6 (v = 2.8e-13 m/s, ~9 um/yr), so 0.5 mm lasts ~55 years. Baseline: durable acrylic cool coating with 50 % binder and effective yield 2.8e-6, giving the 0.5 um/yr erosion used before; k_abs = 316 m2/kg is calibrated to the CRRC-type baseline loss 0.85 -> 0.67. Hand result: design m = 2e-11*5e-6/(2.8e-13 + 1.6e-13) = 2.3e-4 kg/m2 -> dAlpha 0.072 -> SR 0.83 -> q = 0.5*(0.172*300 + 150 - 0.92*85)/15.5 = 3.97 W/m2 vs 5.56 W/m2: ~-29 %. Caveats: the erosion rate is now tied to the UV dose, which varies only ~+-30 % among hot climates, but the quantum yield is uncertain by a factor ~5 and the removal of loose chalk still needs wind or rain (in calm, dry periods chalk and dirt stay, although chalk is itself white); the extra benefit of anatase oxidising organic soot is not modelled; the gain still follows largely from the ratio of erosion velocities. Structural: chalky top layer has low cohesion (rubs off, stains), the silicate matrix below is sound; anatase photocatalysis degrades adjacent sealants and organic roof membranes at the edges. Simulation coefficient: effective dirt removal velocity v + k_w = 4.4e-13 m/s.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "uv_photon_flux_annual_mean",
+   "value": 1.7e+19
+  },
+  {
+   "name": "quantum_yield_cobinder_oxidation",
+   "value": 5e-06
+  },
+  {
+   "name": "cobinder_volume_fraction",
+   "value": 0.05
+  },
+  {
+   "name": "cobinder_molar_volume",
+   "value": 0.0001
+  },
+  {
+   "name": "clean_solar_reflectance",
+   "value": 0.9
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.92
+  },
+  {
+   "name": "coating_thickness",
+   "value": 0.0005
+  },
+  {
+   "name": "roof_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "domain_depth",
+   "value": 5e-05
+  },
+  {
+   "name": "deposition_flux",
+   "value": 2e-11
+  },
+  {
+   "name": "wash_off_velocity",
+   "value": 1.6e-13
+  },
+  {
+   "name": "dirt_absorption_coefficient",
+   "value": 316.0
+  },
+  {
+   "name": "solar_irradiance_daily_mean",
+   "value": 300.0
+  },
+  {
+   "name": "external_heat_transfer_coefficient",
+   "value": 15.0
+  },
+  {
+   "name": "net_sky_longwave",
+   "value": 85.0
+  },
+  {
+   "name": "ambient_temperature",
+   "value": 308.15
+  },
+  {
+   "name": "indoor_temperature",
+   "value": 298.15
+  },
+  {
+   "name": "avogadro_number",
+   "value": 6.022e+23
+  },
+  {
+   "name": "dirt_penetration_depth",
+   "value": 5e-06
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "LayerPecletNumber",
+   "value": 10.0
+  },
+  {
+   "name": "ErosionToWashOffRatioDesign",
+   "value": 1.77
+  },
+  {
+   "name": "ErosionToWashOffRatioBaseline",
+   "value": 0.1
+  }
+ ],
+ "simulation_coefficient": 4.4e-13,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Surface soiling / radiative roof heat gain",
+  "independent_var": {
+   "label": "Normalized depth below eroding surface",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Absorbing dirt concentration",
+   "unit": "kg/m^3"
+  },
+  "primary_metric": {
+   "label": "Daily-mean heat flux into the interior (from steady dirt load)"
+  },
+  "reference_metric": {
+   "label": "Analytical daily-mean heat flux into the interior"
+  },
+  "performance_gain": {
+   "label": "Reduction of service-life interior heat gain vs aged white coating"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of service-life-averaged interior heat gain",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Daily-mean heat flux into the interior (from steady dirt load)",
+  "reference_metric": "Analytical daily-mean heat flux into the interior",
+  "lower_is_better": true,
+  "acceptance_threshold": 15.0,
+  "hard_constraints": [
+   "relative error between solvers < 1 %",
+   "finite outputs",
+   "parameters within audited bounds",
+   "coating_thickness >= 20 years of chalking"
+  ],
+  "design_variables": [
+   "quantum_yield_cobinder_oxidation",
+   "cobinder_volume_fraction",
+   "clean_solar_reflectance",
+   "thermal_emittance",
+   "coating_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "integral",
+  "location": null,
+  "scale": "domain_depth",
+  "unit": "W/m^2",
+  "label": "Daily-mean heat flux into the interior",
+  "transform": "roof_u_value * ((1 - clean_solar_reflectance + dirt_absorption_coefficient * m) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - indoor_temperature) - thermal_emittance * net_sky_longwave) / (roof_u_value + external_heat_transfer_coefficient)"
+ },
+ "baseline_parameters": [
+  {
+   "name": "quantum_yield_cobinder_oxidation",
+   "value": 2.8e-06
+  },
+  {
+   "name": "cobinder_volume_fraction",
+   "value": 0.5
+  },
+  {
+   "name": "clean_solar_reflectance",
+   "value": 0.85
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.9
+  }
+ ],
+ "baseline_description": "Conventional white acrylic cool coating (SR 0.85 new, erosion ~0.5 um/yr), steady aged/soiled state"
+}

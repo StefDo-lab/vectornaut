@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist der Dornteufel (Moloch horridus), dessen Hautkan\u00e4le passiv Feuchte sammeln. Du baust hinter einer por\u00f6sen wei\u00dfen Keramikhaut eine 3-5 mm dicke Schicht aus hygroskopischem Ton (Sepiolith/Attapulgit mit Kieselgel): nachts nimmt sie Luftfeuchte auf, tags\u00fcber gibt sie sie wieder ab und k\u00fchlt durch Verdunstung - ohne Wasseranschluss. Nach realistischer Korrektur (Nachtfeuchte 20-40 %) bleiben ~15 W/m\u00b2 Verdunstungsk\u00fchlung; der W\u00e4rmestrom durch eine Westwand sinkt um ~6 % (8,1 statt 8,7 W/m\u00b2).",
+ "pros_and_cons": "Vorteile: echte passive Latentk\u00fchlung ohne Wasserzufuhr, rein mineralisch m\u00f6glich. Nachteile: kleiner Effekt, weil die Luft-Innenraum-Temperaturdifferenz dominiert; stark klimaabh\u00e4ngig (trockene N\u00e4chte = wenig Aufnahme); Staub und Salze verstopfen Poren; Schwind-Quell-Risse durch t\u00e4gliche Feuchtezyklen.",
+ "mechanical_limits": "Tone quellen/schwinden bei Feuchtewechsel; die Keramikhaut muss diese Dehnungen und Windlasten aufnehmen; Ausfall = Rissbildung, Kapazit\u00e4tsverlust > 50 %.",
+ "manufacturing_methods": "Vorgefertigte Paneele: por\u00f6se Keramikplatte (Porosit\u00e4t 30-40 %) mit r\u00fcckseitig eingebrachter Sorbens-Schicht aus Ton-Kieselgel-Granulat in mineralischem Binder; Montage als vorgeh\u00e4ngte Fassade.",
+ "cost_estimation": "Paneele ~60-100 \u20ac/m\u00b2, Sorbens selbst g\u00fcnstig (1-3 \u20ac/kg).",
+ "validation_experiments": "Sorptionsisothermen der Sorbentien bei 20-80 % RH, Klimakammer mit Tag-Nacht-Zyklen, Feldtest an Testwand mit W\u00e4gung und W\u00e4rmeflussmessung, Staub-Alterungstest.",
+ "industry_partners": "Keramikfassadenhersteller, Tonmineral-Lieferanten, Forschungsgruppen zur sorptionsbasierten K\u00fchlung.",
+ "_prompt_hash": "73f654d814d98d1f"
+}

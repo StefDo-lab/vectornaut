@@ -1,0 +1,51 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady 1D conduction through the roof in normalized coordinate x (x=0 interior, x=1 outer surface); since the gradient is taken over the full normalized thickness, roof_u_value*dT_dx is the heat flux in W/m2. Outer boundary is a linearised surface energy balance: absorbed solar (1-SR_aged)*I, convective/linearised radiative exchange h*(T_a-T_s) and net longwave loss eps*R_net. Linear, closed-form solution: dT_dx = [alpha*I + h*(T_a-T_in) - eps*R_net]/(U+h). Parameter checks: solar_reflectance 0.95 clean is consistent with BaSO4/alumina scattering layers (0.95-0.98) at 300 um. aged_reflectance_loss 0.03 as a 20-year average is optimistic for a porous inorganic surface in a dusty hot climate: field data on BaSO4/CaCO3 radiative-cooling paints show 0.02-0.05 loss within the first year and porous surfaces trap fine dust; I raise it to 0.06 (service-life mean aged SR 0.89). thermal_emittance 0.94 is plausible for fine-grained silicate/alumina (hemispherical 0.92-0.95). U=0.5, h=15, I_mean=300, R_net=85, T_a=35 C, T_in=25 C are consistent daily-mean values for a clear hot-dry summer day; note that daily-mean linearisation hides the peak-hour effect (peak q differences are larger) and that R_net of 85 W/m2 applies to dry climates (humid Gulf/tropical: 40-60 W/m2, which shrinks the advantage). Dimensionless: ratio h/U = 30 (outer film much more conductive than the roof, so the roof controls the flux); solar absorption number alpha*I/(h*(T_a-T_in)) = 0.22 design vs 0.66 baseline. Simulation coefficient: effective overall conductance from sol-air temperature to interior U_eff = U*h/(U+h) = 0.484 W/m2K. Hand solution: design dT_dx = (0.11*300 + 150 - 0.94*85)/15.5 = 6.65 K -> q = 3.33 W/m2; baseline (SR 0.85 with aged loss 0.18 -> 0.67, eps 0.90): (99 + 150 - 76.5)/15.5 = 11.13 -> q = 5.56 W/m2; gain ~40 %. Material check: potassium silicate binder is UV-stable and non-combustible; risks are microcracking under thermal cycling (roof surface 10-45 C daily) and on flexible substrates, and water uptake; surface temperatures stay far below material limits. Other benefits (durability) cannot be computed by this steady model. Baseline: the conventional aged white acrylic cool coating as in the map baseline.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "solar_reflectance", "value": 0.95},
+    {"name": "aged_reflectance_loss", "value": 0.06},
+    {"name": "thermal_emittance", "value": 0.94},
+    {"name": "coating_thickness", "value": 0.0003},
+    {"name": "roof_u_value", "value": 0.5},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0},
+    {"name": "net_sky_longwave", "value": 85.0},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "ambient_temperature", "value": 308.15}
+  ],
+  "dimensionless_numbers": [
+    {"name": "OuterFilmToRoofConductanceRatio", "value": 30.0},
+    {"name": "SolarAbsorptionNumberDesign", "value": 0.22},
+    {"name": "SolarAbsorptionNumberBaseline", "value": 0.66}
+  ],
+  "simulation_coefficient": 0.484,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Building heat transfer / radiative cooling",
+    "independent_var": {"label": "Normalized position through roof (0 = interior, 1 = outer surface)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of interior heat gain vs aged white cool coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean interior heat gain through the roof",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "outer surface temperature below 80 C", "solar_reflectance - aged_reflectance_loss >= 0.6"],
+    "design_variables": ["solar_reflectance", "aged_reflectance_loss", "thermal_emittance", "coating_thickness"]
+  },
+  "metric": {"kind": "derivative_at", "location": "0", "scale": "roof_u_value", "unit": "W/m^2", "label": "Daily-mean heat flux into the interior"},
+  "baseline_parameters": [
+    {"name": "solar_reflectance", "value": 0.85},
+    {"name": "aged_reflectance_loss", "value": 0.18},
+    {"name": "thermal_emittance", "value": 0.90}
+  ],
+  "baseline_description": "Conventional white acrylic cool coating, aged/soiled (SR 0.67, emittance 0.90), same roof"
+}

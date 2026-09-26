@@ -1,0 +1,16 @@
+{
+  "governing_equation": "d2T_dx2 = 0",
+  "boundary_conditions": [
+    "T(0) = indoor_temperature",
+    "dT_dx(1) / (1 / wall_u_value + panel_thickness / panel_conductivity) = (1 - panel_solar_reflectance_aged) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - T(1)) - panel_thermal_emittance * net_sky_longwave"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"],
+  "parameters": [
+    {"name": "indoor_temperature", "value": 298.15, "min_bound": 293.15, "max_bound": 301.15, "justification": "Conditioned interior."},
+    {"name": "ambient_temperature", "value": 308.15, "min_bound": 298.15, "max_bound": 318.15, "justification": "Daily-mean outdoor air."},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0, "min_bound": 8.0, "max_bound": 30.0, "justification": "Combined outer film coefficient."},
+    {"name": "net_sky_longwave", "value": 40.0, "min_bound": 25.0, "max_bound": 60.0, "justification": "Vertical surface, half sky view."},
+    {"name": "panel_thickness", "value": 0.02, "min_bound": 0.0, "max_bound": 0.05, "justification": "Lower bound 0 = no panel (baseline)."}
+  ]
+}

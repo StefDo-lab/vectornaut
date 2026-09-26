@@ -1,0 +1,125 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Model choice: the concept's governing quantity is the rate of reflectance loss (degradation_rate); its effect on the objective is the 20-year mean solar reflectance, which I feed into the steady roof heat-flux model, so the simulation reports the heat flux to the room (relevant quantity) with the steady-state reflectance as the design input. Check of the renewal balance: dust deposition in hot arid regions 1-5 g/m2 per week; a surface erosion of ~8 um/yr removes ~20 g/m2/yr of coating, which cannot remove several hundred g/m2/yr of dust unless rain or wind scours it; in practice limewashed surfaces in dry regions settle at SR ~0.75-0.85 between renewals. Removal also leaves runoff streaks. I therefore reduce steady_state_solar_reflectance from 0.86 to 0.82 (20-year mean). Thickness budget: 300 um / 8 um/yr = 37 years, OK. Dimensionless: renewal Damkoehler number = erosion removal / deposition, ~0.5-2 depending on rain; Biot envelope 0.026. Simulation coefficient: sol-air excess (0.18*600-0.92*80)/20 = 1.72 K vs baseline 6.0 K. Baseline: aged cool paint SR 0.68, eps 0.90. Expected gain ~22 percent (roof). Mechanical: soft lime/silicate layer, low stresses; erosion is designed in. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "erosion_rate",
+   "value": 2.5e-13
+  },
+  {
+   "name": "coating_thickness",
+   "value": 0.0003
+  },
+  {
+   "name": "soiling_deposition_rate",
+   "value": 1e-09
+  },
+  {
+   "name": "clean_solar_reflectance",
+   "value": 0.9
+  },
+  {
+   "name": "steady_state_solar_reflectance",
+   "value": 0.82
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 600.0
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.92
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 80.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "renewal_Damkoehler",
+   "value": 1.0
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.026
+  }
+ ],
+ "simulation_coefficient": 1.72,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of 20-year mean roof heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of 20-year mean roof heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "steady_state_solar_reflectance",
+   "erosion_rate",
+   "coating_thickness"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "steady_state_solar_reflectance",
+   "value": 0.68
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.9
+  }
+ ],
+ "baseline_description": "aged conventional white acrylic cool roof paint (SR 0.68, eps 0.90)"
+}

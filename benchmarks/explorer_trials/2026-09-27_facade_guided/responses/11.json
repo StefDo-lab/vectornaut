@@ -1,0 +1,156 @@
+{
+ "reviews": [
+  {
+   "order_id": "r001-01",
+   "plausible_simulated_benefit_pct": 30,
+   "plausible_objective_gain_pct": 20,
+   "plausible_gain_reasoning": "With a realistic life-mean aged SR of ~0.86 (porous inorganic surfaces in dusty hot climates lose 0.05-0.10) against a life-mean ~0.70 for the repainted acrylic, the same sol-air model gives ~30 % less roof heat flux; facades see less sun and half the sky, so over roof plus facades (windows excluded) the contribution is ~20 %.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Service-life aged reflectance loss of 0.06 is an assumption; open porosity (60 % voids) traps fine dust and there is no field data for 20 years",
+    "Dry-climate net sky longwave (85 W/m2); in humid hot climates 40-60 W/m2 shrinks the emittance advantage",
+    "Daily-mean linearised model; baseline repainted every 10 years has a life-mean SR nearer 0.70 than 0.67",
+    "Only the roof is modelled while the objective covers roof and facades"
+   ],
+   "killer_risks": [
+    "Dust and biofilm pick-up in the open porous surface erodes most of the advantage within a few years",
+    "Potassium silicate on roofs: brittle, cracks on moving substrates and fails under ponding water",
+    "Glare to neighbours from very white surfaces"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.65,
+     "reason": "~30 % on roofs, less on facades; plausibly >20 % overall only on low-rise buildings"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Purely passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.45,
+     "reason": "UV-stable binder, but soiling of the porous surface and cracking of silicate over 20 years are unproven"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.35,
+     "reason": "Any white pigment layer scatters by disorder; the beetle adds little beyond standard Mie-optimised BaSO4/alumina paints"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.7,
+     "reason": "Paint-like application and cost, but only on mineral substrates"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-02",
+   "plausible_simulated_benefit_pct": 18,
+   "plausible_objective_gain_pct": 8,
+   "plausible_gain_reasoning": "A sealed 40 mm cavity with a clean low-e face gives ~0.5 m2K/W, but tile joints leak and the low-e face collects dust, so ~0.3 m2K/W is realistic, i.e. ~18 % less facade flux; since the same resistance is available from 1-2 cm of conventional insulation and only facades are treated, its contribution to the envelope objective is ~8 %.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": false,
+   "proxy_reason": "",
+   "key_assumption_issues": [
+    "Gain mostly from the assumed cavity resistance (0.5 m2K/W), which is conventional insulation, not from the bionic reflective shell (~5 %)",
+    "Assumes a sealed cavity; real ceramic rainscreens are open-jointed",
+    "Low-e face stays clean for 20 years",
+    "Facade values (I=180, R_net=40) are reasonable"
+   ],
+   "killer_risks": [
+    "Cost and weight (100-180 EUR/m2, 20-25 kg/m2) versus paint plus 2 cm insulation",
+    "Condensation and dust in the sealed chambers degrade the low-e face",
+    "Anchor corrosion and brittle breakage"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.4,
+     "reason": "~18 % on facades only, largely replicable by insulation"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.7,
+     "reason": "Fired glaze durable for decades; seals and low-e layer are the weak point"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.3,
+     "reason": "Reflective skin plus air gap is generic building physics; the snail link is loose"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.35,
+     "reason": "Heavy and expensive cladding"
+    }
+   ]
+  },
+  {
+   "order_id": "r001-03",
+   "plausible_simulated_benefit_pct": 35,
+   "plausible_objective_gain_pct": 12,
+   "plausible_gain_reasoning": "Chalking surfaces do stay whiter than acrylics, but dirt also sticks to rough chalky surfaces and erosion in arid climates is slow; I expect the soiling-driven SR loss reduced by about a third (aged ~0.78 vs 0.70 life-mean), i.e. ~15 % less roof heat flux and ~12 % over the envelope.",
+   "simulated_quantity_relevant": true,
+   "relabelled_analogue": false,
+   "relabel_reason": "",
+   "baseline_conventional": true,
+   "baseline_issue": "",
+   "proxy_by_construction": true,
+   "proxy_reason": "Gain equals the assumed erosion-rate ratio (v_b+k_w)/(v_d+k_w) with k_abs calibrated to the baseline loss; nothing independent is solved.",
+   "key_assumption_issues": [
+    "Erosion rate of 20 um/yr assumed and not physically derived; it controls the whole result",
+    "Same wash-off and dirt absorption coefficient for smooth acrylic and a rough chalky surface",
+    "Freshly exposed subsurface assumed as white as the clean surface; UV-damaged and microcracked layers are not"
+   ],
+   "killer_risks": [
+    "Erosion is climate-dependent: no renewal in arid climates, erosion-through in wet ones",
+    "Chalk runoff stains facades below, rubs off, clogs gutters",
+    "Weak cohesion: hail, foot traffic and wind scouring damage the roof unevenly"
+   ],
+   "requirement_coverage": [
+    {
+     "name": "indoor_heat_gain_reduction",
+     "coverage": 0.35,
+     "reason": "~15 % on roofs, uncertain"
+    },
+    {
+     "name": "fully_passive",
+     "coverage": 1.0,
+     "reason": "Passive, uses rain and wind only"
+    },
+    {
+     "name": "weather_durability_20yr",
+     "coverage": 0.35,
+     "reason": "Built to erode; 20-year function depends on a climate-specific erosion rate"
+    },
+    {
+     "name": "bionic_mechanism",
+     "coverage": 0.5,
+     "reason": "Bark exfoliation is a genuine biological renewal strategy, but the mapping to chalking paint is loose"
+    },
+    {
+     "name": "building_practicality",
+     "coverage": 0.4,
+     "reason": "Chalking, staining and non-walkable surface"
+    }
+   ]
+  }
+ ]
+}

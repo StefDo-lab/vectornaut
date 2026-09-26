@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild ist Perlmutt: Aragonitpl\u00e4ttchen in einem d\u00fcnnen organischen M\u00f6rtel lenken Risse um und machen das Material vielfach z\u00e4her. Du baust eine reflektierende Deckschicht mit ausgerichteten Aluminiumoxid-/Glimmerpl\u00e4ttchen (8 \u00b5m lang, 0,4 \u00b5m dick) in einem Siloxan-Silikat-M\u00f6rtel. Das Shear-Lag-Modell zeigt, dass die Spitzenzugspannung in der mineralischen Phase unter 40-K-Temperaturwechseln auf ~26 MPa sinkt statt ~60 MPa in einem durchgehenden Silikatfilm (-57 %). Das betrifft die Rissbest\u00e4ndigkeit, nicht direkt die W\u00e4rmelast: der W\u00e4rmeeffekt ist indirekt und klein (~5 %, weil die Reflexion l\u00e4nger erhalten bleibt).",
+ "pros_and_cons": "Vorteile: l\u00e4ngere Lebensdauer mineralischer K\u00fchlbeschichtungen, weniger Risse und Feuchteeintrag, Pl\u00e4ttchen reflektieren zus\u00e4tzlich. Nachteile: verschmutzt wie jede Farbe; der M\u00f6rtel (Siloxan) altert unter UV und muss hohe Scherdehnungen (~8 %) aushalten; kein direkter K\u00fchlgewinn.",
+ "mechanical_limits": "Pl\u00e4ttchen weit unter ihrer Festigkeit; kritisch ist die M\u00f6rtelschicht (Scherdehnung ~8 %, UV-Alterung, Kriechen). Ausfall = M\u00f6rtelverspr\u00f6dung -> Pl\u00e4ttchen tragen wieder volle Last -> Craquel\u00e9.",
+ "manufacturing_methods": "Pl\u00e4ttchen durch Spr\u00fchen oder Rakeln mit Scherorientierung ausrichten (wie Effektpigmente), Siloxan-Silikat-Hybridbinder, 2-3 Schichten \u00e0 30 \u00b5m.",
+ "cost_estimation": "Effektpigmente 10-30 \u20ac/kg, ~0,1 kg/m\u00b2 -> 2-4 \u20ac/m\u00b2 Pigment; appliziert ~10-15 \u20ac/m\u00b2.",
+ "validation_experiments": "Temperaturwechseltest (-/+ 40 K, 1000 Zyklen) mit Rissmikroskopie, Riss\u00fcberbr\u00fcckung nach EN 1062-7, QUV-Alterung des M\u00f6rtels, Reflexionsmessung vor/nach.",
+ "industry_partners": "Effektpigmenthersteller, Fassadenfarbenhersteller, Materialforschungsinstitute f\u00fcr bioinspirierte Verbundwerkstoffe.",
+ "_prompt_hash": "d875ecb98b73146f"
+}

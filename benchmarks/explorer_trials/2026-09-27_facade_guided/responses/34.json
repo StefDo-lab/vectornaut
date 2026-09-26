@@ -1,0 +1,97 @@
+{
+  "function_analysis": "Stored functions F1-F5 apply. This round's orders ask for an electrostatic mechanism (which can only act on heat flux indirectly, by limiting dust adhesion and thus the loss of solar reflectance), for sub-micron flow redirection (sub-micron features lie deep inside the viscous sublayer of the wind boundary layer and cannot steer flow), and for a more abrasion-proof version of the sealed closed-cell white coat.",
+  "requirements": [
+    {"name": "indoor_heat_gain_reduction", "criterion": "Clearly lowers the summer-day heat flux into the interior (roughly >20 %) versus the aged conventional white cool coating on the same envelope."},
+    {"name": "fully_passive", "criterion": "Works without electricity, pumps, fans or water supply; only sun, sky, wind and rain act on it."},
+    {"name": "weather_durability_20yr", "criterion": "Keeps its optical and thermal function (and adhesion) for at least 20 years under hot-climate UV, thermal cycling, rain, dust/sand and soiling without major maintenance."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is actually derived from a biological model (plant, animal, microbe), not only labelled so."},
+    {"name": "building_practicality", "criterion": "Applicable as coating or facade structure on real buildings at acceptable cost, weight and glare, without toxic release."}
+  ],
+  "mechanism_classes_considered": ["electrostatic_field", "flow_redirection", "radiative_control"],
+  "analogues_considered": [
+    "Flower electrostatics (bumblebee-flower fields): plants are earthed conductors whose field attracts charged pollen - attraction, not repulsion, and no dust-shedding function",
+    "Triboelectric charging of leaves in wind (oleander leaves) - no known anti-soiling role",
+    "Antistatic transparent conductive oxide coatings on PV glass (technology) that bleed off tribo-charge and reduce electrostatic dust adhesion",
+    "Leaf boundary layers and lobed leaves (Vogel): convective coupling at mm-cm scale",
+    "Birch periderm: many rows of closed phellem cells under a water-repellent outer surface; damage exposes only the outermost cell row",
+    "Glazed ceramic tiles: dense glass surfaces that keep their reflectance for decades"
+  ],
+  "objective_statement": "Summer-day (24 h) heat flux into the conditioned interior through the sun-exposed roof and facades of a building in a hot climate, averaged over a 20-year service life, including UV ageing, weathering and soiling of the outer surface (not the value of a freshly applied clean surface).",
+  "baseline_statement": "Conventional white acrylic/elastomeric cool-roof or facade coating (initial solar reflectance ~0.85, thermal emittance ~0.90) in its in-service aged and soiled condition (3-year aged solar reflectance ~0.65-0.70, as in CRRC ageing data), repainted every ~10 years, on the same insulated wall or roof.",
+  "relevant_governing_quantities": ["heat_flux", "temperature", "degradation_rate"],
+  "candidates": [
+    {
+      "order_id": "r004-01",
+      "title": "Antistatic oxide-network white topcoat",
+      "summary": "A white topcoat containing a percolating network of ~20 nm antimony-doped tin oxide (ATO) nanoparticles that bleeds off triboelectric charge from wind-blown dust, so the electrostatic image-force part of dust adhesion vanishes and rain and wind remove dust more easily. No plant system offers a passive electrostatic dust-shedding mechanism (flowers attract charged pollen rather than repel it), so this concept is honestly labelled as borrowed from technology (antistatic PV glass coatings).",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "electrostatic_field"},
+        {"axis": "length_scale", "value": "nm"},
+        {"axis": "inspiration_origin", "value": "technology"},
+        {"axis": "governing_quantity", "value": "degradation_rate"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean roof heat flux vs aged white acrylic coating (via slower soiling)",
+        "formula": "Electrostatic adhesion matters mainly for charged 10-50 um grains; fine soot/organics adhere by van der Waals and capillary forces. Assume the aged SR loss falls from 0.18 to 0.15: alpha 0.30 vs 0.33 -> q = 0.5*(90 + 150 - 76.5)/15.5 = 5.27 vs 5.56 W/m2 -> -5 %",
+        "value": 5,
+        "unit": "%"
+      },
+      "main_risk": "The soiling that darkens cool roofs is dominated by fine absorbing particles held by van der Waals and capillary forces, which charge dissipation does not touch, so the benefit may be near zero.",
+      "novelty_vs_known": "Closest known: antistatic ATO/ITO coatings on PV cover glass; applied here to white cool coatings. Not bionic.",
+      "baseline": "Conventional white acrylic cool coating, aged and soiled (SR 0.67, emittance 0.90), on the same roof.",
+      "inspiration_source": "Technology: antistatic transparent conductive oxide coatings used against dust on PV modules (no plant analogue found; flower electrostatics works the other way).",
+      "domain": "Electrostatics / surface soiling",
+      "physical_mechanism": "Tribo-charged dust grains induce an image charge in an insulating surface only if the surface cannot bleed charge; a surface resistivity below ~1e9 Ohm/sq lets the charge decay in seconds, removing the image force and field-driven deposition. Modelled as steady 1D charge relaxation/diffusion in the topcoat with a surface charging flux and a grounded substrate, from which the steady surface potential and the electrostatic adhesion pressure follow; the adhesion change is translated into a steady soiling level and heat flux.",
+      "parameters": [
+        {"name": "surface_resistivity", "value": 1e8, "min_bound": 1e6, "max_bound": 1e12, "justification": "Percolating ATO network at 5-10 vol% in a white binder."},
+        {"name": "ato_particle_size", "value": 2e-08, "min_bound": 5e-09, "max_bound": 1e-07, "justification": "Nanoparticles small enough to keep the coat white (ATO absorbs weakly in the NIR)."},
+        {"name": "ato_volume_fraction", "value": 0.07, "min_bound": 0.02, "max_bound": 0.15, "justification": "Just above percolation."},
+        {"name": "aged_reflectance_loss", "value": 0.15, "min_bound": 0.1, "max_bound": 0.18, "justification": "Assumed slight improvement over acrylic's 0.18."},
+        {"name": "clean_solar_reflectance", "value": 0.84, "min_bound": 0.78, "max_bound": 0.88, "justification": "ATO absorbs some NIR, lowering clean SR by ~0.01."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same roof as baseline."}
+      ]
+    },
+    {
+      "order_id": "r004-02",
+      "target_feasible": false,
+      "infeasibility_reason": "Sub-micron surface features sit deep in the viscous sublayer of the wind boundary layer on a building (roughness Reynolds number u_tau*k/nu ~ 1e-2 for k = 0.5 um), where the flow is Stokes flow that cannot be redirected, so no sub-micron flow-redirection structure can change convective heat transfer or heat flux; flow-steering facade features must be mm to m in size.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "flow_redirection"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ]
+    },
+    {
+      "order_id": "r004-03",
+      "title": "Birch-periderm glazed multi-row cell coat",
+      "summary": "A factory-fired white facade/roof panel coating made of several rows of closed glass micro-cells with sub-micron BaSO4 crystals in the cell walls, capped by a 30-50 um dense, transparent glaze skin, copying the birch periderm with its many rows of closed, crystal-filled phellem cells under a sealed outer surface. The glaze skin gives the abrasion resistance and dirt shedding of glazed ceramics, and if it is locally abraded only the top row of cells opens while the rows below keep scattering.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "radiative_control"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean roof heat flux vs aged white acrylic cool coating",
+        "formula": "Clean SR 0.90 (glaze adds ~4 % specular reflection but costs some diffuse scattering), life-mean loss 0.04 like glazed tiles -> SR 0.86, eps 0.93 (silicate glaze): q = 0.5*(0.14*300 + 150 - 0.93*85)/15.5 = 3.64 vs 5.56 W/m2 -> -35 %",
+        "value": 35,
+        "unit": "%"
+      },
+      "main_risk": "The fired glaze-on-glass-foam system is limited to factory-made rigid panels (not a paint for existing roofs), and hail or impact can crack the brittle skin.",
+      "novelty_vs_known": "Closest known: white glazed ceramic tiles (SR ~0.75-0.80) and cellular glass; new is the multi-row closed-cell scattering layer with sub-micron crystals under a transparent glaze, reaching higher reflectance than white glazes with the same durability.",
+      "baseline": "Conventional white acrylic cool coating, aged and soiled (SR 0.67, emittance 0.90), on the same roof.",
+      "inspiration_source": "Birch periderm: 10-50 rows of flat, dead, air-filled phellem cells with betulin crystals in and on the walls, under a sealed water-repellent surface; damage removes only the outermost cells and the white layers below remain.",
+      "domain": "Radiative heat transfer / building materials",
+      "physical_mechanism": "Several rows of closed cells with sub-micron crystals scatter sunlight (the transport mean free path of a few tens of um makes 5-10 rows opaque); the transparent glaze skin passes sunlight into the scattering rows, emits strongly at 8-13 um (Si-O bands), keeps dust on a smooth surface that rain washes, and resists sand abrasion. Steady 1D roof conduction with sol-air boundary as in the reference roof concepts.",
+      "parameters": [
+        {"name": "solar_reflectance", "value": 0.9, "min_bound": 0.84, "max_bound": 0.95, "justification": "Multi-row closed-cell scattering under a glaze."},
+        {"name": "aged_reflectance_loss", "value": 0.04, "min_bound": 0.02, "max_bound": 0.1, "justification": "Glazed ceramic tiles lose 0.03-0.08 over years."},
+        {"name": "thermal_emittance", "value": 0.93, "min_bound": 0.88, "max_bound": 0.96, "justification": "Silicate glaze."},
+        {"name": "glaze_thickness", "value": 4e-05, "min_bound": 2e-05, "max_bound": 0.0001, "justification": "Thin enough to avoid crazing, thick enough against abrasion."},
+        {"name": "cell_rows", "value": 8.0, "min_bound": 4.0, "max_bound": 20.0, "justification": "Birch periderm has tens of rows; 8 rows of 30 um cells make ~0.25 mm."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same roof as baseline."}
+      ]
+    }
+  ]
+}

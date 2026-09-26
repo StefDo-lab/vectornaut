@@ -1,0 +1,113 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameters physical. A loose glass microfibre mat in a dusty hot climate will trap dust in its interstices and rain rarely cleans it; I raise the 20-year mean absorptance from 0.15 to 0.18 (SR 0.82 aged mean). Emittance of a glass-fibre layer on a mineral base ~0.93 (silica reststrahlen near 9 um partly offset by fibre scattering); set 0.93. Size parameter of fibres x = pi*d/lambda = pi*8e-6/0.5e-6 ~ 50 (geometric-optics/TIR regime in the visible; Mie in the NIR). Biot of envelope wall_conductance/h_o = 0.026. Simulation coefficient: effective sol-air excess (alpha*I - eps*dR)/h_o = (108-74.4)/20 = 1.68 K. Model: steady 1D conduction, linear, analytical. Metric: heat flux to the room at x=1. Baseline: aged cool paint alpha 0.32, eps 0.90. Roof case. Expected gain ~23%. Mechanical: glass fibres are brittle; hail and sand abrasion break them; bonding to the base must survive 40 K cycles. Durability risk, not a safety risk; audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "solar_absorptance",
+   "value": 0.18
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.93
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 600.0
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 80.0
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "fibre_width",
+   "value": 8e-06
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "fibre_size_parameter_visible",
+   "value": 50.0
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.026
+  }
+ ],
+ "simulation_coefficient": 1.68,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of roof heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of roof heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "solar_absorptance",
+   "thermal_emittance",
+   "fibre_width"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-wall_conductance",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "solar_absorptance",
+   "value": 0.32
+  },
+  {
+   "name": "thermal_emittance",
+   "value": 0.9
+  }
+ ],
+ "baseline_description": "aged conventional white acrylic cool roof paint (SR 0.68, eps 0.90)"
+}

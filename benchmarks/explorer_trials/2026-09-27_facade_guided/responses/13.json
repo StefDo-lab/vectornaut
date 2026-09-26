@@ -1,0 +1,17 @@
+{
+  "governing_equation": "d2T_dx2 = 0",
+  "boundary_conditions": [
+    "T(0) = indoor_temperature",
+    "dT_dx(1) / (1 / roof_u_value + aerogel_thickness / aerogel_conductivity) = (1 - finish_solar_reflectance_aged) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - T(1)) - finish_thermal_emittance * net_sky_longwave"
+  ],
+  "independent_variables": ["x"],
+  "dependent_variables": ["T"],
+  "parameters": [
+    {"name": "indoor_temperature", "value": 298.15, "min_bound": 293.15, "max_bound": 301.15, "justification": "Conditioned interior at 25 C."},
+    {"name": "ambient_temperature", "value": 308.15, "min_bound": 298.15, "max_bound": 318.15, "justification": "Daily-mean outdoor air."},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0, "min_bound": 200.0, "max_bound": 350.0, "justification": "Horizontal roof, clear hot summer day."},
+    {"name": "net_sky_longwave", "value": 85.0, "min_bound": 40.0, "max_bound": 120.0, "justification": "Dry clear sky, horizontal surface."},
+    {"name": "finish_thermal_emittance", "value": 0.9, "min_bound": 0.85, "max_bound": 0.95, "justification": "Conventional white finish on top of the mat."},
+    {"name": "aerogel_thickness", "value": 0.015, "min_bound": 0.0, "max_bound": 0.03, "justification": "Lower bound 0 = no underlayer (baseline)."}
+  ]
+}

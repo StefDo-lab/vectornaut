@@ -1,0 +1,50 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady 1D series conduction interior -> wall -> sealed air chamber -> shell; the normalized gradient dT_dx spans the full resistance R_tot = 1/U_wall + R_gap, so q = dT_dx/R_tot. Outer boundary is a linearised sol-air balance on the shell. Closed form: q = [alpha*I + h*(T_a - T_in) - eps*R_net]/(1 + h*R_tot). Adjustments: the concept is a facade cladding, but the proposal used horizontal-roof numbers. For a west/east facade in a hot climate the daily-mean irradiance is ~150-200 W/m2 (I set 180) and the net longwave loss of a vertical surface, which sees half sky and half warm ground/buildings, is ~30-45 W/m2 (I set 40). R_gap = 0.5 m2K/W is consistent with ISO 6946 for a 40 mm unventilated vertical cavity with one low-e face (h_a ~1.25, h_r ~0.3 W/m2K -> ~0.6); I keep 0.5 to allow for dust and condensation on the low-e face over 20 years. Aged glazed ceramic SR 0.75 is plausible (glazes are smooth and rain-washed; white glazes start ~0.80). Dimensionless: Biot-type ratio h*R_tot = 37.5 (design) vs 30 (baseline); Rayleigh number of the 40 mm cavity at dT ~ 3 K: Ra ~ g*beta*dT*d^3/(nu*alpha) = 9.81*(1/308)*3*6.4e-5/(1.6e-5*2.2e-5) ~ 1.7e4, i.e. weak cellular convection, consistent with ISO values. Simulation coefficient: effective assembly conductance U_eff = 1/(R_tot + 1/h) = 0.39 W/m2K. Hand solution: design q = (45 + 150 - 36)/(1 + 37.5) = 4.13 W/m2; baseline (aged white paint SR 0.67 directly on the wall, R_gap = 0): (59.4 + 150 - 36)/(1 + 30) = 5.59 W/m2; gain ~26 %. Important: most of this gain comes from the added cavity resistance, which a thicker conventional insulation layer would also give; the reflective-shell part alone is ~5 %. Structural: ceramic shells ~10 mm thick on stainless anchors carry wind suction of ~1-2 kPa easily; fired glaze is UV-stable for decades; risks are anchor corrosion, breakage by hail/impact and cracked seals letting dust into the chamber. Baseline: aged white acrylic facade coating directly on the same wall (map baseline).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "shell_solar_reflectance_aged", "value": 0.75},
+    {"name": "air_gap_thickness", "value": 0.04},
+    {"name": "gap_effective_resistance", "value": 0.5},
+    {"name": "wall_u_value", "value": 0.5},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "solar_irradiance_daily_mean", "value": 180.0},
+    {"name": "indoor_temperature", "value": 298.15},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "shell_thermal_emittance", "value": 0.9},
+    {"name": "net_sky_longwave", "value": 40.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "OuterFilmBiotDesign", "value": 37.5},
+    {"name": "OuterFilmBiotBaseline", "value": 30.0},
+    {"name": "CavityRayleighNumber", "value": 17000.0}
+  ],
+  "simulation_coefficient": 0.39,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Building physics / facade heat transfer",
+    "independent_var": {"label": "Normalized thermal position (0 = interior, 1 = outer shell)", "unit": "-"},
+    "dependent_var": {"label": "Temperature", "unit": "K"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of facade heat gain vs aged white coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of daily-mean facade heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 15.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "shell temperature below 80 C"],
+    "design_variables": ["shell_solar_reflectance_aged", "air_gap_thickness", "gap_effective_resistance", "shell_thermal_emittance"]
+  },
+  "metric": {"kind": "derivative_at", "location": "0", "scale": "1 / (1 / wall_u_value + gap_effective_resistance)", "unit": "W/m^2", "label": "Daily-mean heat flux into the interior"},
+  "baseline_parameters": [
+    {"name": "shell_solar_reflectance_aged", "value": 0.67},
+    {"name": "gap_effective_resistance", "value": 0.0}
+  ],
+  "baseline_description": "Aged white acrylic coating (SR 0.67, emittance 0.90) directly on the same wall"
+}

@@ -1,0 +1,10 @@
+{
+ "executive_summary": "Vorbild sind die kleinen Fiederbl\u00e4ttchen von W\u00fcstenb\u00e4umen (Parkinsonia, Akazie): weil sie so klein sind, ist ihre Grenzschicht d\u00fcnn, der W\u00e4rme\u00fcbergang hoch, und sie bleiben ohne Verdunstung nahe Lufttemperatur. Du baust einen leichten Schirm aus vielen 2-3 cm breiten wei\u00dfen Keramiklamellen, 15 cm vor der Wand. Die Wand liegt im Schatten, und der Schirm selbst wird nur ~1-2 K w\u00e4rmer als die Luft. Im Westwand-Modell sinkt der W\u00e4rmestrom in den Raum um ~16 % (7,3 statt 8,7 W/m\u00b2) gegen\u00fcber einer unbeschatteten Cool-Paint-Wand.",
+ "pros_and_cons": "Vorteile: robust, keramische Lamellen halten Jahrzehnte, verschmutzen wenig, bekannte Bauweise (Brise-Soleil, Mashrabiya); funktioniert auch mit dunkleren W\u00e4nden dahinter. Nachteile: im Grunde eine klassische Verschattung, daher wenig neu; teure Unterkonstruktion und Windlasten; der Gewinn gegen\u00fcber einer guten wei\u00dfen Wand ist begrenzt, weil die Luft-Innenraum-Temperaturdifferenz dominiert. Bei dunklen, unisolierten W\u00e4nden w\u00e4re der Nutzen viel gr\u00f6\u00dfer.",
+ "mechanical_limits": "Lamellen und Halter m\u00fcssen Windlasten (~1 kPa) und Schwingungen standhalten; Keramik ist spr\u00f6de gegen Sto\u00df. Ausfall = Bruch von Lamellen oder Korrosion der Halterung.",
+ "manufacturing_methods": "Stranggepresste Keramik- oder Terrakotta-St\u00e4be bzw. -Lamellen auf Aluminium- oder Edelstahlunterkonstruktion; Raster so gew\u00e4hlt, dass die Nachmittagssonne im Westen geblockt wird.",
+ "cost_estimation": "Serie ~80-150 \u20ac/m\u00b2 Fassadenfl\u00e4che montiert.",
+ "validation_experiments": "Testfassade mit/ohne Schirm, Messung von Lamellen- und Wandtemperatur (IR-Kamera) und W\u00e4rmestrom, Windkanalversuch zur Konvektion an kleinen Lamellen, Langzeitbeobachtung von Verschmutzung.",
+ "industry_partners": "Hersteller von Terrakotta-Lamellen und Sonnenschutzsystemen, Fassadenplaner, Bauphysik-Institute.",
+ "_prompt_hash": "c3ea7de8253e275e"
+}

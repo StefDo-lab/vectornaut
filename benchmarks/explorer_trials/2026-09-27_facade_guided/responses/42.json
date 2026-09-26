@@ -1,0 +1,98 @@
+{
+  "function_analysis": "Stored functions F1-F5 apply. This round asks again for sub-micron flow redirection (now with animal origin), for a plant-derived sub-micron lattice that insulates and shades, and for a self-renewing white coat whose renewal is driven by something more reliable than rain in hot climates.",
+  "requirements": [
+    {"name": "indoor_heat_gain_reduction", "criterion": "Clearly lowers the summer-day heat flux into the interior (roughly >20 %) versus the aged conventional white cool coating on the same envelope."},
+    {"name": "fully_passive", "criterion": "Works without electricity, pumps, fans or water supply; only sun, sky, wind and rain act on it."},
+    {"name": "weather_durability_20yr", "criterion": "Keeps its optical and thermal function (and adhesion) for at least 20 years under hot-climate UV, thermal cycling, rain, dust/sand and soiling without major maintenance."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is actually derived from a biological model (plant, animal, microbe), not only labelled so."},
+    {"name": "building_practicality", "criterion": "Applicable as coating or facade structure on real buildings at acceptable cost, weight and glare, without toxic release."}
+  ],
+  "mechanism_classes_considered": ["flow_redirection", "architected_lattice", "radiative_control"],
+  "analogues_considered": [
+    "Balsa/wood cell walls: aligned cellulose nanofibril lattice; delignified 'nanowood' is white, strong and transversely insulating (k ~0.03 W/mK)",
+    "Desert plant leaf pubescence (Encelia farinosa): white hairs reflect sunlight and hold still air",
+    "Birch bark: sacrificial renewal of a white outer layer",
+    "Photo-chalking of anatase-pigmented paints: UV-paced surface renewal",
+    "Animal microstructures in the viscous sublayer (shark denticles, bird feather barbules) act only at 10 um-mm scale"
+  ],
+  "objective_statement": "Summer-day (24 h) heat flux into the conditioned interior through the sun-exposed roof and facades of a building in a hot climate, averaged over a 20-year service life, including UV ageing, weathering and soiling of the outer surface (not the value of a freshly applied clean surface).",
+  "baseline_statement": "Conventional white acrylic/elastomeric cool-roof or facade coating (initial solar reflectance ~0.85, thermal emittance ~0.90) in its in-service aged and soiled condition (3-year aged solar reflectance ~0.65-0.70, as in CRRC ageing data), repainted every ~10 years, on the same insulated wall or roof.",
+  "relevant_governing_quantities": ["heat_flux", "temperature", "degradation_rate"],
+  "candidates": [
+    {
+      "order_id": "r005-01",
+      "target_feasible": false,
+      "infeasibility_reason": "As for the plant variant of this cell: sub-micron features lie deep inside the viscous sublayer of the wind boundary layer (roughness Reynolds number ~1e-2), where Stokes flow cannot be redirected, so no sub-micron flow-redirection structure of any origin can change convective heat transfer; flow-steering features must be mm to m in size.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "flow_redirection"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ]
+    },
+    {
+      "order_id": "r005-02",
+      "title": "Nanowood white insulating facade panel",
+      "summary": "A 20 mm facade panel of delignified, hydrophobised wood ('nanowood') whose aligned cellulose nanofibril lattice, inherited from the wood cell wall, scatters sunlight (white, SR ~0.85-0.9), emits in the mid-IR and conducts heat very poorly across the fibres (~0.03 W/mK). One plant-made lattice therefore shades like the spine pile and insulates like the aerogel mat.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "architected_lattice"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "heat_flux"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of daily-mean west-facade heat flux vs aged white paint on the wall",
+        "formula": "R_panel = 0.02/0.03 = 0.67 m2K/W; aged SR 0.75 (cellulose yellows and soils), eps 0.93; q = (0.25*180 + 150 - 0.93*40)/(1 + 15*2.67) = 157.8/41 = 3.85 vs (59.4 + 150 - 36)/31 = 5.59 W/m2 -> -31 %",
+        "value": 31,
+        "unit": "%"
+      },
+      "main_risk": "Unprotected cellulose outdoors swells, grows mould and photo-yellows; even hydrophobised nanowood is unlikely to keep its whiteness and strength for 20 years in sun and rain.",
+      "novelty_vs_known": "Closest known: radiative-cooling wood and nanowood insulation from the laboratory (2018-2019), and conventional ETICS; new is using one plant lattice as a combined white skin and insulating facade panel.",
+      "baseline": "Conventional white acrylic facade coating, aged and soiled (SR 0.67, emittance 0.90), directly on the same insulated wall.",
+      "inspiration_source": "Wood (balsa, basswood) cell walls: aligned cellulose nanofibrils (~20-50 nm) in a lattice of hollow cells; after lignin removal the lattice is white by scattering and transversely insulating.",
+      "domain": "Heat transfer / building materials",
+      "physical_mechanism": "Aligned cellulose nanofibrils with ~50 % air in sub-micron gaps scatter sunlight and phonon-scatter heat across the fibre direction, giving k_perp ~0.03 W/mK; cellulose emits strongly at 8-13 um. Steady 1D series conduction through wall and panel with sol-air Robin boundary.",
+      "parameters": [
+        {"name": "panel_thickness", "value": 0.02, "min_bound": 0.01, "max_bound": 0.05, "justification": "Structural facade panel thickness."},
+        {"name": "panel_conductivity", "value": 0.03, "min_bound": 0.025, "max_bound": 0.06, "justification": "Nanowood transverse k 0.03 W/mK dry; wetting raises it."},
+        {"name": "panel_solar_reflectance_aged", "value": 0.75, "min_bound": 0.55, "max_bound": 0.9, "justification": "Clean ~0.9; photo-yellowing and soiling lower it."},
+        {"name": "panel_thermal_emittance", "value": 0.93, "min_bound": 0.88, "max_bound": 0.96, "justification": "Cellulose C-O bands in 8-13 um."},
+        {"name": "wall_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same wall as baseline."},
+        {"name": "solar_irradiance_daily_mean", "value": 180.0, "min_bound": 120.0, "max_bound": 250.0, "justification": "West facade."}
+      ]
+    },
+    {
+      "order_id": "r005-03",
+      "title": "UV-paced photo-chalking birch-bark coat",
+      "summary": "A thick white silicate coat with 5 vol% of an organic co-binder and anatase TiO2 at the grain surfaces: sunlight's UV photo-oxidises the co-binder in the top micrometres at a rate set by the UV dose, releasing a thin, white chalk layer that takes the deposited dirt with it and exposes fresh surface, like birch bark shedding its outer layer. Unlike rain erosion, the UV dose varies by only ~30 % between hot climates, and the anatase also oxidises organic soot on the surface.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "radiative_control"},
+        {"axis": "length_scale", "value": "10_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "degradation_rate"}
+      ],
+      "back_of_envelope": {
+        "quantity": "Reduction of service-life-mean roof heat flux vs aged white acrylic cool coating",
+        "formula": "Chalking rate ~5-10 um/yr (anatase chalking paints in Florida/Arizona), steady dirt load ~1/3 of acrylic's -> life-mean SR ~0.82 (clean 0.90), eps 0.92, vs baseline life-mean 0.70: q = 0.5*(54 + 150 - 78.2)/15.5 = 4.06 vs 5.27 W/m2 -> -23 %",
+        "value": 23,
+        "unit": "%"
+      },
+      "main_risk": "Chalk and dirt need wind or rain to leave the surface; the loose chalk rubs off and stains, and photocatalysis attacks sealants and adjacent organic materials.",
+      "novelty_vs_known": "Closest known: historic chalking anatase paints and photocatalytic silicate facade paints; new is a thick, fully white reserve coat whose renewal rate is designed from the UV dose for 20 years, instead of relying on rain erosion.",
+      "baseline": "Conventional white acrylic cool coating, aged and soiled (life-mean SR ~0.70 with repaint every 10 years, emittance 0.90), on the same roof.",
+      "inspiration_source": "Birch (Betula) bark: the white outer phellem is continuously sacrificed and replaced from below, so the surface stays white regardless of what lands on it.",
+      "domain": "Surface degradation / radiative heat transfer",
+      "physical_mechanism": "UV (300-400 nm) is absorbed within ~1-2 um by anatase; photogenerated radicals oxidise the organic co-binder, so the grains in the top layer lose cohesion at a rate v = (absorbed UV photon flux x quantum yield x molar volume of co-binder)/co-binder fraction, typically 5-10 um/yr; the white chalk is removed by wind and rain with the deposited dirt. Modelled as steady advection-diffusion of absorbing dirt in the receding surface layer with the UV-derived erosion velocity; the steady dirt load sets absorptance in the sol-air roof balance.",
+      "parameters": [
+        {"name": "uv_photon_flux_annual_mean", "value": 1.7e19, "min_bound": 1.2e19, "max_bound": 2.2e19, "justification": "300-400 nm photon flux ~ 1e20 /m2/s at noon, ~1.7e19 annual mean in hot climates."},
+        {"name": "quantum_yield_cobinder_oxidation", "value": 1e-5, "min_bound": 1e-6, "max_bound": 1e-4, "justification": "Effective yield for binder scission in anatase paints (most carriers recombine)."},
+        {"name": "cobinder_volume_fraction", "value": 0.05, "min_bound": 0.02, "max_bound": 0.1, "justification": "Just enough organic co-binder to give cohesion before chalking."},
+        {"name": "cobinder_molar_volume", "value": 1e-4, "min_bound": 5e-5, "max_bound": 2e-4, "justification": "Per oxidised repeat unit of an acrylic co-binder."},
+        {"name": "clean_solar_reflectance", "value": 0.9, "min_bound": 0.85, "max_bound": 0.95, "justification": "Anatase/rutile-free BaSO4/CaCO3 white; anatase absorbs UV (~4 % of solar)."},
+        {"name": "thermal_emittance", "value": 0.92, "min_bound": 0.88, "max_bound": 0.96, "justification": "Silicate/sulfate."},
+        {"name": "coating_thickness", "value": 0.0005, "min_bound": 0.0002, "max_bound": 0.001, "justification": "Reserve for 20+ years at 5-10 um/yr."},
+        {"name": "roof_u_value", "value": 0.5, "min_bound": 0.2, "max_bound": 3.0, "justification": "Same roof as baseline."}
+      ]
+    }
+  ]
+}

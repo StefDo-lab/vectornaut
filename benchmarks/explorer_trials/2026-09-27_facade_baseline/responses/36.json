@@ -1,0 +1,120 @@
+{
+ "audit_passed": true,
+ "audit_notes": "Parameter check: expanded cork board lambda 0.037-0.045 W/mK; with outdoor moisture uptake I keep 0.04 (moisture is low in hot-dry climates). 60 mm adds R = 1.5 m2K/W. Cork outdoors greys and erodes ~0.1 mm/yr without render; with a mineral render the board lasts decades (ETICS with cork are certified). Render absorptance 0.30 aged is similar to the baseline paint, so the gain is almost entirely the added insulation. Dimensionless: Biot of cork layer h_o*t/k = 20*0.06/0.04 = 30 (resistance dominated by cork); Biot envelope 0.015. Simulation coefficient: effective series conductance G_eff = 1/(1/0.526 + 1.5) = 0.294 W/m2K. Model: steady 1D conduction, analytical. Metric: heat flux to the room with scale -G_eff. Baseline: same wall with aged cool paint and no cork (cork_thickness 0, render absorptance 0.32). Expected gain ~44 percent - but this is the conventional benefit of external insulation; the bionic element (cork cells) contributes nothing beyond what EPS or mineral wool would. Fire: cork is combustible (Euroclass E), relevant for high-rise facades. Audit passed.",
+ "request_feasible": true,
+ "infeasibility_reason": null,
+ "audited_parameters": [
+  {
+   "name": "cork_thickness",
+   "value": 0.06
+  },
+  {
+   "name": "cork_conductivity",
+   "value": 0.04
+  },
+  {
+   "name": "render_solar_absorptance",
+   "value": 0.3
+  },
+  {
+   "name": "wall_u_value",
+   "value": 0.5
+  },
+  {
+   "name": "outer_heat_transfer_coefficient",
+   "value": 20.0
+  },
+  {
+   "name": "wall_conductance",
+   "value": 0.526
+  },
+  {
+   "name": "T_air",
+   "value": 311.15
+  },
+  {
+   "name": "T_indoor",
+   "value": 298.15
+  },
+  {
+   "name": "solar_irradiance",
+   "value": 300.0
+  },
+  {
+   "name": "render_emittance",
+   "value": 0.9
+  },
+  {
+   "name": "net_longwave_sky_loss",
+   "value": 20.0
+  }
+ ],
+ "dimensionless_numbers": [
+  {
+   "name": "cork_Biot",
+   "value": 30.0
+  },
+  {
+   "name": "Biot_envelope",
+   "value": 0.015
+  }
+ ],
+ "simulation_coefficient": 0.294,
+ "solver_method": "analytical",
+ "ui_metadata": {
+  "domain_name": "Heat transfer",
+  "independent_var": {
+   "label": "Normalised depth through wall (outer surface at 0)",
+   "unit": "-"
+  },
+  "dependent_var": {
+   "label": "Temperature",
+   "unit": "K"
+  },
+  "primary_metric": {
+   "label": "Heat flux to the room (solver)"
+  },
+  "reference_metric": {
+   "label": "Heat flux to the room (analytical)"
+  },
+  "performance_gain": {
+   "label": "Reduction of west-wall heat flux to the room vs aged cool paint"
+  }
+ },
+ "objective_metric": {
+  "objective_name": "Reduction of west-wall heat flux to the room vs aged cool paint",
+  "score_field": "performance_gain_pct",
+  "direction": "maximize",
+  "primary_metric": "Heat flux to the room (solver)",
+  "reference_metric": "Heat flux to the room (analytical)",
+  "lower_is_better": true,
+  "acceptance_threshold": 5.0,
+  "hard_constraints": [
+   "relative error between solver and analytical reference < 1%",
+   "finite outputs",
+   "all parameters within audited bounds"
+  ],
+  "design_variables": [
+   "cork_thickness",
+   "render_solar_absorptance"
+  ]
+ },
+ "metric": {
+  "kind": "derivative_at",
+  "location": "1",
+  "scale": "-1/(1/wall_conductance + cork_thickness/cork_conductivity)",
+  "unit": "W/m^2",
+  "label": "Heat flux to the room"
+ },
+ "baseline_parameters": [
+  {
+   "name": "cork_thickness",
+   "value": 0.0
+  },
+  {
+   "name": "render_solar_absorptance",
+   "value": 0.32
+  }
+ ],
+ "baseline_description": "same wall with aged conventional cool paint, no added insulation"
+}

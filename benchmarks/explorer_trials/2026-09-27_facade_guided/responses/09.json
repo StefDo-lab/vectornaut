@@ -1,0 +1,63 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady advection-diffusion of absorbing dirt in a frame attached to the receding (eroding) surface; material moves towards the surface at the erosion rate v and dirt spreads into the top layer with effective diffusivity D = dirt_penetration_depth * v, so the dirt profile decays as exp(-z/delta). Surface: deposition flux minus rain/wind wash-off (first-order, wash_off_velocity * c(0)); deep boundary clean. Closed form: c(0) = J_dep/(v + k_w), areal load m = c(0)*delta. Metric: integral of c over the layer times domain_depth = areal dirt load (kg/m2); transform to the daily-mean interior heat flux through the roof with alpha = 1 - SR_clean + k_abs*m (same sol-air/U model as the other roof concepts). Checks: Peclet number of the layer v*L/D = L/delta = 10 (profile fully resolved, c(1)=0 valid). Erosion 20 um/yr (6.3e-13 m/s) is at the high end of chalking mineral paints; historic chalking TiO2 paints lost 5-20 um/yr; in arid climates erosion needs UV plus wind/sand rather than rain, so this value is uncertain by a factor ~3. Baseline acrylic erosion 0.5 um/yr (1.6e-14 m/s) is typical of durable acrylics. k_abs is calibrated so the baseline reproduces the CRRC-type aged loss 0.85 -> 0.67, so the baseline is anchored to data, but the design benefit then follows almost directly from the ratio (v_b + k_w)/(v_d + k_w) = 0.22 - it is an input-ratio model, not independent physics, and should be judged as such. Hand check: design m = 2e-11*5e-6/7.9e-13 = 1.27e-4 kg/m2 -> dAlpha 0.040 -> SR 0.88 -> q = 0.5*(36 + 150 - 78.2)/15.5 = 3.48 W/m2; baseline m = 5.68e-4 -> dAlpha 0.18 -> q = 5.56 W/m2; gain ~37 %. Service life: 0.8 mm at 20 um/yr lasts 40 years, OK. Structural: a deliberately weak (chalking) matrix has low cohesion and abrasion resistance; hail and foot traffic damage roofs; runoff of BaSO4/CaCO3 fines is non-toxic but whitens gutters/facades below. Simulation coefficient: effective dirt removal velocity v + k_w = 7.9e-13 m/s.",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "erosion_rate", "value": 6.3e-13},
+    {"name": "coating_thickness", "value": 0.0008},
+    {"name": "clean_solar_reflectance", "value": 0.92},
+    {"name": "dirt_penetration_depth", "value": 5e-06},
+    {"name": "thermal_emittance", "value": 0.92},
+    {"name": "roof_u_value", "value": 0.5},
+    {"name": "domain_depth", "value": 5e-05},
+    {"name": "deposition_flux", "value": 2e-11},
+    {"name": "wash_off_velocity", "value": 1.6e-13},
+    {"name": "dirt_absorption_coefficient", "value": 316.0},
+    {"name": "solar_irradiance_daily_mean", "value": 300.0},
+    {"name": "external_heat_transfer_coefficient", "value": 15.0},
+    {"name": "net_sky_longwave", "value": 85.0},
+    {"name": "ambient_temperature", "value": 308.15},
+    {"name": "indoor_temperature", "value": 298.15}
+  ],
+  "dimensionless_numbers": [
+    {"name": "LayerPecletNumber", "value": 10.0},
+    {"name": "ErosionToWashOffRatioDesign", "value": 3.94},
+    {"name": "ErosionToWashOffRatioBaseline", "value": 0.1}
+  ],
+  "simulation_coefficient": 7.9e-13,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Surface soiling / radiative roof heat gain",
+    "independent_var": {"label": "Normalized depth below eroding surface", "unit": "-"},
+    "dependent_var": {"label": "Absorbing dirt concentration", "unit": "kg/m^3"},
+    "primary_metric": {"label": "Daily-mean heat flux into the interior (from steady dirt load)"},
+    "reference_metric": {"label": "Analytical daily-mean heat flux into the interior"},
+    "performance_gain": {"label": "Reduction of service-life interior heat gain vs aged white coating"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of service-life-averaged interior heat gain",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Daily-mean heat flux into the interior (from steady dirt load)",
+    "reference_metric": "Analytical daily-mean heat flux into the interior",
+    "lower_is_better": true,
+    "acceptance_threshold": 15.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "coating_thickness >= 20 * 3.156e7 * erosion_rate (reserve for 20 years)"],
+    "design_variables": ["erosion_rate", "coating_thickness", "clean_solar_reflectance", "thermal_emittance"]
+  },
+  "metric": {
+    "kind": "integral",
+    "location": null,
+    "scale": "domain_depth",
+    "unit": "W/m^2",
+    "label": "Daily-mean heat flux into the interior",
+    "transform": "roof_u_value * ((1 - clean_solar_reflectance + dirt_absorption_coefficient * m) * solar_irradiance_daily_mean + external_heat_transfer_coefficient * (ambient_temperature - indoor_temperature) - thermal_emittance * net_sky_longwave) / (roof_u_value + external_heat_transfer_coefficient)"
+  },
+  "baseline_parameters": [
+    {"name": "erosion_rate", "value": 1.6e-14},
+    {"name": "clean_solar_reflectance", "value": 0.85},
+    {"name": "thermal_emittance", "value": 0.90}
+  ],
+  "baseline_description": "Conventional white acrylic cool coating (SR 0.85 new, erosion 0.5 um/yr), in steady aged/soiled state"
+}
