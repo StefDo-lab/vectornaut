@@ -1,0 +1,93 @@
+{
+  "reviews": [
+    {
+      "order_id": "r001-01",
+      "plausible_simulated_benefit_pct": 30.0,
+      "plausible_objective_gain_pct": 1.0,
+      "plausible_gain_reasoning": "Measured barnacle removal stresses follow the sqrt(E/t) trend only roughly (viscoelastic dissipation, cupping and embedding on very soft silicones), and part of the compliance is lost to the stiff graded base, so about 30 % lower release stress than a good commercial foul-release topcoat is realistic rather than 50 %. Merchant ships at 12-16 kn already shed most macrofouling from commercial foul-release coatings; the benefit appears mainly after idle periods, while slime, the dominant in-service penalty, is not affected, so about 1 % of time-averaged friction.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Kendall/Brady energy scaling with an elastic work of adhesion of 0.05 J/m^2; real barnacle cement adhesion involves viscoelastic dissipation and does not scale cleanly",
+        "Exponential modulus profile across the full 400 um thickness; the actual profile of a nass-in-nass sprayed system is uncertain and sets the compliance loss",
+        "The model gives release stress of a rigid disc, not the hydrodynamic load actually available on a fouler at a given ship speed",
+        "Auto-filled parameters d2u_dxi2=1 and du_dxi=1 appear in the audited list (pipeline artefact, not used physically)"
+      ],
+      "killer_risks": [
+        "Ultra-soft top layer (tear strength ~0.5-1 kN/m) is cut by fenders, chains, debris and in-water cleaning; damaged spots foul and roughen, erasing the benefit within 1-2 years",
+        "Slime is untouched by softness, so the dominant in-service drag penalty of foul-release coatings remains",
+        "Low-crosslink PDMS may contain unreacted oligomers that leach"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.3, "reason": "Only macrofouling release after idle periods improves; roughly 1 % time-averaged."},
+        {"name": "no_toxic_biocides", "coverage": 0.8, "reason": "No biocide; possible leaching of silicone oligomers from low-crosslink PDMS."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.35, "reason": "Very soft outer layer is mechanically vulnerable over 5 years; the gradient helps delamination but not cutting."},
+        {"name": "fouling_control", "coverage": 0.45, "reason": "Better hard-fouling release, no improvement on slime or during idle periods."},
+        {"name": "bionic_mechanism", "coverage": 0.5, "reason": "Soft-over-stiff skin architecture loosely borrowed from cetaceans; the release mechanism itself is standard foul-release engineering."},
+        {"name": "practical_application", "coverage": 0.6, "reason": "Sprayable, but 400 um soft silicone with gradient needs extra coats and careful handling in dock."}
+      ]
+    },
+    {
+      "order_id": "r001-02",
+      "plausible_simulated_benefit_pct": 20.0,
+      "plausible_objective_gain_pct": 1.0,
+      "plausible_gain_reasoning": "The 67 % comes from lab adhesion strengths of fresh amphiphilic surfaces (12 vs 30 Pa) put into an exponential survival law; after months in service and with 10-40 % idle time at zero shear, the reduction of retained slime is more like 20 %. Since slime adds perhaps 5 % to time-averaged friction on foul-release ships, 20 % less slime gives about 1 %.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "The adhesion-strength ratio 12 vs 30 Pa is a free input from short-term lab data and fully determines the gain",
+        "Exponential survival exp(-tau_w/tau_adh) is assumed, not derived",
+        "Constant service wall shear of 25 Pa ignores idle periods where the benefit vanishes and the biofilm consolidates",
+        "Settlement flux is a proxy for slime thickness; biofilm growth after attachment is not modelled"
+      ],
+      "killer_risks": [
+        "Zwitterionic surface segments are buried by silicone surface reconstruction, fouled by conditioning films and oil, and abraded within months",
+        "Hydrogel swelling weakens the matrix and adhesion to the tie layer",
+        "Consolidated slime from idle periods is not removed later at service shear"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.25, "reason": "About 1 % time-averaged, and only while the surface chemistry persists."},
+        {"name": "no_toxic_biocides", "coverage": 0.85, "reason": "No release by design; sulfobetaine segments are covalently bound."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.2, "reason": "Surface chemistry of amphiphilic and zwitterionic coatings is not shown to last years in service."},
+        {"name": "fouling_control", "coverage": 0.35, "reason": "Targets slime at speed; no effect during idle periods or on macrofouling beyond the silicone base."},
+        {"name": "bionic_mechanism", "coverage": 0.45, "reason": "Hydration-layer principle is shared with fish mucus, but mucus works by continuous secretion, which is not copied."},
+        {"name": "practical_application", "coverage": 0.55, "reason": "Additive route in a sprayable silicone is practical; cost of zwitterionic prepolymer moderate."}
+      ]
+    },
+    {
+      "order_id": "r001-03",
+      "plausible_simulated_benefit_pct": null,
+      "plausible_objective_gain_pct": -4.0,
+      "plausible_gain_reasoning": "No conventional baseline was simulated, and the metric (surface confinement of hydrolysis) says nothing about fouling. Biocide-free eroding coatings foul with barnacles and weed within months because um-per-month erosion cannot dislodge settled larvae, whereas silicone foul-release at least sheds macrofouling at speed, so the time-averaged drag is likely a few percent worse than the baseline.",
+      "simulated_quantity_relevant": null,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": false,
+      "baseline_issue": "No baseline was simulated; the silicone foul-release baseline has no counterpart in this metric.",
+      "key_assumption_issues": [
+        "Water diffusivity and hydrolysis constant were changed by two orders of magnitude by the auditor to obtain surface confinement; the proposed values gave bulk hydrolysis within weeks",
+        "The erosion rate is not predicted by the model (the front estimate is 500 times too fast); removal by flow and ion exchange is missing",
+        "No link from erosion to fouling removal is modelled"
+      ],
+      "killer_risks": [
+        "Without a biocide, surface erosion of a few um per month does not remove settled barnacle cyprids or tubeworms; the hull fouls",
+        "About 0.36 kg/m^2 of polymer fragments released into the sea over five years (microplastic unless fully biodegradable)",
+        "Erosion rate strongly depends on temperature and speed; reservoir exhausted before docking in warm waters"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.1, "reason": "Likely worse than silicone foul-release over the interval."},
+        {"name": "no_toxic_biocides", "coverage": 0.3, "reason": "No biocide, but releases substantial polymer fragments by design."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.3, "reason": "Consumes itself; durability depends on a reservoir and a rate the model cannot predict."},
+        {"name": "fouling_control", "coverage": 0.15, "reason": "Erosion alone does not prevent macrofouling."},
+        {"name": "bionic_mechanism", "coverage": 0.4, "reason": "Surface shedding is genuinely borrowed from coral mucus and skin turnover, but those also rely on active secretion."},
+        {"name": "practical_application", "coverage": 0.6, "reason": "Applied like conventional self-polishing paints."}
+      ]
+    }
+  ]
+}

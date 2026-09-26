@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du legst auf die ölfreie, superweiche Schicht eine nur 20 µm dünne Silikonhaut mit 10 Vol.-% ausgerichteten, undurchlässigen Plättchen (Glasflakes oder Ton), wie die Wachsplättchen in der Pflanzenkutikula. Sie verlängert den Diffusionsweg (Tortuositätsfaktor 0,15) und senkt den Austrag beweglicher Silikonanteile. Im Modell sinkt der Auslaugfluss um 84 % gegenüber einer ölhaltigen Foul-Release-Beschichtung; die Haut selbst trägt davon nur etwa ein Drittel bei, der Rest kommt von der ölfreien Schicht darunter. Achtung: die Plättchen versteifen die Haut in der Ebene und verschlechtern die Seepockenablösung; der Nettoeffekt auf den Widerstand liegt realistisch unter 1 %.",
+  "pros_and_cons": "Vorteile: weniger Silikonaustrag und Wasseraufnahme, längere Stabilität der weichen Schicht, günstige Füllstoffe. Nachteile: Zielkonflikt zwischen Barriere (steife Plättchen) und Nachgiebigkeit (Ablösung); Ausrichtung der Plättchen beim Spritzen unvollständig; zusätzliche Schicht.",
+  "mechanical_limits": "In-plane-Modul der Haut mehrere MPa, Schubverzögerungslänge etwa 1,3 mm um eine Seepockenbasis, dadurch höhere Ablösespannung. Grenzen: Rissbildung an Plättchenkanten, Delamination Haut/Schicht.",
+  "manufacturing_methods": "Silikon-Deckhaut mit Glasflakes (Dicke 1-2 µm, Durchmesser 100-200 µm) oder organophilem Ton, Spritzen in dünnen Lagen zur Ausrichtung parallel zur Oberfläche.",
+  "cost_estimation": "Mehrkosten 5-10 EUR/m² für die Barrierehaut; Entwicklung 80-150 kEUR.",
+  "validation_experiments": "1) Auslaug- und Wasseraufnahmetests mit und ohne Haut; 2) Seepocken- und Pseudobarnacle-Ablösung zur Prüfung des Zielkonflikts; 3) REM-Querschnitt zur Plättchenausrichtung.",
+  "industry_partners": "Glasflake- und Tonmineral-Lieferanten, Foul-Release-Hersteller, Barrierebeschichtungs-Spezialisten."
+}

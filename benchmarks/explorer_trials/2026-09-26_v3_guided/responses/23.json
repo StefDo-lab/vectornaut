@@ -1,0 +1,126 @@
+{
+  "function_analysis": "Unchanged for this map: smooth wetted surface, biocide-free control or release of slime and macrofouling over a 5-year interval incl. idle periods, 5+ years of seawater durability, shipyard application without continuous supply. Evidence so far: release-stress and hydration concepts give ~1-1.5 % objective gain; durability of soft or molecular layers and slime during idle periods are the weak points.",
+  "requirements": [
+    {"name": "friction_drag_reduction", "criterion": "Lowers the time-averaged hull friction resistance over the service interval compared with the conventional biocide-free foul-release coating."},
+    {"name": "no_toxic_biocides", "criterion": "Releases no biocides, heavy metals, or other toxic or persistent substances (including leaching oils or polymer fragments) into seawater."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps adhesion, integrity and function for at least 5 years in seawater, including abrasion, UV at the waterline, cathodic protection and hydrolysis."},
+    {"name": "fouling_control", "criterion": "Limits slime and macrofouling (or allows its easy release at service speeds or by gentle cleaning) throughout the interval, including idle periods."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is genuinely derived from a biological model."},
+    {"name": "practical_application", "criterion": "Can be applied to large steel hulls with shipyard processes at a cost comparable to premium coatings and without continuous energy or material supply."}
+  ],
+  "mechanism_classes_considered": [
+    "graded_stiffness (anisotropic, fibre-reinforced compliant layer: stiff in compression, compliant in shear)",
+    "phase_change (thermoresponsive polymer switching between hydrated and collapsed states)",
+    "trapped_gas_or_liquid (mineral interlayer hydration water)"
+  ],
+  "analogues_considered": [
+    "Monocot stems (palms, bamboo, rushes): axially aligned stiff vascular fibre bundles in soft parenchyma, with a radial gradient of fibre density; axially stiff, compliant in shear",
+    "Plant cell walls: cellulose microfibril angle sets stiffness anisotropy",
+    "Thermoresponsive PNIPAM cell-sheet release (cells detach when the polymer rehydrates); thermally responsive fouling-release surfaces in the lab",
+    "Smectite clays (montmorillonite) with nm interlayer hydration water, chemically stable in seawater over geological time; bentonite seals",
+    "Natural rock surfaces, which foul readily despite hydrated mineral surfaces"
+  ],
+  "objective_statement": "Time-averaged hull frictional resistance of a merchant ship over a 5-year docking interval in seawater (mixed operating profile around 12-16 kn with idle periods), including the drag added by slime and macrofouling and by coating degradation, not the friction of a freshly applied clean surface.",
+  "baseline_statement": "Conventional biocide-free silicone (PDMS/fluoropolymer-modified) foul-release coating averaged over the same 5-year interval, i.e. in its typical in-service state after 12-24 months with a light-to-medium slime layer and occasional macrofouling during idle periods.",
+  "relevant_governing_quantities": ["wall_shear", "fouling_adhesion", "degradation_rate", "stress"],
+  "candidates": [
+    {
+      "order_id": "r003-01",
+      "title": "Palm-stem anisotropic release layer: normal-aligned polymer microfibres in ultra-soft silicone",
+      "summary": "A 300 um ultra-soft silicone layer (E ~0.1 MPa) reinforced with 5 vol% short polymer microfibres (10 um diameter) aligned normal to the hull by electrostatic flocking before the matrix cures, with fibre density graded from dense at the primer to sparse at the surface, like vascular bundles in a palm stem. The fibres make the layer stiff in compression (resisting fender and indentation damage) while leaving it compliant in shear, which is the compliance that sets the release stress of hard foulers under flow.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "100_um"},
+        {"axis": "inspiration_origin", "value": "plant"},
+        {"axis": "governing_quantity", "value": "fouling_adhesion"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "shear modulus of guided cantilever fibres: G_f = V_f*3*E_f*r^2/L^2 = 0.05*3*3e9*(5e-6)^2/(3e-4)^2 = 1.25e5 Pa, plus matrix G_m = 3.3e4 Pa: G_eff = 1.6e5 Pa; compliance C = t/G_eff = 3e-4/1.6e5 = 1.9e-9 m/Pa vs baseline 4.5e-10: sigma_c ratio sqrt(4.5e-10/1.9e-9) = 0.49 (-51 %); compressive modulus V_f*E_f = 150 MPa vs 3 MPa for commercial silicone (much better damage tolerance); macrofouling share after idle periods ~3-5 %, a third removed and the benefit kept for 5 years: ~1.5 %",
+        "value": 1.5,
+        "unit": "%"
+      },
+      "main_risk": "Fibre ends reaching the surface create roughness and nucleate fouling (barnacles and weed anchor on fibre tips, as on flock coatings), and fibre-matrix debonding under cyclic shear.",
+      "novelty_vs_known": "Closest: flock (standing fibre) antifouling coatings with ~1 mm free fibres, and soft silicone foul-release coatings. New: fibres fully embedded under a smooth soft skin, used for mechanical anisotropy (compression-stiff, shear-compliant) rather than as a surface texture; the graded fibre density follows monocot stems.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating (uniform topcoat, E about 1 MPa, 150 um) averaged over the same 5-year interval in service.",
+      "inspiration_source": "Monocot stems (palms, bamboo, rush pith): longitudinal stiff vascular fibre bundles in soft parenchyma, densest at the periphery, giving high axial stiffness with low shear stiffness of the ground tissue.",
+      "domain": "Anisotropic composite mechanics / fracture of soft coatings",
+      "physical_mechanism": "Hard foulers are removed by flow-induced shear on their base plate; the critical shear stress scales as sqrt(2w/C) with the areal shear compliance C of the coating. Slender fibres normal to the surface stiffen the layer strongly in compression (E_c ~ V_f E_f) but only weakly in shear (they bend as guided cantilevers, G_f ~ 3 V_f E_f r^2/L^2). The layer can therefore be much softer in shear than a commercial topcoat while resisting indentation, cutting and fender pressure that destroy ultra-soft silicones.",
+      "parameters": [
+        {"name": "matrix_modulus", "value": 1.0e5, "min_bound": 3.0e4, "max_bound": 1.0e6, "justification": "Ultra-soft silicone (Young's modulus), soft parenchyma analogue."},
+        {"name": "fibre_modulus", "value": 3.0e9, "min_bound": 1.0e9, "max_bound": 1.0e10, "justification": "Nylon or PET microfibres."},
+        {"name": "fibre_volume_fraction", "value": 0.05, "min_bound": 0.01, "max_bound": 0.2, "justification": "Achievable by flocking; vascular bundle fractions in palm stems 5-30 %."},
+        {"name": "fibre_radius", "value": 5.0e-6, "min_bound": 2.0e-6, "max_bound": 2.0e-5, "justification": "Commercial flock fibres 10-20 um diameter."},
+        {"name": "layer_thickness", "value": 3.0e-4, "min_bound": 1.0e-4, "max_bound": 1.0e-3, "justification": "Fibre length equals layer thickness minus a thin cover skin."},
+        {"name": "work_of_adhesion", "value": 0.05, "min_bound": 0.01, "max_bound": 0.3, "justification": "Barnacle cement on silicone."}
+      ]
+    },
+    {
+      "order_id": "r003-02",
+      "title": "Pulsed-heater thermoresponsive release: patch-wise heating of an LCST hydrogel brush",
+      "summary": "A sub-micrometre thermoresponsive copolymer brush (LCST tuned to ~35 C in seawater) on a thin silicone topcoat over an embedded carbon thin-film heater grid; each hull patch is heated by 10-15 K for a few seconds once or twice per day, collapsing the brush, and rehydration on cooling pushes off young, not yet consolidated diatom and bacterial cells, as in thermoresponsive cell-sheet release. I found no animal that uses such a phase switch, so the honest origin is technology.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "phase_change"},
+        {"axis": "length_scale", "value": "sub_um"},
+        {"axis": "inspiration_origin", "value": "technology"},
+        {"axis": "governing_quantity", "value": "fouling_adhesion"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "retained fraction of attached cells = 1/(1 + p*t_c/t_s) = 1/(1 + 0.6*1/0.5) = 0.45 with release probability p = 0.6 per switch, consolidation time t_c = 1 day, switching period t_s = 0.5 day; applies also in port; slime penalty ~5 % reduced by ~40 % after ageing: ~2 %; energy: pulse heats ~100 um: 1.5e6 J/m^3K*1e-4 m*15 K = 2.3 kJ/m^2 per pulse plus losses ~2x, i.e. ~10 kJ/m^2/day = 0.1 W/m^2 average",
+        "value": 2.0,
+        "unit": "%"
+      },
+      "main_risk": "The embedded heater grid on a steel hull (electrical insulation, cathodic protection interference, damage by fenders) is impractical at shipyard scale and fails locally, and the LCST brush ages like other molecular layers.",
+      "novelty_vs_known": "Closest: thermally responsive PNIPAM fouling-release surfaces tested in the lab (bulk temperature changes) and cell-sheet engineering. New: short, patch-wise pulsed heating of only the outer coating so that the average energy is ~0.1 W/m^2, and switching also during idle periods.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service (light-to-medium slime).",
+      "inspiration_source": "No animal system switches a surface phase to shed fouling that I can name honestly; the mechanism comes from thermoresponsive cell-culture substrates (PNIPAM cell-sheet release) in tissue engineering.",
+      "domain": "Polymer phase transitions / near-wall particle transport",
+      "physical_mechanism": "Below its LCST the brush is swollen and hydrated; heated above it, it collapses and dehydrates. On cooling it re-swells within seconds, and the swelling pressure and rehydration of the interface detach cells that have attached but not yet consolidated their adhesive (hours to a day). Periodic switching therefore removes a fraction p of the unconsolidated cells at each switch, so fewer cells become permanent slime. In a settlement model the effective attachment velocity is reduced by the retained fraction 1/(1 + p*t_c/t_s).",
+      "parameters": [
+        {"name": "release_probability_per_switch", "value": 0.6, "min_bound": 0.1, "max_bound": 0.95, "justification": "Fraction of unconsolidated bacteria/diatoms released per thermal cycle on PNIPAM surfaces in lab studies (40-90 %)."},
+        {"name": "consolidation_time", "value": 86400.0, "min_bound": 3600.0, "max_bound": 604800.0, "justification": "Time for diatom EPS adhesion to become permanent, hours to days."},
+        {"name": "switching_period", "value": 43200.0, "min_bound": 3600.0, "max_bound": 604800.0, "justification": "Two heating pulses per day per patch."},
+        {"name": "contact_attachment_velocity", "value": 1.0e-4, "min_bound": 1.0e-6, "max_bound": 1.0e-3, "justification": "Contact frequency times sticking probability of diatoms."},
+        {"name": "survival_fraction_under_flow", "value": 0.45, "min_bound": 0.05, "max_bound": 1.0, "justification": "Time-averaged fraction of attached cells surviving service shear on a silicone surface incl. idle periods, same for design and baseline."},
+        {"name": "pulse_temperature_rise", "value": 15.0, "min_bound": 5.0, "max_bound": 30.0, "justification": "Heating above the LCST from ambient seawater."}
+      ]
+    },
+    {
+      "order_id": "r003-03",
+      "title": "Smectite interlayer-water skin: exfoliated clay platelets bound in a silicone surface",
+      "summary": "Exfoliated synthetic smectite platelets (1 nm thick, 50-300 nm wide) are silane-bonded into the outer micrometres of an oil-free silicone topcoat so that the surface exposes mineral faces carrying 1-2 layers of strongly bound interlayer and surface water, as in montmorillonite clays. Unlike organic hydration layers, the mineral does not hydrolyse and dissolves only at geological rates, so the hydration function should not degrade over 5 years.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "nm"},
+        {"axis": "inspiration_origin", "value": "geology"},
+        {"axis": "governing_quantity", "value": "degradation_rate"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "loss flux by dissolution S*L/2 with S = k_diss*c_clay = 1e-12 1/s * 50 kg/m^3 = 5e-11 kg/m^3/s over L = 1.5e-4 m: 4e-15 kg/m^2/s, negligible against ~3e-10 for oil-containing coatings; but natural mineral surfaces foul readily, so the anti-slime effect is uncertain: objective gain perhaps 0.5 %",
+        "value": 0.5,
+        "unit": "%"
+      },
+      "main_risk": "Clay surfaces, like natural rocks, are readily colonised by diatoms and bacteria: bound mineral water does not by itself resist EPS adhesion, and clay faces raise the surface energy of the silicone.",
+      "novelty_vs_known": "Closest: clay-polymer nanocomposite coatings (used as barrier layers) and zwitterionic hydration coatings. New: using the permanently hydrated, non-hydrolysing faces of smectite platelets as the hydration layer of a foul-release surface.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating (with 3-5 wt% free silicone oil, as in many commercial systems) averaged over the same 5-year interval in service.",
+      "inspiration_source": "Smectite clays (montmorillonite) in marine sediments and bentonite seals: nm interlayer water bound to charged silicate layers, chemically stable in seawater over geological time.",
+      "domain": "Mineral surface chemistry / transport",
+      "physical_mechanism": "Charged silicate layers of smectites bind 1-2 molecular layers of water (crystalline swelling persists in seawater, whereas osmotic swelling is suppressed by the high ionic strength). Exposed at the coating surface, these faces present a hydrated interface. The function is lost only by platelet removal (wear) or dissolution, whose rate is set by silicate dissolution kinetics (order 1e-12 1/s), so the loss rate of functional material is orders of magnitude below oil depletion in conventional coatings.",
+      "parameters": [
+        {"name": "clay_concentration", "value": 50.0, "min_bound": 10.0, "max_bound": 150.0, "justification": "5 wt% platelets in the outer layer."},
+        {"name": "clay_dissolution_rate", "value": 1.0e-12, "min_bound": 1.0e-14, "max_bound": 1.0e-10, "justification": "Smectite dissolution at pH 8 and 10-25 C, order 1e-12 1/s on a mass basis."},
+        {"name": "mobile_diffusivity", "value": 1.0e-15, "min_bound": 1.0e-17, "max_bound": 1.0e-12, "justification": "Diffusion of dissolved or mobile species through the silicone network."},
+        {"name": "depletion_depth", "value": 1.5e-4, "min_bound": 5.0e-5, "max_bound": 4.0e-4, "justification": "Topcoat thickness."},
+        {"name": "free_mobile_concentration", "value": 0.0, "min_bound": 0.0, "max_bound": 100.0, "justification": "No free oil in the design; 40-50 kg/m^3 in an oil-containing conventional foul-release coating."}
+      ]
+    }
+  ]
+}

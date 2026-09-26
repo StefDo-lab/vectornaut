@@ -1,0 +1,52 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: classical shear-lag of a topcoat strip (modulus E_t, thickness t_t) bonded through an interlayer of areal shear stiffness k to a rigid primer, loaded at a damage edge by a line load F; xi = x/analysis_length. u'' = (k l^2/(E_t t_t)) u, E_t t_t du/dx(0) = -F, u(1) = 0 (far field). Interfacial shear tau(x) = k u(x), peak at the edge tau_max = F*sqrt(k/(E_t t_t)). Design (graded interphase, k = 2.6e10 Pa/m): shear-lag length sqrt(E_t t_t/k) = 76 um, tau_max = 50*sqrt(2.6e10/150) = 0.66 MPa. Baseline (50 um silicone-epoxy tie coat with G = 6.7 MPa, k = 1.3e11 Pa/m): transfer length 34 um, tau_max = 1.47 MPa. Expected gain ~55 %. lambda*l = 13 (design), 29 (baseline), so the far-field BC is adequate. Checks: the design k follows from an exponential modulus profile over 100 um from 1 GPa to 0.33 MPa (beta = 8), dominated by its softest ~12 um; a real sprayed gradient will be less ideal. Membrane strain in the topcoat at the edge F/(E_t t_t) = 50/150 = 0.33, i.e. large; linear elasticity is approximate at this load and the topcoat itself may tear first (tear strength of silicone ~2-5 kN/m vs a 50 N/m load: margin exists). Material limits: silicone-to-silicone cohesive strength ~1-3 MPa, so the baseline peak of 1.5 MPa is near peel initiation while 0.66 MPa is below it, which is the benefit. Caveats: the shear-lag model neglects peel (normal) stresses at the edge, which are of the same order; the reduction applies to peeling from existing damage, not to cutting. Dimensionless: lambda*l = 13 (design) and 29 (baseline); stiffness ratio 5. Simulation coefficient: shear-lag length 7.6e-5 m (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "topcoat_modulus", "value": 1000000.0},
+    {"name": "topcoat_thickness", "value": 0.00015},
+    {"name": "interlayer_shear_stiffness", "value": 26000000000.0},
+    {"name": "edge_line_load", "value": 50.0},
+    {"name": "interphase_thickness", "value": 0.0001},
+    {"name": "analysis_length", "value": 0.001}
+  ],
+  "dimensionless_numbers": [
+    {"name": "LambdaTimesLength_design", "value": 13.2},
+    {"name": "LambdaTimesLength_baseline", "value": 29.4},
+    {"name": "EdgeMembraneStrain", "value": 0.33},
+    {"name": "InterlayerStiffnessRatio_baseline_to_design", "value": 5.0}
+  ],
+  "simulation_coefficient": 7.6e-05,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Shear-lag delamination mechanics of layered coatings",
+    "independent_var": {"label": "Normalised distance from the damage edge", "unit": "-"},
+    "dependent_var": {"label": "Topcoat displacement", "unit": "m"},
+    "primary_metric": {"label": "Peak interfacial shear stress at the damage edge"},
+    "reference_metric": {"label": "Peak interfacial shear stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of peak edge delamination stress vs conventional tie coat"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of peak edge delamination stress",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Peak interfacial shear stress at the damage edge",
+    "reference_metric": "Peak interfacial shear stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "peak stress below silicone cohesive strength (~1-3 MPa)"],
+    "design_variables": ["interlayer_shear_stiffness", "topcoat_modulus", "topcoat_thickness"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "0",
+    "scale": "interlayer_shear_stiffness",
+    "unit": "Pa",
+    "label": "Peak interfacial shear stress at the damage edge"
+  },
+  "baseline_parameters": [
+    {"name": "interlayer_shear_stiffness", "value": 130000000000.0}
+  ],
+  "baseline_description": "Conventional 50 um silicone-epoxy tie coat (G = 6.7 MPa) under a 150 um silicone topcoat"
+}

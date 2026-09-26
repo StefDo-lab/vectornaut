@@ -1,0 +1,13 @@
+{
+  "governing_equation": "d2u_dxi2 = 3 * reference_shear_stress * (bed_thickness + skin_thickness) * (1/skin_modulus - 1/bed_modulus) / (2 * transition_width) / cosh((xi - bed_thickness / (bed_thickness + skin_thickness)) / transition_width)**2",
+  "boundary_conditions": [
+    "u(0) = 0",
+    "du_dxi(1) = 3 * reference_shear_stress * (bed_thickness + skin_thickness) / skin_modulus"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "reference_shear_stress", "value": 10000.0, "min_bound": 1000.0, "max_bound": 200000.0, "justification": "Mean shear stress transmitted through a barnacle base plate by the drag of its shell; the model is linear, so the compliance u(1)/tau does not depend on it."},
+    {"name": "transition_width", "value": 0.01, "min_bound": 0.001, "max_bound": 0.05, "justification": "Normalised width of the smoothed skin/bed interface (tanh step) in xi = z/(bed+skin), a numerical smoothing of the modulus jump; xi=0 at the primer, xi=1 at the surface."}
+  ]
+}

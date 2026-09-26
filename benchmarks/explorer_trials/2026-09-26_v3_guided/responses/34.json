@@ -1,0 +1,279 @@
+{
+ "function_analysis": "Unchanged for this map. Evidence after three rounds: fouling-release and hydration concepts give about 1-1.5 % objective gain; durability (cutting, delamination, loss of molecular layers) and idle-period slime are the weak points, so stress-limited durability and idle-period cleaning are worth probing.",
+ "requirements": [
+  {
+   "name": "friction_drag_reduction",
+   "criterion": "Lowers the time-averaged hull friction resistance over the service interval compared with the conventional biocide-free foul-release coating."
+  },
+  {
+   "name": "no_toxic_biocides",
+   "criterion": "Releases no biocides, heavy metals, or other toxic or persistent substances (including leaching oils or polymer fragments) into seawater."
+  },
+  {
+   "name": "multi_year_seawater_durability",
+   "criterion": "Keeps adhesion, integrity and function for at least 5 years in seawater, including abrasion, UV at the waterline, cathodic protection and hydrolysis."
+  },
+  {
+   "name": "fouling_control",
+   "criterion": "Limits slime and macrofouling (or allows its easy release at service speeds or by gentle cleaning) throughout the interval, including idle periods."
+  },
+  {
+   "name": "bionic_mechanism",
+   "criterion": "The working mechanism is genuinely derived from a biological model."
+  },
+  {
+   "name": "practical_application",
+   "criterion": "Can be applied to large steel hulls with shipyard processes at a cost comparable to premium coatings and without continuous energy or material supply."
+  }
+ ],
+ "objective_statement": "Time-averaged hull frictional resistance of a merchant ship over a 5-year docking interval in seawater (mixed operating profile around 12-16 kn with idle periods), including the drag added by slime and macrofouling and by coating degradation, not the friction of a freshly applied clean surface.",
+ "baseline_statement": "Conventional biocide-free silicone (PDMS/fluoropolymer-modified) foul-release coating averaged over the same 5-year interval, i.e. in its typical in-service state after 12-24 months with a light-to-medium slime layer and occasional macrofouling during idle periods.",
+ "relevant_governing_quantities": [
+  "wall_shear",
+  "fouling_adhesion",
+  "degradation_rate",
+  "stress"
+ ],
+ "mechanism_classes_considered": [
+  "graded_stiffness (graded interphase between rigid primer and soft topcoat)",
+  "phase_change (thermoresponsive switching triggered from outside the hull)",
+  "trapped_gas_or_liquid (hydration lubrication layer that lowers contact friction and wear)"
+ ],
+ "analogues_considered": [
+  "Plant cuticle: the cuticle proper merges into the cell wall through a cuticular layer with interpenetrating polysaccharide fibrils and graded composition",
+  "Articular cartilage boundary lubrication: phosphatidylcholine and lubricin hydration layers give friction coefficients of 0.001-0.01 at MPa pressures",
+  "Hull grooming robots that operate during idle periods",
+  "Induction heating of steel through non-conductive coatings"
+ ],
+ "candidates": [
+  {
+   "order_id": "r004-01",
+   "title": "Plant-cuticle graded interphase: compositionally graded tie layer that halves edge delamination stress",
+   "summary": "Replace the thin, stiff silicone-epoxy tie coat of a foul-release system by a 100 um interphase whose composition and modulus grade continuously from epoxy (G ~1 GPa) to silicone (G ~0.3 MPa), like the cuticular layer that anchors the plant cuticle in the cell wall. The more compliant, graded interphase lengthens the shear-lag transfer length at damage edges, so cleaning brushes, fenders and pulled-off fouling produce roughly half the peak interfacial shear stress that drives peeling of the topcoat from a cut.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "graded_stiffness"
+    },
+    {
+     "axis": "length_scale",
+     "value": "100_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "stress"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+    "formula": "interphase shear stiffness k = beta*G_min/(t*(1-exp(-beta))) with beta = ln(3000) = 8: 8*3.3e5/1e-4 = 2.6e10 Pa/m vs tie coat G/t = 6.7e6/5e-5 = 1.3e11 Pa/m; peak edge shear tau_max = F*sqrt(k/(E_t*t_t)), ratio sqrt(2.6e10/1.3e11) = 0.45 (-55 %); fewer and smaller peeled patches: if damaged/peeled area falls from ~3 % to ~1.5 % of the hull and each damaged spot fouls heavily (+30 % local drag): 1.5 %*0.3 = 0.45 %, plus longer retention of foul-release function: ~0.5 %",
+    "value": 0.5,
+    "unit": "%"
+   },
+   "main_risk": "Most damage of foul-release coatings starts as cuts and tears in the soft topcoat itself, which the interphase does not prevent; and a compliant graded interphase is hard to spray reproducibly.",
+   "novelty_vs_known": "Closest: conventional two-layer tie coat plus silicone topcoat and functionally graded coatings in other industries. New: a continuous epoxy-to-silicone composition gradient for hull foul-release systems, taken from the cuticular layer of plant cuticles, aimed at edge delamination rather than adhesion strength.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Conventional biocide-free silicone foul-release coating (epoxy primer, 50 um silicone-epoxy tie coat, 150 um silicone topcoat) averaged over the same 5-year interval in service.",
+   "inspiration_source": "Plant cuticle (e.g. leaves of Clivia, Prunus): the cutin/wax cuticle proper is anchored in the polysaccharide cell wall through a cuticular layer of graded composition with interpenetrating cellulose and pectin fibrils, which prevents delamination of the stiff-soft pair under bending and swelling.",
+   "domain": "Structural mechanics / shear-lag of layered coatings",
+   "physical_mechanism": "At a cut or edge, a load F per unit width on the topcoat (brush, fender friction, fouling being torn off) is transferred to the substrate through the interlayer over a shear-lag length 1/lambda = sqrt(E_t*t_t/k), where k is the shear stiffness per area of the interlayer; the peak interfacial shear stress at the edge is tau_max = F*lambda. A graded interphase whose softest part lies next to the topcoat has a much lower k than a thin stiff tie coat, spreading the load and lowering the peak stress that initiates peeling from damage edges.",
+   "parameters": [
+    {
+     "name": "topcoat_modulus",
+     "value": 1000000.0,
+     "min_bound": 300000.0,
+     "max_bound": 3000000.0,
+     "justification": "Commercial silicone topcoat Young's modulus."
+    },
+    {
+     "name": "topcoat_thickness",
+     "value": 0.00015,
+     "min_bound": 5e-05,
+     "max_bound": 0.0004,
+     "justification": "Typical topcoat dry film thickness."
+    },
+    {
+     "name": "interlayer_shear_stiffness",
+     "value": 26000000000.0,
+     "min_bound": 1000000000.0,
+     "max_bound": 1000000000000.0,
+     "justification": "Graded interphase, 100 um, G from 1 GPa to 0.33 MPa: beta*G_min/(t*(1-exp(-beta))); a 50 um tie coat with G = 6.7 MPa gives 1.3e11 Pa/m."
+    },
+    {
+     "name": "edge_line_load",
+     "value": 50.0,
+     "min_bound": 1.0,
+     "max_bound": 1000.0,
+     "justification": "Line load at a damage edge from a cleaning brush or fender friction, order 10-100 N/m."
+    },
+    {
+     "name": "interphase_thickness",
+     "value": 0.0001,
+     "min_bound": 2e-05,
+     "max_bound": 0.0003,
+     "justification": "Thickness of the graded interphase."
+    }
+   ]
+  },
+  {
+   "order_id": "r004-02",
+   "title": "Contactless induction-grooming of an LCST brush: robot-triggered thermal release during idle periods",
+   "summary": "Keep the thermoresponsive brush on the silicone topcoat but drop the embedded heater grid: a hull-crawling robot with an induction head heats the outer ~0.2 mm of steel through the non-conductive coating by 15 K for a few seconds as it passes, twice a day during idle periods (when fouling settles fastest). The brush collapses and re-swells, releasing unconsolidated cells without touching the surface, so no brush wear and no electrical installation on the hull.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "phase_change"
+    },
+    {
+     "axis": "length_scale",
+     "value": "sub_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "technology"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "fouling_adhesion"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+    "formula": "k_eff/k_c = f_idle/(1+p*t_c/t_s) + (1-f_idle)*s_flow = 0.25/(1+0.5*2) + 0.75*0.435 = 0.451 vs baseline 0.25 + 0.326 = 0.576: -22 % retained slime settlement; idle-period slime consolidates and is not shed later, so its weight in the drag penalty is higher than its share of flux: ~-30 % of a ~5 % slime penalty = 1.5 %, discounted for brush ageing: ~1 %; energy ~20 kJ/m^2 per pass, 10,000 m^2 twice a day = 400 MJ/day (~5 kW average, idle only)",
+    "value": 1.0,
+    "unit": "%"
+   },
+   "main_risk": "The robot adds cost and operational complexity, and the molecular LCST brush ages or is masked within months, so the switching has nothing left to switch.",
+   "novelty_vs_known": "Closest: the parent pulsed-heater concept and proactive grooming robots with brushes. New: contactless induction heating of the steel skin through the coating triggers the phase switch, so the release happens without mechanical contact and without any electrical installation in the coating.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service (light-to-medium slime, no grooming).",
+   "inspiration_source": "Thermoresponsive cell-culture substrates (PNIPAM cell-sheet release) combined with induction heating and hull-grooming robots; no biological origin.",
+   "domain": "Polymer phase transitions / near-wall particle transport",
+   "physical_mechanism": "Induction heats a thin steel skin (penetration depth ~0.1-0.5 mm at 10-50 kHz) which conducts heat through a ~200 um coating within ~0.3 s; the brush crosses its LCST, collapses, and re-swells on cooling, detaching cells that have not yet consolidated their adhesive. Switching during idle periods removes a fraction p of unconsolidated cells per pass; at speed the silicone sheds part of the slime as usual. In a settlement model the effective attachment velocity becomes k_c*[f_idle/(1+p*t_c/t_s) + (1-f_idle)*s_flow].",
+   "parameters": [
+    {
+     "name": "release_probability_per_switch",
+     "value": 0.5,
+     "min_bound": 0.1,
+     "max_bound": 0.9,
+     "justification": "Fraction of unconsolidated marine cells released per thermal cycle, below lab values for bacteria."
+    },
+    {
+     "name": "consolidation_time",
+     "value": 86400.0,
+     "min_bound": 3600.0,
+     "max_bound": 604800.0,
+     "justification": "Time for diatom and cyprid adhesion to become permanent."
+    },
+    {
+     "name": "switching_period",
+     "value": 43200.0,
+     "min_bound": 10800.0,
+     "max_bound": 604800.0,
+     "justification": "Two robot passes per day during idle periods."
+    },
+    {
+     "name": "idle_fraction",
+     "value": 0.25,
+     "min_bound": 0.05,
+     "max_bound": 0.6,
+     "justification": "Fraction of time at anchor or in port."
+    },
+    {
+     "name": "survival_fraction_under_flow",
+     "value": 0.435,
+     "min_bound": 0.05,
+     "max_bound": 1.0,
+     "justification": "exp(-25/30): fraction of attached cells surviving service shear on silicone."
+    },
+    {
+     "name": "contact_attachment_velocity",
+     "value": 0.0001,
+     "min_bound": 1e-06,
+     "max_bound": 0.001,
+     "justification": "Contact frequency times sticking probability of diatoms."
+    }
+   ]
+  },
+  {
+   "order_id": "r004-03",
+   "title": "Cartilage hydration-lubricated topcoat: phosphocholine boundary layer that makes foul-release coatings groomable",
+   "summary": "A silicone foul-release topcoat whose surface carries a covalently anchored phosphocholine (PC) polymer brush that holds hydration shells like the lipid and lubricin boundary layer of articular cartilage. It lowers the sliding friction of brushes, fenders and debris on the soft coating from about 0.4 to about 0.02, so the traction shear stress that cuts, tears and abrades soft silicone falls by an order of magnitude, allowing frequent gentle in-water grooming without damaging the coating.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "nm"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "stress"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+    "formula": "traction shear stress tau = mu*p: 0.02*0.2 MPa = 4 kPa vs 0.4*0.2 MPa = 80 kPa under a grooming brush (-95 %); with grooming every 1-2 weeks the slime penalty (~5 %) could fall to ~2 %, but grooming is an operation also possible on the baseline with some damage; credit to the coating: fewer damaged spots and longer foul-release life ~1 %",
+    "value": 1.0,
+    "unit": "%"
+   },
+   "main_risk": "The nm PC boundary layer is worn away by the very contacts it is meant to lubricate, or masked by conditioning films, so friction returns to that of bare silicone within months.",
+   "novelty_vs_known": "Closest: phosphocholine polymer coatings for medical devices and hydration-lubrication research (Klein), and zwitterionic anti-fouling brushes. New: using the hydration layer as a boundary lubricant that protects a soft foul-release coating against grooming and contact damage, not only as an anti-adhesion layer.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service, subjected to the same contacts (fenders, occasional cleaning).",
+   "inspiration_source": "Articular cartilage in mammalian joints: phosphatidylcholine lipids and lubricin bind hydration shells that support MPa pressures with friction coefficients of 0.001-0.01 (hydration lubrication).",
+   "domain": "Tribology / contact mechanics of soft coatings",
+   "physical_mechanism": "Hydration shells around phosphocholine groups are tightly bound (resisting squeeze-out under pressure) but relax rapidly, so they sustain normal load while shearing like a fluid, giving very low boundary friction. The traction shear stress transmitted into the coating under a sliding contact is tau = mu*p; it drives tearing, cutting and abrasive wear of soft silicone. Lowering mu by an order of magnitude lowers the transmitted shear stress and the wear rate accordingly.",
+   "parameters": [
+    {
+     "name": "friction_coefficient_new",
+     "value": 0.02,
+     "min_bound": 0.002,
+     "max_bound": 0.2,
+     "justification": "Hydration-lubricated PC brushes, 0.001-0.03 in lab tribometry; conservative for sea conditions."
+    },
+    {
+     "name": "friction_coefficient_baseline",
+     "value": 0.4,
+     "min_bound": 0.1,
+     "max_bound": 1.5,
+     "justification": "Wet sliding friction of soft silicone against nylon brushes or rubber fenders."
+    },
+    {
+     "name": "contact_pressure",
+     "value": 200000.0,
+     "min_bound": 10000.0,
+     "max_bound": 2000000.0,
+     "justification": "Brush or fender contact pressure on the hull, 0.01-2 MPa."
+    },
+    {
+     "name": "coating_shear_modulus",
+     "value": 330000.0,
+     "min_bound": 30000.0,
+     "max_bound": 3000000.0,
+     "justification": "Silicone topcoat shear modulus (E ~1 MPa)."
+    },
+    {
+     "name": "coating_thickness",
+     "value": 0.00015,
+     "min_bound": 5e-05,
+     "max_bound": 0.0004,
+     "justification": "Topcoat thickness."
+    }
+   ]
+  }
+ ]
+}

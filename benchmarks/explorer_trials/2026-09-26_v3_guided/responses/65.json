@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du verankerst auf der Silikon-Deckschicht eine guluronatreiche Polyanionen-Bürste, die mit dem Calcium und Magnesium des Meerwassers reversibel vernetzt, wie die Alginatkapsel von Pseudomonas-Biofilmen. Das entstehende hydratisierte Gel schmiert Kontakte mit Bürsten und Fendern und heilt sich mit den Ionen des Meeres selbst, ohne Nachschub. Im Modell sinkt die gemittelte Kontakt-Schubspannung um 70 % (24 statt 80 kPa), gesetzt durch die angenommenen Reibwerte und einen intakten Anteil von 80 %. Großes Risiko: Calcium-verbrückte anionische Oberflächen fördern die Haftung von Diatomeen-EPS; der Widerstandsvorteil liegt realistisch bei 0 bis 0,5 %.",
+  "pros_and_cons": "Vorteile: Selbstheilung mit Meerwasserionen, keine Freisetzung, Schutz weicher Beschichtungen vor Kontaktschäden. Nachteile: mögliche Förderung von Schleimhaftung, Mg- und Na-Konkurrenz schwächt das Gel, durch Abrieb verlorene Ketten wachsen nicht nach.",
+  "mechanical_limits": "Scherdehnung im Silikon 0,07 statt 0,24 bei 0,2 MPa Kontaktdruck. Grenzen: Gelfestigkeit in Mg-reichem Meerwasser gering, Abrieb der verankerten Ketten, Hydrolyse der Ankergruppen.",
+  "manufacturing_methods": "Silan- oder Epoxy-funktionalisiertes Alginat bzw. Polyguluronat, auf den Silikon-Topcoat gepfropft (Plasmaaktivierung, dann Tauch- oder Sprühauftrag) oder als Additiv mit Oberflächensegregation.",
+  "cost_estimation": "Material 30-50 EUR/m² (Alginat ist günstig, Funktionalisierung kostet); Entwicklung 100-200 kEUR.",
+  "validation_experiments": "1) Tribologie in künstlichem Meerwasser vor und nach Schädigung (Heilungsnachweis); 2) Diatomeen- und Bakterienhaftung im Vergleich zu PDMS (entscheidender Test); 3) Alterung und Abrieb.",
+  "industry_partners": "Alginat-Hersteller, Biomaterial-Oberflächenfirmen, Foul-Release-Hersteller, Tribologie-Institute."
+}

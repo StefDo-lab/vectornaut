@@ -1,0 +1,92 @@
+{
+  "reviews": [
+    {
+      "order_id": "r002-01",
+      "plausible_simulated_benefit_pct": 80.0,
+      "plausible_objective_gain_pct": 0.7,
+      "plausible_gain_reasoning": "An oil-free coating with tethered functional segments does lose far less functional material than an oil-containing one, but the model omits wear, which removes tethered segments at roughly v*c = 2 um/yr*100 kg/m^3 = 0.2 g/m^2/yr, and the pseudo-steady oil flux (9.5 g/m^2/yr) overstates real oil release; about 80 % lower loss rate is plausible. Keeping material says little about keeping the anti-slime function, which usually fails by conditioning films and surface reconstruction, so the objective contribution is below 1 %.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Baseline assumes 4.5 wt% free silicone oil; against an oil-free PDMS foul-release coating the comparison has no meaning",
+        "Wear loss of tethered segments is not modelled and exceeds the modelled cleavage flux",
+        "Linker cleavage rate 3e-10 1/s (half-life 73 years) is a free choice that sets the design flux",
+        "Pseudo-steady diffusion for a finite, depleting oil reservoir overstates the baseline flux"
+      ],
+      "killer_risks": [
+        "Anti-slime function lost by conditioning films and surface reconstruction regardless of reservoir size",
+        "Without free oil the initial slipperiness and release performance may be lower than commercial oil-containing coatings",
+        "Zwitterion-rich silicone swells and loses adhesion to the tie layer"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.2, "reason": "Below 1 % time-averaged; benefit hinges on unproven persistence of the hydration function."},
+        {"name": "no_toxic_biocides", "coverage": 0.85, "reason": "No oil and no biocide; only slow release of cleaved zwitterionic oligomers."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.35, "reason": "Material inventory lasts, but surface function durability is not demonstrated."},
+        {"name": "fouling_control", "coverage": 0.35, "reason": "Slime at speed only, as for the parent; nothing new against macrofouling or idle periods."},
+        {"name": "bionic_mechanism", "coverage": 0.35, "reason": "Tethered reservoir is a polymer-engineering choice; the mucus renewal analogy is loose."},
+        {"name": "practical_application", "coverage": 0.55, "reason": "Sprayable silicone with a specialty macromer; moderate cost."}
+      ]
+    },
+    {
+      "order_id": "r002-02",
+      "plausible_simulated_benefit_pct": 25.0,
+      "plausible_objective_gain_pct": 1.0,
+      "plausible_gain_reasoning": "Including idle periods is an improvement, but the sticking probability 0.5 and adhesion strength 15 Pa are fresh-surface lab values; after months in seawater brush surfaces lose much of their advantage, so about 25 % less retained slime is realistic, worth about 1 % of time-averaged friction with a ~5 % slime penalty.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Sticking probability 0.5 and adhesion strength 15 Pa are free inputs from short-term lab assays and set the gain",
+        "Settlement flux used as a proxy for slime thickness; growth and consolidation not modelled",
+        "No ageing of the brush layer in the model"
+      ],
+      "killer_risks": [
+        "Molecular brush layer masked by conditioning films and oil and abraded within months",
+        "Bottle-brush macromers are expensive to make at the tonnage of hull coatings",
+        "Hydrolysis of siloxane anchors over years"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.25, "reason": "About 1 % time-averaged while the surface lasts."},
+        {"name": "no_toxic_biocides", "coverage": 0.85, "reason": "Nothing released by design."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.2, "reason": "No evidence that nm brush layers survive years of service."},
+        {"name": "fouling_control", "coverage": 0.4, "reason": "Addresses slime at speed and partly at rest; no effect on macrofouling beyond the silicone base."},
+        {"name": "bionic_mechanism", "coverage": 0.6, "reason": "Mucin bottle-brush architecture is genuinely taken from mucus."},
+        {"name": "practical_application", "coverage": 0.45, "reason": "Additive route is practical, but macromer synthesis is costly at scale."}
+      ]
+    },
+    {
+      "order_id": "r002-03",
+      "plausible_simulated_benefit_pct": 55.0,
+      "plausible_objective_gain_pct": 1.5,
+      "plausible_gain_reasoning": "The 1D compliance model ignores the in-plane load spreading of the stiff skin (shear-lag length ~1.6 mm around a 5 mm base) and the viscoelastic and cupping effects of barnacles on ultra-soft beds, so about 55 % lower release stress than a commercial topcoat is realistic. Merchant ships shed most macrofouling from foul-release coatings at speed; the benefit appears after idle periods and in cleaning, so about 1.5 % of time-averaged friction; slime is unaffected.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "1D through-thickness compliance ignores load spreading by the stiff skin, which raises the release stress",
+        "Elastic Kendall energy balance with w = 0.05 J/m^2; real barnacle cement is viscoelastic",
+        "Bed modulus 0.1 MPa is a gel whose long-term properties in seawater are uncertain"
+      ],
+      "killer_risks": [
+        "Punctures or cuts through the 50 um skin expose a 0.1 MPa gel bed that tears and swells, starting local failure",
+        "Ultra-soft silicone gels are usually oil-extended; extractable oil would leach",
+        "Delamination at the skin/bed interface under cyclic hull loads"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.35, "reason": "About 1.5 % time-averaged from better macrofouling release."},
+        {"name": "no_toxic_biocides", "coverage": 0.7, "reason": "No biocide; possible leaching of extractable oils from a very soft gel bed."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.4, "reason": "Skin protects against abrasion, but punctures expose a weak gel; interface fatigue untested."},
+        {"name": "fouling_control", "coverage": 0.45, "reason": "Better hard-fouling release; slime and idle periods not addressed."},
+        {"name": "bionic_mechanism", "coverage": 0.1, "reason": "A glacier is not a biological model; the request asks for a bionic coating."},
+        {"name": "practical_application", "coverage": 0.55, "reason": "Sprayable three-layer silicone system; one extra coat and careful gel handling."}
+      ]
+    }
+  ]
+}

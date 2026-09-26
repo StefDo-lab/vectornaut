@@ -1,0 +1,50 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: pseudo-steady diffusion of mobile species (sol chains or free oil) through the layer, xi = depth/layer_thickness, c(0) = 0 at the wetted surface, c(1) = mobile concentration in the undepleted layer; leaching flux J = (D/L) dc/dxi(0) = D*c/L. Design (bottle-brush matrix, 2 wt% sol, 300 um): J = 1e-15*20/3e-4 = 6.7e-11 kg/(m^2 s) (2.1 g/(m^2 yr)). Baseline (conventional foul-release with 4.5 wt% free oil, 150 um): J = 1e-15*45/1.5e-4 = 3.0e-10 kg/(m^2 s). Expected gain ~78 %. Caveats: (1) same diffusivity for sol oligomers and oil (sol chains of bottle-brush networks are larger and slower, favouring the design); (2) pseudo-steady model of a depleting reservoir, valid for the initial rate; (3) against an oil-free conventional silicone (sol ~3-5 %) the reduction would be smaller; (4) the supersoft design is 300 um thick against 150 um, which halves its flux, a design choice; (5) loss of mobile species is a proxy for stiffening; the link to release performance is not simulated. The fibres do not enter this model. Stress: bottle-brush elastomers have low tear energy (~10-50 J/m^2), a durability concern not covered here. Dimensionless: ratio of mobile concentrations 0.44, thickness ratio 2. Simulation coefficient: design leaching flux 6.7e-11 kg/(m^2 s) (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "mobile_concentration", "value": 20.0},
+    {"name": "mobile_diffusivity", "value": 1e-15},
+    {"name": "layer_thickness", "value": 0.0003},
+    {"name": "fibre_volume_fraction", "value": 0.05},
+    {"name": "matrix_modulus", "value": 100000.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "MobileConcentrationRatio", "value": 0.44},
+    {"name": "ThicknessRatio", "value": 2.0}
+  ],
+  "simulation_coefficient": 6.7e-11,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Leaching and degradation of soft coatings",
+    "independent_var": {"label": "Normalised depth from the wetted surface", "unit": "-"},
+    "dependent_var": {"label": "Mobile species concentration", "unit": "kg/m^3"},
+    "primary_metric": {"label": "Leaching flux of mobile silicone"},
+    "reference_metric": {"label": "Leaching flux of mobile silicone (reference solver)"},
+    "performance_gain": {"label": "Reduction of leaching (degradation) rate vs oil-containing foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of leaching rate",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Leaching flux of mobile silicone",
+    "reference_metric": "Leaching flux of mobile silicone (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 30.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "non-negative concentration"],
+    "design_variables": ["mobile_concentration", "layer_thickness"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "mobile_diffusivity/layer_thickness",
+    "unit": "kg/(m^2 s)",
+    "label": "Leaching flux of mobile silicone"
+  },
+  "baseline_parameters": [
+    {"name": "mobile_concentration", "value": 45.0},
+    {"name": "layer_thickness", "value": 0.00015}
+  ],
+  "baseline_description": "Conventional foul-release coating with 4.5 wt% free silicone oil, 150 um"
+}

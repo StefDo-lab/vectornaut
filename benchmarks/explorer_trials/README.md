@@ -10,6 +10,7 @@ Query for all trials: "Entwickle eine bionisch inspirierte Beschichtung für Sch
 | `2026-09-25_v1_baseline` | commit `01d2263` | 1 round x 9, `--strategy-weights seed=1` (no map guidance) |
 | `2026-09-26_v2_guided` | commit `8dda8b0` (+ critic) | 5 rounds x 3, default strategies, `--opt-rounds 1` |
 | `2026-09-26_v2_baseline` | commit `8dda8b0` (+ critic) | 1 round x 15, `--strategy-weights seed=1` |
+| `2026-09-26_v3_guided` | commit `ad72735` | 6 rounds x 3, default strategies, `--opt-rounds 1` (objective/baseline framing, two-number critic) |
 
 v1 answers only replay on the v1 code: later explorer versions changed scheduling and added the critic call. The findings from v1 led to the evidence tiers, materials critic, requirement coverage and diversity changes in commit `8dda8b0`.
 

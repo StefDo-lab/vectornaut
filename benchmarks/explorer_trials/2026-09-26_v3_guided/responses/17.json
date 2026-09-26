@@ -1,0 +1,55 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady near-wall transport of diatom cells with a first-order wall reaction whose effective attachment velocity is time-averaged over service and idle: k_eff = k_c*a*[f_idle + (1-f_idle)*exp(-tau_w/tau_adh)]. Retained settlement flux J = k_eff*c_b/(1+Da), Da = delta*k_eff/D. Design (a = 0.5, tau_adh = 15 Pa, f_idle = 0.25): k_eff = 1e-4*0.5*(0.25+0.75*0.189) = 1.96e-5 m/s, Da = 0.098, J = 1.78e4 1/(m^2 s). Baseline silicone foul-release (a = 1, tau_adh = 30 Pa): k_eff = 1e-4*(0.25+0.75*0.435) = 5.76e-5 m/s, Da = 0.288, J = 4.47e4 1/(m^2 s). Expected gain about 60 % lower retained settlement flux, somewhat less than the parent's 67 % because idle periods are now included; the idle share is where the steric sticking reduction matters. Caveats: sticking probability 0.5 and adhesion strength 15 Pa are fresh-surface lab values and fully drive the gain; ageing, conditioning films and oil are not modelled; settlement flux is a proxy for slime thickness. Parameter check: all positive and in range; u_tau = 0.156 m/s at 25 Pa. Dimensionless: Damkoehler 0.098 (design) and 0.288 (baseline), reaction-limited regime; shear-to-adhesion ratio 1.67 (design) vs 0.83 (baseline). No structural load. Simulation coefficient: design effective attachment velocity 1.96e-5 m/s (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "sticking_probability_new", "value": 0.5},
+    {"name": "slime_adhesion_strength_new", "value": 15.0},
+    {"name": "idle_fraction", "value": 0.25},
+    {"name": "wall_shear_service", "value": 25.0},
+    {"name": "brush_hydration_thickness", "value": 1.5e-08},
+    {"name": "contact_attachment_velocity", "value": 0.0001},
+    {"name": "concentration_boundary_layer_thickness", "value": 5e-05},
+    {"name": "effective_near_wall_diffusivity", "value": 1e-08},
+    {"name": "bulk_cell_concentration", "value": 1000000000.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "DamkoehlerNumber_design", "value": 0.098},
+    {"name": "DamkoehlerNumber_baseline", "value": 0.288},
+    {"name": "ShearToAdhesionRatio_design", "value": 1.67}
+  ],
+  "simulation_coefficient": 1.96e-05,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Near-wall transport and attachment of fouling cells",
+    "independent_var": {"label": "Normalised distance from the hull wall", "unit": "-"},
+    "dependent_var": {"label": "Diatom cell concentration", "unit": "1/m^3"},
+    "primary_metric": {"label": "Time-averaged retained diatom settlement flux"},
+    "reference_metric": {"label": "Time-averaged retained diatom settlement flux (reference solver)"},
+    "performance_gain": {"label": "Reduction of retained slime settlement vs silicone foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of time-averaged retained slime settlement",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Time-averaged retained diatom settlement flux",
+    "reference_metric": "Time-averaged retained diatom settlement flux (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "non-negative concentration"],
+    "design_variables": ["sticking_probability_new", "slime_adhesion_strength_new", "brush_hydration_thickness"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "effective_near_wall_diffusivity/concentration_boundary_layer_thickness",
+    "unit": "1/(m^2 s)",
+    "label": "Time-averaged retained diatom settlement flux"
+  },
+  "baseline_parameters": [
+    {"name": "sticking_probability_new", "value": 1.0},
+    {"name": "slime_adhesion_strength_new", "value": 30.0}
+  ],
+  "baseline_description": "Conventional silicone foul-release surface (sticking 1, slime adhesion strength 30 Pa)"
+}

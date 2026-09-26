@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du zerlegst die zähe 50-µm-Silikonhaut der Gletscher-Variante in 0,5-mm-Kacheln mit 20 µm breiten, mit Bettmaterial gefüllten Fugen, wie Eisschollen im Packeis. Jede Kachel bewegt sich einzeln auf dem ultraweichen Bett (E ca. 0,1 MPa, 350 µm), sodass die Last einer Seepocke nicht mehr über 1,6 mm verteilt wird und die Nachgiebigkeit des Betts erhalten bleibt; Risse enden an der nächsten Fuge. Die kritische Ablösespannung sinkt im Modell um 78 % (3,2 statt 14,9 kPa) gegenüber einer Standard-Foul-Release-Deckschicht. Erwarteter Vorteil beim zeitgemittelten Widerstand realistisch etwa 1,5 %, weil Schleim unverändert bleibt. Das Vorbild ist nicht biologisch.",
+  "pros_and_cons": "Vorteile: behält die niedrige Ablösespannung trotz Schutzhaut, Schäden bleiben lokal, Rumpfdehnung wird von den Fugen aufgenommen. Nachteile: Fugen sind weiche Schwachstellen und Mikrorillen für Diatomeen, Segmentierung ist ein zusätzlicher langsamer Prozessschritt, Schleim unverändert, kein bionisches Vorbild.",
+  "mechanical_limits": "Fugendehnung bei 0,2 % Rumpfdehnung etwa 5 %, unkritisch. Grenzen: Fender- und Punktlasten an den Fugen, Haftung Kachel/Bett, Kohäsion des 0,1-MPa-Betts.",
+  "manufacturing_methods": "Primer, Haftschicht, weiches Bett spritzen; Haut durch Schablonen-Spritzen (Gitterschablone) oder nachträgliches Laser- bzw. Rollen-Einschneiden segmentieren; Fugen mit Bettmaterial fluten.",
+  "cost_estimation": "Material 45-75 EUR/m², Segmentierung 10-30 EUR/m² zusätzlich; Entwicklung 0,2-0,4 MEUR.",
+  "validation_experiments": "1) Seepocken-Ablösekraft auf durchgehender und gekachelter Haut; 2) Diatomeenbesiedlung der Fugen; 3) Fender- und Schnitttests mit Schadensausbreitung; 4) Floßtest 24 Monate.",
+  "industry_partners": "Foul-Release-Hersteller, Anbieter von Schablonen- und Lasertechnik für Großflächen, Werften, Prüfinstitute."
+}

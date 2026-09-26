@@ -1,0 +1,48 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady water penetration with first-order hydrolysis in the erodible layer, c'' = phi^2 c with Thiele modulus phi = L*sqrt(k/D), c(0)=1 at the seawater side, zero flux at the primer. With the proposed D = 1e-12 m^2/s and k = 1e-6 1/s, phi = 3e-4*sqrt(1e6) = 0.3: water saturates the whole layer (mean c = tanh(phi)/phi = 0.97), i.e. BULK hydrolysis with a half-life of ln2/k = 8 days. The 300 um reservoir would lose its integrity within weeks, not 5 years; this contradicts the concept. Adjustment: a surface-eroding binder needs phi >> 1. I set D = 1e-14 m^2/s (hydrophobic, e.g. fluorinated or highly crosslinked polyester binder) and k = 1e-4 1/s (fast silyl-ester hydrolysis where water is present), giving a penetration depth sqrt(D/k) = 10 um (typical leached-layer thickness of self-polishing paints) and phi = 30, mean c = 0.033. Consistency check against the target erosion: a reaction-diffusion front alone erodes at about sqrt(D k) = 1e-9 m/s (2.6 mm/month), three orders of magnitude faster than the 1.9e-12 m/s target; in real self-polishing paints the rate is set by ion exchange and by the removal of the hydrolysed, still-attached layer by flow shear, which this model does not contain. So the erosion rate is not predicted by this model; the simulation only shows whether hydrolysis is surface-confined (metric: mean water/hydrolysis fraction through the layer, lower = more surface-confined and more durable). No conventional baseline exists for this metric: a silicone foul-release coating does not hydrolyse at all, so baseline_parameters are left empty and the gain is not available. Stress check: hydrolysed leached layer is mechanically weak; loss of cohesion in the leached layer is the intended erosion. Main concern stays: biocide-free erosion of a few um per month does not remove settled cyprids and tubeworm larvae (anchored within hours), and the polymer fragments released (tens of g/m^2 over 5 years, about 300 um * 1200 kg/m^3 = 0.36 kg/m^2) are persistent unless the binder is truly biodegradable. Dimensionless: Thiele modulus 30 (adjusted), penetration depth ratio 0.033. Simulation coefficient: penetration depth 1e-5 m (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "water_diffusivity", "value": 1e-14},
+    {"name": "hydrolysis_rate_constant", "value": 0.0001},
+    {"name": "layer_thickness", "value": 0.0003},
+    {"name": "target_erosion_rate", "value": 1.9e-12},
+    {"name": "biofilm_growth_time", "value": 600000.0},
+    {"name": "surface_water_concentration", "value": 1.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ThieleModulus_adjusted", "value": 30.0},
+    {"name": "ThieleModulus_as_proposed", "value": 0.3},
+    {"name": "PenetrationDepthToThickness", "value": 0.033},
+    {"name": "FrontErosionToTargetRatio", "value": 526.0}
+  ],
+  "simulation_coefficient": 1e-05,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Hydrolytic surface erosion of a renewal layer",
+    "independent_var": {"label": "Normalised depth from the wetted surface", "unit": "-"},
+    "dependent_var": {"label": "Normalised water (hydrolysis) concentration", "unit": "-"},
+    "primary_metric": {"label": "Mean hydrolysis fraction through the layer"},
+    "reference_metric": {"label": "Mean hydrolysis fraction through the layer (reference solver)"},
+    "performance_gain": {"label": "Surface confinement of hydrolysis (no conventional baseline)"}
+  },
+  "objective_metric": {
+    "objective_name": "Surface confinement of hydrolysis",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Mean hydrolysis fraction through the layer",
+    "reference_metric": "Mean hydrolysis fraction through the layer (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 0.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "0 <= c <= 1"],
+    "design_variables": ["water_diffusivity", "hydrolysis_rate_constant", "layer_thickness"]
+  },
+  "metric": {
+    "kind": "mean",
+    "unit": "-",
+    "label": "Mean hydrolysis fraction through the layer"
+  },
+  "baseline_parameters": [],
+  "baseline_description": "No conventional baseline for this metric (silicone foul-release does not hydrolyse)"
+}

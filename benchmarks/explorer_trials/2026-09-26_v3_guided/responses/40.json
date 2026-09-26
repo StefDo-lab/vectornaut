@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du behältst die thermoresponsive Polymerbürste auf der Silikon-Deckschicht, verzichtest aber auf das eingebaute Heizgitter: Ein Rumpfroboter mit Induktionskopf erwärmt in Liegezeiten zweimal täglich berührungslos die äußeren 0,2 mm Stahl durch die Beschichtung hindurch um 15 K. Die Bürste kollabiert und quillt wieder, frisch angeheftete Zellen lösen sich, ohne dass eine Bürste die Oberfläche berührt. Im Modell sinkt der zeitgemittelte verbleibende Ansiedlungsfluss um 18 %, weil nur während der Liegezeiten geschaltet wird; Energie etwa 6 kW im Mittel während der Liegezeit. Realistisch erwartest du bis etwa 1 % weniger zeitgemittelten Widerstand. Das Prinzip ist technisch, nicht bionisch.",
+  "pros_and_cons": "Vorteile: keine Elektrik in der Beschichtung, kein Bürstenverschleiß, wirkt genau in den kritischen Liegezeiten. Nachteile: Roboterbetrieb, Kosten und Logistik; Alterung der molekularen Bürste; nur Schleim und junge Ansiedler, kein Makrobewuchs; kein bionisches Prinzip.",
+  "mechanical_limits": "Thermische Zyklen (ca. 1000 pro Jahr in Liegezeiten) an Grenzflächen; lokale Überhitzung bei Robotstillstand muss verhindert werden (Temperaturregelung). Roboterhaftung (Magnet- oder Unterdruckräder) belastet die weiche Deckschicht.",
+  "manufacturing_methods": "Standard-Foul-Release-Aufbau plus LCST-Copolymer als Oberflächenadditiv; Roboter mit Induktionsspule (10-50 kHz), Temperaturmessung per Infrarot und Magneträdern.",
+  "cost_estimation": "Beschichtung ähnlich Premium-Foul-Release (40-60 EUR/m²); Roboter 150-400 kEUR pro Schiff; Entwicklung 0,5-1 MEUR.",
+  "validation_experiments": "1) Induktionsheizung an beschichteten Stahlpanels (Temperaturprofil, Zyklenfestigkeit); 2) Diatomeen-Ablösung pro Zyklus; 3) Hafenversuch mit Roboter über 6 Monate.",
+  "industry_partners": "Hersteller von Rumpfreinigungsrobotern, Induktionstechnik-Anbieter, Foul-Release-Hersteller, Reedereien mit langen Liegezeiten."
+}

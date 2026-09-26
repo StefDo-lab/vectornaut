@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2u_dxi2 = 0",
+  "boundary_conditions": [
+    "u(0) = 0",
+    "du_dxi(1) = reference_shear_stress * layer_thickness / (matrix_modulus / 3 + 3 * fibre_volume_fraction * fibre_modulus * fibre_radius**2 / layer_thickness**2)"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "reference_shear_stress", "value": 10000.0, "min_bound": 1000.0, "max_bound": 200000.0, "justification": "Mean shear stress on a barnacle base plate from the drag of its shell; linear model, so the compliance does not depend on it. xi = z/layer_thickness, primer at 0, surface at 1; effective shear modulus = matrix shear modulus plus guided-cantilever fibre contribution."}
+  ]
+}

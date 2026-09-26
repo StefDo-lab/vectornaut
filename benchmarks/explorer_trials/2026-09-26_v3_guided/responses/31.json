@@ -1,0 +1,50 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: same depletion model as used for tethered functional species: steady diffusion of mobile species with a volumetric source from clay dissolution, c(0)=0 at the wetted surface, c(1) = free mobile concentration at the reservoir front, surface loss flux J = S L/2 + D c_free/L. Design (no oil): S = 1e-12*50 = 5e-11 kg/(m^3 s), J = 5e-11*1.5e-4/2 = 3.75e-15 kg/(m^2 s) (0.1 mg/(m^2 yr)). Baseline: oil-containing conventional foul-release coating, no clay, 45 kg/m^3 free oil: J = 1e-15*45/1.5e-4 = 3e-10 kg/(m^2 s). Gain ~100 % by construction: the design has no mobile species, so this metric can hardly distinguish anything. Important caveats: (1) the realistic loss mechanism for platelets is wear of the silicone surface (a few um per year, i.e. ~0.1-0.3 g/(m^2 yr) of clay at 5 wt%), not dissolution; (2) the loss of material is not the loss of the anti-fouling function; natural clay and rock surfaces are colonised by biofilms, so whether a clay-faced surface resists slime at all is the open question and is not simulated; (3) against an oil-free silicone baseline the comparison is meaningless. Seawater chemistry: Na/Ca exchange collapses osmotic swelling; only 1-2 water layers remain (crystalline swelling), so the hydration layer is ~0.3-0.6 nm, thinner than on zwitterionic brushes. Dimensionless: S L^2/(D c_free) = 2.5e-5; platelet aspect ratio ~100-300. No structural concern at 5 wt% clay; the surface energy of the silicone rises where clay faces are exposed. Simulation coefficient: design loss flux 3.75e-15 kg/(m^2 s) (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "clay_concentration", "value": 50.0},
+    {"name": "clay_dissolution_rate", "value": 1e-12},
+    {"name": "mobile_diffusivity", "value": 1e-15},
+    {"name": "depletion_depth", "value": 0.00015},
+    {"name": "free_mobile_concentration", "value": 0.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "SourceToDiffusionRatio", "value": 2.5e-05},
+    {"name": "PlateletAspectRatio", "value": 150.0}
+  ],
+  "simulation_coefficient": 3.75e-15,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Depletion of functional species in foul-release coatings",
+    "independent_var": {"label": "Normalised depth from the wetted surface", "unit": "-"},
+    "dependent_var": {"label": "Mobile species concentration", "unit": "kg/m^3"},
+    "primary_metric": {"label": "Loss flux of functional material to seawater"},
+    "reference_metric": {"label": "Loss flux of functional material (reference solver)"},
+    "performance_gain": {"label": "Reduction of functional-material loss rate vs oil-containing foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of functional-material loss rate",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Loss flux of functional material to seawater",
+    "reference_metric": "Loss flux of functional material (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 50.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "non-negative concentration"],
+    "design_variables": ["clay_concentration", "depletion_depth"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "mobile_diffusivity/depletion_depth",
+    "unit": "kg/(m^2 s)",
+    "label": "Loss flux of functional material to seawater"
+  },
+  "baseline_parameters": [
+    {"name": "clay_dissolution_rate", "value": 0.0},
+    {"name": "free_mobile_concentration", "value": 45.0}
+  ],
+  "baseline_description": "Conventional foul-release coating with 4.5 wt% free silicone oil"
+}

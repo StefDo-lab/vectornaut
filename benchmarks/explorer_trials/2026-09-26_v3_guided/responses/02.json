@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2u_dxi2 = log(tie_layer_modulus / top_layer_modulus) * du_dxi",
+  "boundary_conditions": [
+    "u(0) = 0",
+    "du_dxi(1) = 3 * reference_shear_stress * top_layer_thickness / top_layer_modulus"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "reference_shear_stress", "value": 10000.0, "min_bound": 1000.0, "max_bound": 200000.0, "justification": "Mean shear stress transmitted through the barnacle base plate by the drag of its protruding shell (order 0.01-0.1 MPa, the range of measured critical removal stresses on silicones). Linear model: the compliance u(1)/reference_shear_stress is independent of its value."}
+  ]
+}

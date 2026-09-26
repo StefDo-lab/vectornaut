@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2u_dxi2 = 0",
+  "boundary_conditions": [
+    "u(0) = 0",
+    "du_dxi(1) = 3 * reference_shear_stress * (bed_thickness / bed_modulus * (fouler_base_radius / (fouler_base_radius + tile_size / 2))**2 + skin_thickness / skin_modulus)"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "reference_shear_stress", "value": 10000.0, "min_bound": 1000.0, "max_bound": 200000.0, "justification": "Mean shear on a barnacle base; linear model. u is the surface displacement under the base (xi from primer to surface, uniform effective strain), so u(1)/tau is the effective areal compliance including the load-spreading correction (a/(a+l))^2 with l = tile_size/2."}
+  ]
+}

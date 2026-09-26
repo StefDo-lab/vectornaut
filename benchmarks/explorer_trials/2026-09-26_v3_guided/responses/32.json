@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du baust exfolierte synthetische Smektit-Tonplättchen (1 nm dick) über Silanbindungen in die äußeren Mikrometer eines ölfreien Silikon-Topcoats ein. Ihre Mineraloberflächen tragen 1-2 Lagen fest gebundenes Wasser wie Montmorillonit im Meeresboden und zersetzen sich chemisch praktisch nicht. Das Modell zeigt nahezu 100 % weniger Materialverlust als ein ölhaltiges Foul-Release-System, das ist aber konstruktionsbedingt und sagt nichts über die Anti-Schleim-Wirkung. Weil natürliche Mineraloberflächen im Meer stark bewachsen werden, ist die Bewuchswirkung unsicher; realistisch 0-0,5 % Vorteil beim zeitgemittelten Widerstand.",
+  "pros_and_cons": "Vorteile: mineralisch stabil, kein Öl, günstiger Rohstoff, Barrierewirkung gegen Wasseraufnahme. Nachteile: Tonflächen erhöhen die Oberflächenenergie des Silikons und können Haftung eher fördern; Hydratschicht in Meerwasser nur 0,3-0,6 nm; Verlust durch Abrieb; fraglich, ob überhaupt eine Anti-Fouling-Wirkung entsteht.",
+  "mechanical_limits": "5 Gew.-% Plättchen versteifen das Silikon leicht (Modul +20-50 %), was die Ablösespannung für Seepocken erhöht; sonst keine Strukturgrenze. Ausfall: Agglomeration, Rissbildung an Agglomeraten.",
+  "manufacturing_methods": "Organisch modifizierte, silanfunktionalisierte Smektit-Plättchen in den Silikon-Topcoat dispergieren (Hochscher-Dispergierung), Airless-Spritzen.",
+  "cost_estimation": "Material 25-40 EUR/m²; Entwicklung 80-150 kEUR.",
+  "validation_experiments": "1) Statische Diatomeen- und Bakterienansiedlung sowie Ablösung im Turbulenzkanal im Vergleich zu PDMS; 2) Kontaktwinkel und XPS nach Wasserlagerung; 3) Seepocken-Ablösekraft; 4) Floßtest.",
+  "industry_partners": "Tonmineral-Lieferanten, Foul-Release-Hersteller, Institute für Grenzflächenchemie."
+}

@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du kombinierst die faserverstärkte, scherweiche Palmstamm-Schicht mit einer ölfreien, superweichen Flaschenbürsten-Silikonmatrix (E ca. 0,1 MPa bei nur etwa 2 % löslichem Anteil). Übliche ultraweiche Silikone sind ölgestreckt oder haben viel Sol-Anteil, der ausläuft und die Schicht mit den Jahren versteift. Im Modell sinkt der Auslaugfluss um 78 % (2,1 statt 9,5 g/m² pro Jahr) gegenüber einer Foul-Release-Beschichtung mit 4,5 % freiem Öl. Die Schicht bleibt dadurch weich und die leichtere Seepockenablösung bleibt über fünf Jahre erhalten; realistisch etwa 1 % weniger zeitgemittelter Widerstand.",
+  "pros_and_cons": "Vorteile: weniger Silikonaustrag ins Meer, stabile Weichheit, kombinierbar mit Faserverstärkung gegen Eindrücken. Nachteile: Flaschenbürsten-Elastomere haben geringe Reißenergie und sind teuer; ohne Öl ist die anfängliche Gleitwirkung geringer; gegenüber ölfreien Standard-Silikonen ist der Vorteil kleiner.",
+  "mechanical_limits": "Reißenergie von Flaschenbürsten-Elastomeren nur etwa 10-50 J/m², Fasern müssen Risse überbrücken; Faserknicken ab etwa 0,4 MPa; Ausfall durch Einrisse bei Fenderkontakt.",
+  "manufacturing_methods": "Flaschenbürsten-PDMS per Makromonomer-Polymerisation und Vernetzung in situ (lösemittelfrei), Beflockung mit Nylon/PET-Fasern im nassen Film, weiche Deckhaut.",
+  "cost_estimation": "Material 60-120 EUR/m² (Flaschenbürsten-Makromer teuer); Entwicklung 0,3-0,5 MEUR.",
+  "validation_experiments": "1) Extraktions- und Auslaugtests (Massenverlust, Sol-Anteil) über 12 Monate; 2) Modulentwicklung nach Wasserlagerung; 3) Seepockenablösung über die Zeit; 4) Reiß- und Fendertests.",
+  "industry_partners": "Silikonhersteller mit Makromer-Chemie, Foul-Release-Hersteller, Beflockungsspezialisten, Umweltlabore."
+}

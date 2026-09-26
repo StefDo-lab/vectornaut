@@ -1,0 +1,57 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady transport of diatom cells across a near-wall transport layer of thickness delta (normalised coordinate y, wall at y=0, outer edge at y=1), d2c/dy2 = 0, with a first-order wall reaction at y=0 whose effective attachment velocity is the contact attachment velocity times the fraction of attached cells that survive the service wall shear, exp(-tau_w/tau_adh). The net retained settlement flux is J = (D/delta) dc/dy(0) = k_eff c_b/(1 + Da), Da = delta k_eff/D. Design (tau_adh = 12 Pa): k_eff = 1e-4*exp(-25/12) = 1.25e-5 m/s, Da = 0.062, J = 1.17e4 cells/(m^2 s). Baseline silicone foul-release (tau_adh = 30 Pa): k_eff = 4.35e-5 m/s, Da = 0.217, J = 3.57e4 cells/(m^2 s). Expected gain: 67 % lower net retained settlement flux. Caveats: (1) the exponential survival law is an assumption standing in for a distribution of adhesion strengths; (2) the result depends almost entirely on the ratio of adhesion strengths (12 vs 30 Pa), which is taken from short-term lab flow-cell data on fresh amphiphilic surfaces and may not persist in service; (3) ships spend 10-40 % of time idle at zero shear, when the survival factor is 1 for both coatings and the benefit vanishes, so the time-averaged benefit on slime accumulation is smaller; (4) the model does not compute drag. Dimensionless numbers: Damkoehler number of the wall reaction 0.062 (design) and 0.217 (baseline), i.e. reaction-limited, so the adhesion ratio controls the flux; shear-to-adhesion ratio 2.08 (design) vs 0.83 (baseline). Near-wall Reynolds number of a 10 um cell, u_tau*d/nu = 0.16*1e-5/1e-6 = 1.6. Parameter check: all positive; wall shear 25 Pa corresponds to u_tau = sqrt(25/1025) = 0.156 m/s, consistent with a hull at about 12 kn; hydration layer thickness, biofilm thickness and biofilm viscosity are not used in this model (informational). Stress check: no structural load; the zwitterionic surface layer must survive abrasion and hydrolysis, a durability risk not a simulation failure. The simulation coefficient is the design effective attachment velocity k_eff = 1.25e-5 m/s (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "hydration_layer_thickness", "value": 5e-09},
+    {"name": "biofilm_thickness", "value": 5e-05},
+    {"name": "slime_adhesion_strength_baseline", "value": 30.0},
+    {"name": "slime_adhesion_strength_new", "value": 12.0},
+    {"name": "wall_shear_service", "value": 25.0},
+    {"name": "biofilm_viscosity", "value": 10.0},
+    {"name": "concentration_boundary_layer_thickness", "value": 5e-05},
+    {"name": "effective_near_wall_diffusivity", "value": 1e-08},
+    {"name": "contact_attachment_velocity", "value": 0.0001},
+    {"name": "bulk_cell_concentration", "value": 1000000000.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "DamkoehlerNumber_design", "value": 0.062},
+    {"name": "DamkoehlerNumber_baseline", "value": 0.217},
+    {"name": "ShearToAdhesionRatio_design", "value": 2.08},
+    {"name": "ShearToAdhesionRatio_baseline", "value": 0.83},
+    {"name": "CellReynoldsNumber", "value": 1.6}
+  ],
+  "simulation_coefficient": 1.25e-05,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Near-wall transport and attachment of fouling cells",
+    "independent_var": {"label": "Normalised distance from the hull wall", "unit": "-"},
+    "dependent_var": {"label": "Diatom cell concentration", "unit": "1/m^3"},
+    "primary_metric": {"label": "Net retained diatom settlement flux"},
+    "reference_metric": {"label": "Net retained diatom settlement flux (reference solver)"},
+    "performance_gain": {"label": "Reduction of retained slime settlement vs silicone foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of retained slime settlement flux",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Net retained diatom settlement flux",
+    "reference_metric": "Net retained diatom settlement flux (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "non-negative concentration"],
+    "design_variables": ["slime_adhesion_strength_new", "contact_attachment_velocity"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "effective_near_wall_diffusivity/concentration_boundary_layer_thickness",
+    "unit": "1/(m^2 s)",
+    "label": "Net retained diatom settlement flux"
+  },
+  "baseline_parameters": [
+    {"name": "slime_adhesion_strength_new", "value": 30.0}
+  ],
+  "baseline_description": "Conventional silicone foul-release surface (slime adhesion strength 30 Pa)"
+}

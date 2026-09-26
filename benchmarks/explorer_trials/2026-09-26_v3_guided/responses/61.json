@@ -1,0 +1,53 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Wrinkle geometry check: lambda = 2*pi*t_s*(E_s/(3*E_b))^(1/3). With the proposed t_s = 3 um, E_s = 50 MPa, E_b = 0.2 MPa: lambda = 2*pi*3e-6*(83.3)^(1/3) = 82 um, above the intended 30-50 um. Adjusted t_s to 1.5 um: lambda = 41 um. Amplitude ~10 um requires a compressive strain of eps ~ eps_c*(1 + (A/t_s)^2*... ) i.e. several percent pre-swelling of the base, feasible. Hydraulic roughness: amplitude 10 um, k_s ~ 5 um, k_s+ = 5/6.3 = 0.8 at 12-16 kn, hydraulically smooth. Settlement model: steady transport of cyprids through a 1 mm near-wall layer (effective diffusivity 1e-6 m^2/s from swimming and port turbulence) with a first-order settlement reaction whose rate is reduced by the texture factor f = 0.5 (attachment-point effect, from lab data up to 0.1 and field ~0.5). Da = delta*k*f/D = 0.005 (design), 0.01 (baseline): reaction-limited, so the gain equals 1 - f = ~50 %. The gain is set by the assumed settlement factor, not by the simulation. Caveats: cyprid response to texture is species-specific (some barnacles prefer grooves of their own scale); diatoms (5-20 um) may prefer the 41 um valleys; the stiff 1.5 um skin can crack under hull strain (critical strain of an oxidised PDMS skin ~1-3 %, hull strain <0.2 %, OK) and wrinkles on soft silicone may flatten under long-term creep. Baseline: smooth conventional foul-release silicone (f = 1). Dimensionless: lambda/antennular disc diameter 41/25 = 1.6, k_s+ = 0.8, Da 0.005. Simulation coefficient: effective settlement velocity 5e-6 m/s (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "skin_thickness", "value": 1.5e-06},
+    {"name": "skin_modulus", "value": 50000000.0},
+    {"name": "base_modulus", "value": 200000.0},
+    {"name": "settlement_reduction_factor", "value": 0.5},
+    {"name": "contact_attachment_velocity", "value": 1e-05},
+    {"name": "cyprid_concentration", "value": 1000.0},
+    {"name": "cyprid_boundary_layer_thickness", "value": 0.001},
+    {"name": "cyprid_effective_diffusivity", "value": 1e-06}
+  ],
+  "dimensionless_numbers": [
+    {"name": "WrinkleWavelengthToDiscDiameter", "value": 1.6},
+    {"name": "RoughnessReynolds_ksplus", "value": 0.8},
+    {"name": "DamkoehlerNumber_design", "value": 0.005}
+  ],
+  "simulation_coefficient": 5e-06,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Larval transport and settlement on textured coatings",
+    "independent_var": {"label": "Normalised distance from the hull wall", "unit": "-"},
+    "dependent_var": {"label": "Cyprid concentration", "unit": "1/m^3"},
+    "primary_metric": {"label": "Cyprid settlement flux"},
+    "reference_metric": {"label": "Cyprid settlement flux (reference solver)"},
+    "performance_gain": {"label": "Reduction of barnacle settlement vs smooth foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of barnacle settlement",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Cyprid settlement flux",
+    "reference_metric": "Cyprid settlement flux (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "hydraulically smooth texture (k_s+ < 5)"],
+    "design_variables": ["skin_thickness", "skin_modulus", "base_modulus"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "cyprid_effective_diffusivity/cyprid_boundary_layer_thickness",
+    "unit": "1/(m^2 s)",
+    "label": "Cyprid settlement flux"
+  },
+  "baseline_parameters": [
+    {"name": "settlement_reduction_factor", "value": 1.0}
+  ],
+  "baseline_description": "Smooth conventional silicone foul-release surface"
+}

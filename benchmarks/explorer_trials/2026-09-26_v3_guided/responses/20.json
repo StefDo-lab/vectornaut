@@ -1,0 +1,58 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: through-thickness shear displacement of a bilayer (compliant bed under a stiff skin), xi = z/(t_bed + t_skin), primer at xi=0, surface at xi=1; the shear stress is uniform through the thickness, so du/dz = tau/G(z) with G = E/3 and a smoothed (tanh) modulus step at xi_b = t_bed/(t_bed+t_skin) = 0.875. The equation is the derivative of this strain profile; the top BC fixes the strain in the skin, and u(1) gives the areal compliance C = u(1)/tau. Analytical: C = 3*(t_bed/E_bed + t_skin/E_skin) = 3*(3.5e-4/1e5 + 5e-5/5e6) = 1.053e-8 m/Pa; sigma_c = sqrt(2w/C) = sqrt(0.1/1.053e-8) = 3.1 kPa. Baseline: uniform commercial topcoat, E = 1 MPa, 150 um (skin and bed set to 1 MPa, thicknesses 131.25 + 18.75 um): C = 4.5e-10 m/Pa, sigma_c = 14.9 kPa. Expected gain about 79 % lower release stress. Important caveat not captured by the 1D model: the stiff skin carries in-plane load and spreads the fouler's shear over a shear-lag length l = sqrt(E_skin*t_skin*t_bed/G_bed) = sqrt(5e6*5e-5*3.5e-4/3.3e4) = 1.6 mm around the 5 mm base, which enlarges the loaded bed area by about (6.6/5)^2 = 1.7 and lowers the effective compliance accordingly; sigma_c then rises by about 30 %, i.e. the real reduction is nearer 70-73 %. A thicker or stiffer skin makes this worse (l grows as sqrt(E_skin*t_skin)). Second caveat: under hull bending strain and thermal mismatch a stiff skin on a very soft bed can wrinkle when the compressive strain exceeds about 0.52*(3*E_bed/E_skin)^(2/3) = 0.52*(0.06)^(2/3) = 0.08, so wrinkling needs 8 % compressive strain, far above hull strains (<0.2 %): safe. Stress check: bed shear strain at 10 kPa is 3*1e4/1e5 = 0.3, elastic; ultra-soft bed gels (0.1 MPa) have low cohesive strength (~0.1-0.3 MPa), and a skin puncture exposes the bed. Dimensionless: modulus ratio skin/bed 50, shear-lag length/base radius 0.32, xi_b 0.875. Simulation coefficient: areal compliance 1.053e-8 m/Pa (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "skin_modulus", "value": 5000000.0},
+    {"name": "skin_thickness", "value": 5e-05},
+    {"name": "bed_modulus", "value": 100000.0},
+    {"name": "bed_thickness", "value": 0.00035},
+    {"name": "work_of_adhesion", "value": 0.05},
+    {"name": "fouler_base_radius", "value": 0.005},
+    {"name": "reference_shear_stress", "value": 10000.0},
+    {"name": "transition_width", "value": 0.01}
+  ],
+  "dimensionless_numbers": [
+    {"name": "ModulusRatio_skin_to_bed", "value": 50.0},
+    {"name": "ShearLagLengthToBaseRadius", "value": 0.32},
+    {"name": "InterfacePosition_xi_b", "value": 0.875},
+    {"name": "WrinklingCriticalStrain", "value": 0.08}
+  ],
+  "simulation_coefficient": 1.053e-08,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fracture mechanics of layered foul-release coatings",
+    "independent_var": {"label": "Normalised depth from primer to surface", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement in the coating", "unit": "m"},
+    "primary_metric": {"label": "Critical fouler release stress (skin on soft bed)"},
+    "reference_metric": {"label": "Critical fouler release stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of critical release stress vs conventional foul-release topcoat"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of critical fouler release stress",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouler release stress",
+    "reference_metric": "Critical fouler release stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "bed shear strain at reference load < 1"],
+    "design_variables": ["skin_modulus", "skin_thickness", "bed_modulus", "bed_thickness"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "1/reference_shear_stress",
+    "unit": "Pa",
+    "label": "Critical fouler release stress",
+    "transform": "sqrt(2*work_of_adhesion/m)"
+  },
+  "baseline_parameters": [
+    {"name": "skin_modulus", "value": 1000000.0},
+    {"name": "bed_modulus", "value": 1000000.0},
+    {"name": "bed_thickness", "value": 0.00013125},
+    {"name": "skin_thickness", "value": 1.875e-05}
+  ],
+  "baseline_description": "Conventional uniform silicone foul-release topcoat (E = 1 MPa, 150 um)"
+}

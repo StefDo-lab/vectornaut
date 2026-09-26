@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2c_dxi2 = hydrolysis_rate_constant * layer_thickness**2 / water_diffusivity * c",
+  "boundary_conditions": [
+    "c(0) = surface_water_concentration",
+    "dc_dxi(1) = 0"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["c"],
+  "parameters": [
+    {"name": "surface_water_concentration", "value": 1.0, "min_bound": 0.5, "max_bound": 1.0, "justification": "Normalised water concentration at the wetted surface (saturation = 1); xi = depth/layer_thickness, xi=0 at the seawater side, xi=1 at the impermeable primer (zero flux)."}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2u_dxi2 = interlayer_shear_stiffness * analysis_length**2 / (topcoat_modulus * topcoat_thickness) * u",
+  "boundary_conditions": [
+    "du_dxi(0) = -edge_line_load * analysis_length / (topcoat_modulus * topcoat_thickness)",
+    "u(1) = 0"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "analysis_length", "value": 1.0e-3, "min_bound": 5.0e-4, "max_bound": 1.0e-2, "justification": "Distance from the damage edge (xi = x/analysis_length) over which the load is transferred; much longer than the shear-lag length (30-80 um), so u(1) = 0 represents the far field."}
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "reviews": [
+    {
+      "order_id": "r004-01",
+      "plausible_simulated_benefit_pct": 35.0,
+      "plausible_objective_gain_pct": 0.3,
+      "plausible_gain_reasoning": "Shear-lag correctly shows that a more compliant interlayer lowers the peak edge shear, but peel stresses of the same order are ignored and a sprayed gradient will be less ideal than the exponential profile (whose softest 12 um dominate), so about 35 % lower peak delamination stress. Delamination from damage edges is a secondary failure mode of foul-release coatings; cuts and tears in the topcoat dominate, so the effect on time-averaged friction is a few tenths of a percent.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Interlayer stiffness of the graded interphase (2.6e10 Pa/m) from an idealised exponential profile; its value sets the gain",
+        "Baseline tie coat shear modulus 6.7 MPa is an assumption; softer tie coats would reduce the difference",
+        "Peel (normal) edge stresses and large membrane strain (0.33) neglected"
+      ],
+      "killer_risks": [
+        "Main damage mode (cutting and tearing of the soft topcoat) is unaffected",
+        "Soft zone of the interphase becomes the new weak plane (cohesive failure)",
+        "Reproducible gradient spraying on a hull in dock conditions is uncertain"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.15, "reason": "Only indirect, a few tenths of a percent through fewer peeled spots."},
+        {"name": "no_toxic_biocides", "coverage": 0.9, "reason": "No release; standard epoxy and silicone chemistries."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.55, "reason": "Improves edge delamination resistance, not cut resistance."},
+        {"name": "fouling_control", "coverage": 0.35, "reason": "Same topcoat as the baseline; no new fouling control."},
+        {"name": "bionic_mechanism", "coverage": 0.45, "reason": "Graded cuticular layer genuinely inspires the interphase, though graded interfaces are also standard engineering."},
+        {"name": "practical_application", "coverage": 0.55, "reason": "Extra wet-on-wet coats or mixing-ratio ramps are possible but demanding in a shipyard."}
+      ]
+    },
+    {
+      "order_id": "r004-02",
+      "plausible_simulated_benefit_pct": 12.0,
+      "plausible_objective_gain_pct": 0.5,
+      "plausible_gain_reasoning": "Switching only during idle periods removes a share of unconsolidated slime; with ageing of the molecular LCST layer and uncertain per-switch release of marine diatoms, about 12 % less retained slime is realistic, worth about half a percent of time-averaged friction. A conventional brush-grooming robot on the baseline would likely achieve as much.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Release probability 0.5 per switch and consolidation time 1 day are assumptions",
+        "Linear flux model; idle-period consolidation effect only noted",
+        "The fair competitor (baseline plus a brush-grooming robot) is not simulated"
+      ],
+      "killer_risks": [
+        "The robot, not the coating, carries the benefit; proactive brush grooming of the baseline gives similar slime control at lower complexity",
+        "Molecular LCST brush ages or is masked within months",
+        "Robot logistics and cost on large merchant ships"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.2, "reason": "About 0.5 % time-averaged."},
+        {"name": "no_toxic_biocides", "coverage": 0.8, "reason": "No substance released."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.25, "reason": "Brush layer durability over years unproven; robot needs maintenance."},
+        {"name": "fouling_control", "coverage": 0.45, "reason": "Targets slime in idle periods, the right window, but not macrofouling."},
+        {"name": "bionic_mechanism", "coverage": 0.0, "reason": "Technology concept."},
+        {"name": "practical_application", "coverage": 0.2, "reason": "Requires a robot and energy for the whole service life."}
+      ]
+    },
+    {
+      "order_id": "r004-03",
+      "plausible_simulated_benefit_pct": 40.0,
+      "plausible_objective_gain_pct": 0.5,
+      "plausible_gain_reasoning": "The 95 % is just the input friction ratio; in the field sand, biofilm and wear of the nm layer raise the friction coefficient to perhaps 0.1-0.25 over the service interval, so about 40 % lower contact shear on average. Without grooming the coating alone gives little objective benefit (about 0.5 % through less contact damage); the larger potential requires an operational grooming regime.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Gain equals the assumed friction ratio 0.02/0.4; no tribology is simulated",
+        "Lab friction coefficients of clean hydration-lubricated surfaces used for sea conditions",
+        "The nm lubricating layer is assumed to persist under the contacts it lubricates"
+      ],
+      "killer_risks": [
+        "Abrasion of the PC layer by the brushes and fenders within months",
+        "Masking by biofilm and conditioning films removes the hydration lubrication",
+        "Squeeze-out of the hydration layer under fender pressures above ~1 MPa"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.2, "reason": "Small direct effect; potential depends on grooming operations."},
+        {"name": "no_toxic_biocides", "coverage": 0.85, "reason": "Covalently bound PC polymer, no release."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.3, "reason": "Protects the topcoat only while the nm layer survives."},
+        {"name": "fouling_control", "coverage": 0.35, "reason": "Some anti-slime effect of the hydration layer and compatibility with grooming."},
+        {"name": "bionic_mechanism", "coverage": 0.6, "reason": "Hydration lubrication genuinely taken from articular cartilage."},
+        {"name": "practical_application", "coverage": 0.5, "reason": "Additive in a sprayable topcoat; MPC cost moderate."}
+      ]
+    }
+  ]
+}

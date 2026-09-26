@@ -1,0 +1,91 @@
+{
+  "reviews": [
+    {
+      "order_id": "r005-01",
+      "plausible_simulated_benefit_pct": 0.0,
+      "plausible_objective_gain_pct": 0.3,
+      "plausible_gain_reasoning": "The slip length b+ = 0.3 is an input borrowed from low-Reynolds-number DNS; compliant-coating drag reduction has never been demonstrated reproducibly at ship Reynolds numbers, and soft layers near U/c_t ~ 0.7 risk hydroelastic waves that add drag, so my best estimate for clean-surface wall shear is 0 %. The soft fibre layer may slightly ease macrofouling release, about 0.3 % of time-averaged friction.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Effective slip length b+ = 0.3 assumed, not computed from the layer properties",
+        "Equivalent laminar gap h+ = 28 is a free modelling choice of the Couette surrogate",
+        "Steady model cannot represent the fluid-structure interaction that is the mechanism"
+      ],
+      "killer_risks": [
+        "No drag reduction or even drag increase from hydroelastic instabilities at ship speed",
+        "Slime covering the surface decouples the wall motion from the flow",
+        "Fibre inclination cannot be controlled reliably on a hull in dock"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.15, "reason": "Clean-surface benefit speculative; small release benefit."},
+        {"name": "no_toxic_biocides", "coverage": 0.75, "reason": "No biocide; fibre fragments when worn."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.35, "reason": "Soft fibre-filled layer, tear and debonding risks."},
+        {"name": "fouling_control", "coverage": 0.35, "reason": "Soft layer eases hard-fouling release a little; slime unaffected."},
+        {"name": "bionic_mechanism", "coverage": 0.4, "reason": "Fibre-angle anisotropy from plant stems is real, but the drag mechanism is not a plant function."},
+        {"name": "practical_application", "coverage": 0.35, "reason": "Inclined flocking at hull scale is unproven."}
+      ]
+    },
+    {
+      "order_id": "r005-02",
+      "plausible_simulated_benefit_pct": 60.0,
+      "plausible_objective_gain_pct": 0.8,
+      "plausible_gain_reasoning": "An oil-free bottle-brush matrix leaches much less than an oil-containing coating, but the design's advantage partly comes from being twice as thick, and against oil-free commercial silicones it would be small; about 60 % less leaching is plausible. Keeping the layer soft preserves easier hard-fouling release over the interval, worth under 1 % of time-averaged friction.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Baseline assumes an oil-containing coating; many foul-release coatings are oil-free",
+        "Design is 300 um thick against 150 um, which halves its flux in this model",
+        "Same diffusivity for sol and oil; pseudo-steady model of a depleting reservoir"
+      ],
+      "killer_risks": [
+        "Low tear energy of bottle-brush elastomers (10-50 J/m^2): cuts and tears under fenders",
+        "Cost of bottle-brush macromers at hull-coating volumes",
+        "Lower initial release performance without surface oil"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.3, "reason": "Under 1 % via sustained release performance."},
+        {"name": "no_toxic_biocides", "coverage": 0.8, "reason": "Oil-free, low leaching; fibre fragments on wear."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.35, "reason": "Stable softness but weak tear resistance."},
+        {"name": "fouling_control", "coverage": 0.45, "reason": "Easier hard-fouling release kept over time; slime unaffected."},
+        {"name": "bionic_mechanism", "coverage": 0.45, "reason": "Fibre architecture from plant stems; the oil-free matrix is chemistry."},
+        {"name": "practical_application", "coverage": 0.35, "reason": "Expensive matrix plus flocking step."}
+      ]
+    },
+    {
+      "order_id": "r005-03",
+      "plausible_simulated_benefit_pct": 60.0,
+      "plausible_objective_gain_pct": 1.5,
+      "plausible_gain_reasoning": "Tiling does limit load spreading, but the (a/(a+l))^2 correction is a rough area estimate and viscoelastic barnacle adhesion and embedding on ultra-soft beds remain, so about 60 % lower release stress is realistic, slightly better than the continuous skin. Damage containment helps durability; the objective gain stays about 1.5 % because slime is unaffected.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Load-spreading correction (a/(a+l))^2 is an estimate, not a solved plate-on-foundation problem",
+        "Elastic Kendall balance with w = 0.05 J/m^2",
+        "Gap material behaviour under contact not modelled"
+      ],
+      "killer_risks": [
+        "Soft 20 um gaps as weak spots under fenders and as microgrooves for diatom colonisation",
+        "Segmentation of a skin at hull scale is slow and costly",
+        "Ultra-soft bed gels may be oil-extended and leach"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.35, "reason": "About 1.5 % via better macrofouling release and less damage."},
+        {"name": "no_toxic_biocides", "coverage": 0.7, "reason": "No biocide; possible extractables from the soft bed."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.5, "reason": "Damage stays local, skin protects the bed; gaps are weak spots."},
+        {"name": "fouling_control", "coverage": 0.4, "reason": "Good hard-fouling release; gaps may favour slime."},
+        {"name": "bionic_mechanism", "coverage": 0.1, "reason": "Sea ice is not a biological model."},
+        {"name": "practical_application", "coverage": 0.45, "reason": "Extra segmentation step; otherwise sprayable."}
+      ]
+    }
+  ]
+}

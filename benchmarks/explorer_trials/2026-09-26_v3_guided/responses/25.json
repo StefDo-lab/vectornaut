@@ -1,0 +1,55 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: uniform shear through the fibre-reinforced layer, u'' = 0, u(0)=0 at the primer, surface strain du/dxi(1) = tau*L/G_eff with G_eff = E_m/3 + 3*V_f*E_f*r^2/L^2 (matrix shear modulus plus the shear stiffness of guided-cantilever fibres spanning the layer). Areal compliance C = u(1)/tau, release stress sigma_c = sqrt(2w/C). Design: G_eff = 3.33e4 + 3*0.05*3e9*(5e-6/3e-4)^2 = 3.33e4 + 1.25e5 = 1.58e5 Pa; C = 3e-4/1.58e5 = 1.9e-9 m/Pa; sigma_c = 7.3 kPa. Baseline: uniform commercial topcoat E = 1 MPa, 150 um, no fibres: C = 4.5e-10 m/Pa, sigma_c = 14.9 kPa. Expected gain ~51 %. Compressive modulus of the design ~V_f*E_f = 150 MPa (vs ~3 MPa bulk modulus-limited indentation stiffness of a thin soft layer is actually confinement-dominated; the gain in indentation resistance is real for loads spread over areas larger than the layer thickness). Structural check: Euler buckling of clamped-clamped fibres sigma_cr = pi^2*E_f*r^2/L^2 = 8.2 MPa per fibre, 0.41 MPa as composite stress without matrix support; the soft matrix adds lateral support, but fender pressures of ~1 MPa will buckle fibres elastically (recoverable for nylon), so the indentation benefit saturates. Fibre-matrix interfacial shear under a 10 kPa base load is small (shear strain 0.063). Caveats: (1) fibres must be fully covered by a ~20-50 um soft skin, otherwise tips create roughness and fouling anchor points; (2) the guided-cantilever assumption requires good fibre bonding at the primer and at the skin; (3) the gradient of fibre density described in the concept is not modelled (uniform fibres); (4) release under peel rather than shear is governed by the much higher normal stiffness and would be harder. Dimensionless: slenderness L/r = 60, fibre-to-matrix shear contribution ratio 3.75, shear strain at 10 kPa 0.063. Simulation coefficient: effective shear modulus 1.58e5 Pa (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "matrix_modulus", "value": 100000.0},
+    {"name": "fibre_modulus", "value": 3000000000.0},
+    {"name": "fibre_volume_fraction", "value": 0.05},
+    {"name": "fibre_radius", "value": 5e-06},
+    {"name": "layer_thickness", "value": 0.0003},
+    {"name": "work_of_adhesion", "value": 0.05},
+    {"name": "reference_shear_stress", "value": 10000.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FibreSlenderness_L_over_r", "value": 60.0},
+    {"name": "FibreToMatrixShearStiffnessRatio", "value": 3.75},
+    {"name": "ShearStrainAtReferenceLoad", "value": 0.063}
+  ],
+  "simulation_coefficient": 158000.0,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Fracture mechanics of anisotropic foul-release coatings",
+    "independent_var": {"label": "Normalised depth from primer to surface", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement in the coating", "unit": "m"},
+    "primary_metric": {"label": "Critical fouler release stress (fibre-reinforced soft layer)"},
+    "reference_metric": {"label": "Critical fouler release stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of critical release stress vs conventional foul-release topcoat"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of critical fouler release stress",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Critical fouler release stress",
+    "reference_metric": "Critical fouler release stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "shear strain at reference load < 1"],
+    "design_variables": ["matrix_modulus", "fibre_modulus", "fibre_volume_fraction", "fibre_radius", "layer_thickness"]
+  },
+  "metric": {
+    "kind": "value_at",
+    "location": "1",
+    "scale": "1/reference_shear_stress",
+    "unit": "Pa",
+    "label": "Critical fouler release stress",
+    "transform": "sqrt(2*work_of_adhesion/m)"
+  },
+  "baseline_parameters": [
+    {"name": "matrix_modulus", "value": 1000000.0},
+    {"name": "layer_thickness", "value": 0.00015},
+    {"name": "fibre_volume_fraction", "value": 0.0}
+  ],
+  "baseline_description": "Conventional uniform silicone foul-release topcoat (E = 1 MPa, 150 um, no fibres)"
+}

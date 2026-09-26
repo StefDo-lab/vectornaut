@@ -1,0 +1,9 @@
+{
+  "executive_summary": "Du ahmst Mucine nach: Flaschenbürsten-Polymere mit dichten, kurzen Sulfobetain- oder Oligoglycerin-Seitenketten werden über ein Siloxan-Rückgrat in die Silikonoberfläche verankert und halten eine 10-20 nm dicke sterische Hydratschicht. Sie senken die Haftwahrscheinlichkeit von Diatomeen auch im Stillstand und ihre Haftfestigkeit bei Fahrt. Im zeitgemittelten Modell (25 % Liegezeit) sinkt der verbleibende Ansiedlungsfluss um 60 % gegenüber Silikon-Foul-Release. Realistisch, nach Alterung, bleiben vielleicht 20-30 % weniger Schleim, also etwa 1-1,5 % weniger zeitgemittelter Reibungswiderstand.",
+  "pros_and_cons": "Vorteile: wirkt auch in Liegezeiten, keine Freisetzung, dichtere Bürste widersteht dem Überdecken durch Silikonketten besser als lineare Zwitterionen. Nachteile: bleibt eine molekulare Schicht, die Konditionierungsfilme, Öl und Abrieb innerhalb von Monaten neutralisieren können; Synthese der Flaschenbürsten aufwendig; Laborwerte stark vom Test abhängig.",
+  "mechanical_limits": "Keine Strukturlast. Grenzen: Abrieb der Bürstenschicht (wenige nm bis µm), Hydrolyse der Ankergruppen, Quellung. Ausfall: Diatomeen-Ablösung nach Alterung auf PDMS-Niveau.",
+  "manufacturing_methods": "Flaschenbürsten-Makromer per ATRP oder ROMP mit Silan-Ankergruppen als Additiv (2-5 Gew.-%) im Silikon-Topcoat; Oberflächensegregation unter Wasser. Airless-Spritzen.",
+  "cost_estimation": "Material 40-80 EUR/m² je nach Makromer-Preis; Entwicklung 200-300 kEUR.",
+  "validation_experiments": "1) Statische Diatomeen- und Bakterien-Ansiedlungstests; 2) Ablösung im Turbulenzkanal; 3) Alterung (Wasserlagerung, Abrieb, Ölfilm) und Wiederholung; 4) Floßtests mit Liegezeitsimulation.",
+  "industry_partners": "Foul-Release-Hersteller, Polymer-Spezialsynthese (kontrollierte Radikalpolymerisation), Biomedizin-Oberflächenfirmen, Meeresforschungsinstitute."
+}

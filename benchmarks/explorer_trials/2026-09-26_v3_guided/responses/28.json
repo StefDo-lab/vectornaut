@@ -1,0 +1,54 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady near-wall transport of diatom cells with a first-order wall reaction; the effective attachment velocity is the contact attachment velocity times the time-averaged survival under flow times the fraction of attached cells that consolidate before a thermal switch removes them, 1/(1 + p*t_c/t_s) (competing first-order processes: consolidation at rate 1/t_c, removal at rate p/t_s). Design: k_eff = 1e-4*0.45/(1 + 0.6*86400/43200) = 2.05e-5 m/s, Da = 0.102, J = 1.86e4 1/(m^2 s). Baseline silicone foul-release (p = 0): k_eff = 4.5e-5 m/s, Da = 0.225, J = 3.67e4 1/(m^2 s). Expected gain ~49 %. Energy check (not in the steady model): a pulse must heat the brush through a ~50 um topcoat (diffusion time L^2/alpha = 2.5e-9/1e-7 = 0.025 s) and loses heat to the water (h ~300 W/m^2K in port, ~3000 W/m^2K at 15 kn) and into the substrate (penetration sqrt(alpha*t) ~0.45 mm for a 2 s pulse). Per 2 s pulse at 15 K: ~10-15 kJ/m^2 in port, ~100 kJ/m^2 at speed. Two pulses per day: 0.35 W/m^2 (port) to 2.3 W/m^2 (at speed) average, i.e. 3.5-23 kW for a 10,000 m^2 hull, with ~50 kW peak for a 1 m^2 patch at speed; affordable for a ship's electrical plant, but it is a continuous energy supply and needs an embedded, insulated heater grid on the steel hull (cathodic protection, electrical safety, damage by fenders). Caveats: release probability 0.6 per switch and consolidation time 1 day are lab-level assumptions and set the gain; the brush ages like other molecular layers; the LCST must be tuned above the highest seawater temperature on the route (~32 C in the tropics), so heating to ~45 C is needed. Dimensionless: Damkoehler 0.102 (design), 0.225 (baseline); p*t_c/t_s = 1.2. Simulation coefficient: design k_eff 2.05e-5 m/s (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "release_probability_per_switch", "value": 0.6},
+    {"name": "consolidation_time", "value": 86400.0},
+    {"name": "switching_period", "value": 43200.0},
+    {"name": "contact_attachment_velocity", "value": 0.0001},
+    {"name": "survival_fraction_under_flow", "value": 0.45},
+    {"name": "pulse_temperature_rise", "value": 15.0},
+    {"name": "concentration_boundary_layer_thickness", "value": 5e-05},
+    {"name": "effective_near_wall_diffusivity", "value": 1e-08},
+    {"name": "bulk_cell_concentration", "value": 1000000000.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "DamkoehlerNumber_design", "value": 0.102},
+    {"name": "DamkoehlerNumber_baseline", "value": 0.225},
+    {"name": "RemovalToConsolidationRatio", "value": 1.2}
+  ],
+  "simulation_coefficient": 2.05e-05,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Near-wall transport and attachment of fouling cells",
+    "independent_var": {"label": "Normalised distance from the hull wall", "unit": "-"},
+    "dependent_var": {"label": "Diatom cell concentration", "unit": "1/m^3"},
+    "primary_metric": {"label": "Retained (consolidated) diatom settlement flux"},
+    "reference_metric": {"label": "Retained diatom settlement flux (reference solver)"},
+    "performance_gain": {"label": "Reduction of retained slime settlement vs silicone foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of retained slime settlement",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Retained (consolidated) diatom settlement flux",
+    "reference_metric": "Retained diatom settlement flux (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 20.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "non-negative concentration"],
+    "design_variables": ["release_probability_per_switch", "switching_period"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "effective_near_wall_diffusivity/concentration_boundary_layer_thickness",
+    "unit": "1/(m^2 s)",
+    "label": "Retained (consolidated) diatom settlement flux"
+  },
+  "baseline_parameters": [
+    {"name": "release_probability_per_switch", "value": 0.0}
+  ],
+  "baseline_description": "Conventional silicone foul-release surface without thermal switching"
+}

@@ -1,0 +1,134 @@
+{
+  "function_analysis": "A hull coating for multi-year service must (F1) keep the wetted surface hydraulically smooth so the turbulent skin friction stays near that of a smooth wall (at 12-16 kn the viscous length nu/u_tau is about 3-5 um, so roughness above ~10-20 um already costs drag); (F2) prevent or shed biofouling (bacterial/diatom slime within days, weed and calcareous macrofouling within weeks) without releasing biocides, because over a 5-year docking interval fouling, not the clean-surface friction, dominates the drag penalty (light slime about +5-10 %, calcareous fouling +20-80 % total resistance); (F3) survive 5+ years of seawater immersion, UV at the waterline, abrasion by fenders, anchors chains and in-water cleaning, cathodic protection and hydrolysis without delamination or loss of function; (F4) be applicable with shipyard processes on large steel hulls at acceptable cost and without continuous consumption of energy or material.",
+  "requirements": [
+    {"name": "friction_drag_reduction", "criterion": "Lowers the time-averaged hull friction resistance over the service interval compared with the conventional biocide-free foul-release coating."},
+    {"name": "no_toxic_biocides", "criterion": "Releases no biocides, heavy metals, or other toxic or persistent substances (including leaching oils or polymer fragments) into seawater."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps adhesion, integrity and function for at least 5 years in seawater, including abrasion, UV at the waterline, cathodic protection and hydrolysis."},
+    {"name": "fouling_control", "criterion": "Limits slime and macrofouling (or allows its easy release at service speeds or by gentle cleaning) throughout the interval, including idle periods."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is genuinely derived from a biological model."},
+    {"name": "practical_application", "criterion": "Can be applied to large steel hulls with shipyard processes at a cost comparable to premium coatings and without continuous energy or material supply."}
+  ],
+  "mechanism_classes_considered": [
+    "graded_stiffness (soft, thick elastomer lowers the critical release stress of hard foulers)",
+    "trapped_gas_or_liquid (bound hydration layer, infused lubricant, plastron)",
+    "interfacial_slip (slip or lubricating boundary condition for clean-surface friction)",
+    "flow_redirection (riblets and grooves reducing turbulent skin friction on the clean surface)",
+    "other: controlled surface renewal/erosion (sloughing of the outermost layer carries the biofilm away)",
+    "other: microtopography below the settlement scale of larvae",
+    "electrostatic_field (surface charge and fields against settlement; needs power)"
+  ],
+  "analogues_considered": [
+    "Pilot whale and dolphin skin: soft, highly hydrated epidermis with rapid cell turnover and nano-ridges",
+    "Fish epidermal mucus: hydrated glycoprotein gel that binds water and resists bacterial colonisation",
+    "Coral mucus sheets that are periodically shed together with settled particles and microbes",
+    "Blue mussel periostracum microripples (about 1-2 um) deterring larval settlement",
+    "Plane-tree and eucalyptus bark shedding (surface renewal in plants)",
+    "Silicone foul-release technology: Kendall/Brady scaling of pull-off stress with modulus and thickness",
+    "Self-polishing copolymer antifouling paints (controlled hydrolysis at the surface)",
+    "Zwitterionic polymer brushes from biomedical implants (non-fouling hydration layers)"
+  ],
+  "objective_statement": "Time-averaged hull frictional resistance of a merchant ship over a 5-year docking interval in seawater (mixed operating profile around 12-16 kn with idle periods), including the drag added by slime and macrofouling and by coating degradation, not the friction of a freshly applied clean surface.",
+  "baseline_statement": "Conventional biocide-free silicone (PDMS/fluoropolymer-modified) foul-release coating averaged over the same 5-year interval, i.e. in its typical in-service state after 12-24 months with a light-to-medium slime layer and occasional macrofouling during idle periods.",
+  "relevant_governing_quantities": ["wall_shear", "fouling_adhesion", "degradation_rate", "stress"],
+  "candidates": [
+    {
+      "order_id": "r001-01",
+      "title": "Pilot-whale graded soft skin: thick ultra-soft silicone over stiff tie layer",
+      "summary": "A two-to-three layer silicone foul-release system whose outer 300-400 um layer is much softer (E ~0.2 MPa) than commercial foul-release topcoats (~1 MPa), graded down to a stiffer, tear-resistant tie layer bonded to the anticorrosive primer. The critical release stress of hard foulers scales as sqrt(w*E/t), so a softer, thicker outer layer lets barnacles and tubeworms release at lower hydrodynamic shear, while the stiff base limits cutting and tearing damage.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "100_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "fouling_adhesion"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "release stress ratio sigma_new/sigma_base = sqrt((E_new/E_base)*(t_base/t_new)) = sqrt((0.2/1.0)*(150/400)) = 0.27 (-73 %); hard fouling on FR ships contributes roughly 3-6 % of time-averaged friction (idle periods), slime about 5 % which is barely affected by modulus; assuming half of the macrofouling penalty is removed: 0.5*5 % = 2.5 %",
+        "value": 2.5,
+        "unit": "%"
+      },
+      "main_risk": "The ultra-soft outer layer is cut and torn by fenders, chains and cleaning, and the damaged spots foul and roughen; slime (diatoms) adhesion is barely lowered by softness alone.",
+      "novelty_vs_known": "Closest: commercial silicone foul-release coatings and Brady's modulus-thickness rule. New: an intentional through-thickness stiffness gradient (soft skin over tough dermis-like tie layer) that decouples low release stress from damage tolerance, instead of a single uniform silicone topcoat.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating (uniform topcoat, E about 1 MPa, 150 um) over the same 5-year interval in service.",
+      "inspiration_source": "Pilot whale (Globicephala melas) and dolphin skin: a soft, hydrated outer epidermis over a much stiffer collagen-rich dermis, which stays nearly free of hard fouling.",
+      "domain": "Contact and fracture mechanics of soft coatings",
+      "physical_mechanism": "A barnacle base plate (rigid disc, radius a) bonded to an elastomer layer of thickness t and modulus E detaches when the stored elastic energy released by crack growth exceeds the work of adhesion w; for thin, nearly incompressible layers the critical shear/pull-off stress scales as sigma_c ~ sqrt(w*E/t) (Kendall; Brady-Singer). A soft thick top layer therefore lowers sigma_c, so foulers release at lower flow shear or by gentler cleaning. The stiffness gradient to a tough tie layer (E ~ 5 MPa) keeps the layer from tearing and delaminating. Maps to the request: easier release means a smoother hull over the service interval, hence lower time-averaged friction, without biocides.",
+      "parameters": [
+        {"name": "top_layer_modulus", "value": 2.0e5, "min_bound": 5.0e4, "max_bound": 2.0e6, "justification": "Soft outer epidermis analogue; 0.2 MPa is achievable with low-crosslink PDMS; commercial topcoats are about 1 MPa."},
+        {"name": "top_layer_thickness", "value": 4.0e-4, "min_bound": 5.0e-5, "max_bound": 1.0e-3, "justification": "Thick soft layer lowers release stress; limited by cost and sag during application."},
+        {"name": "tie_layer_modulus", "value": 5.0e6, "min_bound": 1.0e6, "max_bound": 5.0e7, "justification": "Dermis analogue giving tear resistance and adhesion to the epoxy primer."},
+        {"name": "work_of_adhesion", "value": 0.05, "min_bound": 0.01, "max_bound": 0.3, "justification": "Barnacle cement on low-energy silicone, order 0.02-0.1 J/m^2."},
+        {"name": "fouler_base_radius", "value": 5.0e-3, "min_bound": 1.0e-3, "max_bound": 1.5e-2, "justification": "Adult barnacle basal plate radius."},
+        {"name": "baseline_modulus", "value": 1.0e6, "min_bound": 3.0e5, "max_bound": 3.0e6, "justification": "Typical commercial silicone foul-release topcoat modulus."},
+        {"name": "baseline_thickness", "value": 1.5e-4, "min_bound": 5.0e-5, "max_bound": 3.0e-4, "justification": "Typical dry film thickness of a foul-release topcoat."}
+      ]
+    },
+    {
+      "order_id": "r001-02",
+      "title": "Fish-mucus hydration skin: covalently anchored zwitterionic network in silicone",
+      "summary": "A silicone foul-release matrix whose surface segregates a covalently anchored, crosslinked zwitterionic (sulfobetaine) network that binds a nm-thick hydration layer, imitating fish epidermal mucus. The bound water layer lowers the adhesion of diatom and bacterial slime, which is the fouling that conventional silicone foul-release coatings do not shed at service speed.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "nm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "fouling_adhesion"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "slime on in-service FR coatings adds about +5-9 % total resistance (Schultz 2007: light slime ~ +9 % at 15 kn); if the diatom removal fraction at hull shear (~20-30 Pa) rises from ~40 % (PDMS) to ~80 % (amphiphilic surfaces in lab), the average slime penalty roughly halves: 0.5*6 % = 3 %, discounted for loss of the surface chemistry over years: ~2 %",
+        "value": 2.0,
+        "unit": "%"
+      },
+      "main_risk": "The zwitterionic surface layer is lost by abrasion, hydrolysis and surface reconstruction of the silicone within months, after which the coating behaves like the baseline.",
+      "novelty_vs_known": "Closest: amphiphilic PEG/fluoropolymer foul-release coatings and zwitterionic brushes on implants. New: a crosslinked zwitterionic network anchored through the silicone matrix (not a grafted monolayer), so abrasion exposes fresh zwitterionic segments, like continuously renewed mucus.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service (light-to-medium slime).",
+      "inspiration_source": "Fish epidermal mucus: hydrated glycoprotein gel whose bound water layer prevents microbial attachment.",
+      "domain": "Interfacial physics / biofilm mechanics",
+      "physical_mechanism": "Zwitterions bind water electrostatically, forming a hydration layer of a few nm that must be displaced for adhesive EPS to bond; this lowers the effective adhesion strength of slime. A biofilm of thickness h_b on the wall is sheared by the turbulent flow; the shear transmitted to the interface equals the wall shear tau_w, and the film is removed where tau_w exceeds its interfacial adhesion strength. Lower adhesion strength means a larger removed fraction at a given speed, hence a thinner average slime layer and lower equivalent sand roughness over the service interval.",
+      "parameters": [
+        {"name": "hydration_layer_thickness", "value": 5.0e-9, "min_bound": 1.0e-9, "max_bound": 2.0e-8, "justification": "Bound water on zwitterionic surfaces spans a few nm."},
+        {"name": "biofilm_thickness", "value": 5.0e-5, "min_bound": 1.0e-5, "max_bound": 5.0e-4, "justification": "Typical diatom slime thickness on hulls."},
+        {"name": "slime_adhesion_strength_baseline", "value": 30.0, "min_bound": 5.0, "max_bound": 100.0, "justification": "Wall shear at which about half of a diatom film is removed from PDMS in flow-cell tests."},
+        {"name": "slime_adhesion_strength_new", "value": 12.0, "min_bound": 2.0, "max_bound": 60.0, "justification": "Amphiphilic/zwitterionic surfaces show 2-3 times higher removal at equal shear."},
+        {"name": "wall_shear_service", "value": 25.0, "min_bound": 5.0, "max_bound": 80.0, "justification": "Turbulent wall shear on a hull at 12-16 kn, rho*u_tau^2 with u_tau ~0.15-0.25 m/s."},
+        {"name": "biofilm_viscosity", "value": 10.0, "min_bound": 0.1, "max_bound": 1000.0, "justification": "Effective viscosity of an EPS matrix (viscoelastic, order 1-100 Pa s)."}
+      ]
+    },
+    {
+      "order_id": "r001-03",
+      "title": "Coral-mucus sloughing skin: slowly hydrolysing biocide-free renewal layer",
+      "summary": "A 300 um outer layer of a hydrolysable, biodegradable polyester-silyl binder without any biocide that erodes at a controlled 3-6 um per month, imitating coral mucus sheet shedding and the rapid skin turnover of cetaceans. Continuous removal of the outermost microns carries off young biofilm and keeps the surface smooth by polishing, over a 5-year reservoir.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "other"},
+        {"axis": "length_scale", "value": "100_um"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "degradation_rate"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "erosion 5 um/month removes the outer surface roughly every 1-2 weeks at the thickness of a young diatom film (10 um), but settled barnacle cyprids anchor within hours and are not removed by um-scale erosion; slime penalty reduction perhaps 20 % of 6 % = 1.2 %, minus polishing smoothness loss; net ~1 %",
+        "value": 1.0,
+        "unit": "%"
+      },
+      "main_risk": "Without a biocide, erosion rates compatible with a 5-year reservoir are far too slow to dislodge settled larvae, and the hydrolysis products add polymer fragments to seawater.",
+      "novelty_vs_known": "Closest: self-polishing copolymer antifouling paints, which rely on released biocides; biocide-free erodible coatings exist but perform poorly. New: the erosion rate is tuned to the growth time of slime rather than to biocide release.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service.",
+      "inspiration_source": "Coral mucus sheet shedding (Porites) and the fast epidermal turnover of pilot whales, which remove settling microorganisms with the shed layer.",
+      "domain": "Polymer degradation / reaction-diffusion",
+      "physical_mechanism": "Seawater diffuses into the binder and hydrolyses ester or silyl-ester bonds in a thin leached layer; a steady reaction-diffusion balance D*c'' = k*c sets the leached-layer thickness and the steady erosion rate. The eroding surface continuously removes the substrate to which slime is attached, lowering the mean biofilm thickness, provided the erosion per slime generation time is comparable to the film thickness.",
+      "parameters": [
+        {"name": "water_diffusivity", "value": 1.0e-12, "min_bound": 1.0e-14, "max_bound": 1.0e-10, "justification": "Water diffusion in hydrophobic polyester binders."},
+        {"name": "hydrolysis_rate_constant", "value": 1.0e-6, "min_bound": 1.0e-8, "max_bound": 1.0e-4, "justification": "Pseudo first-order hydrolysis of silyl esters in seawater (1/s)."},
+        {"name": "layer_thickness", "value": 3.0e-4, "min_bound": 1.0e-4, "max_bound": 6.0e-4, "justification": "Reservoir for 5 years at about 5 um per month."},
+        {"name": "target_erosion_rate", "value": 1.9e-12, "min_bound": 3.0e-13, "max_bound": 1.0e-11, "justification": "5 um per month in m/s."},
+        {"name": "biofilm_growth_time", "value": 6.0e5, "min_bound": 1.0e5, "max_bound": 3.0e6, "justification": "About one week for a diatom film of ~10 um."}
+      ]
+    }
+  ]
+}

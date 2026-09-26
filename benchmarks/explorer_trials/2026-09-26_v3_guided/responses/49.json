@@ -1,0 +1,10 @@
+{
+  "governing_equation": "d2c_dxi2 = 0",
+  "boundary_conditions": [
+    "c(0) = 0",
+    "c(1) = mobile_concentration"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["c"],
+  "parameters": []
+}

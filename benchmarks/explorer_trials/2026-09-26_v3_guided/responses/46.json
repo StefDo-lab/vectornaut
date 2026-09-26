@@ -1,0 +1,12 @@
+{
+  "governing_equation": "d2u_dy2 = 0",
+  "boundary_conditions": [
+    "u(0) = effective_slip_length / equivalent_laminar_gap * du_dy(0)",
+    "u(1) = wall_velocity"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["u"],
+  "parameters": [
+    {"name": "dynamic_viscosity", "value": 1.08e-3, "min_bound": 8.0e-4, "max_bound": 1.9e-3, "justification": "Seawater at 15-20 C."}
+  ]
+}

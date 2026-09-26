@@ -1,0 +1,54 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: steady diffusion of mobile silicone through the soft layer (xi = depth/L, surface at 0, undepleted layer at 1 with c = mobile concentration) with a Robin condition at the surface representing the platelet-filled skin: D/L dc/dxi(0) = k_skin c(0), k_skin = D*(1-phi)/((1+alpha*phi/2)*L_skin) (Nielsen tortuosity, same matrix diffusivity). Leaching flux J = (D/L) dc/dxi(0). Design: coefficient L*(1-phi)/((1+alpha*phi/2)*L_skin) = 3e-4*0.9/(6*2e-5) = 2.25, c(0) = 20/3.25 = 6.15, J = 3.33e-12*2.25*6.15 = 4.6e-11 kg/(m^2 s). Baseline: conventional oil-containing coating (45 kg/m^3 free oil, 150 um), with the skin reduced to a 5 um unfilled silicone film (phi = 0, i.e. equivalent to no barrier): coefficient 30, J = 2.9e-10 kg/(m^2 s). Expected gain ~84 %, of which most comes from the oil-free, thicker parent layer (-78 %) and the skin adds a factor 0.69. Caveats: Nielsen assumes perfectly aligned, well-dispersed platelets; real sprayed skins reach perhaps half the tortuosity; the in-plane modulus of the skin with 10 vol% aspect-100 flakes rises strongly (Halpin-Tsai: E_skin ~ 10-30 MPa for a 0.3 MPa matrix... order of several MPa), which spreads fouler loads (shear-lag length sqrt(E_s t_s t_b/G_b) = sqrt(1e7*2e-5*3e-4/3.3e4) = 1.3 mm) and raises the release stress; so the barrier and the release function are in conflict. Dimensionless: tortuosity factor 0.15, skin-to-bulk resistance ratio 0.44 (design). Simulation coefficient: skin conductance 7.5e-12 m/s (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "mobile_concentration", "value": 20.0},
+    {"name": "mobile_diffusivity", "value": 1e-15},
+    {"name": "layer_thickness", "value": 0.0003},
+    {"name": "skin_thickness", "value": 2e-05},
+    {"name": "platelet_volume_fraction", "value": 0.1},
+    {"name": "platelet_aspect_ratio", "value": 100.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "TortuosityFactor", "value": 0.15},
+    {"name": "SkinToBulkResistanceRatio", "value": 0.44},
+    {"name": "SkinShearLagLengthToBaseRadius", "value": 0.26}
+  ],
+  "simulation_coefficient": 7.5e-12,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Leaching through layered coatings with barrier skins",
+    "independent_var": {"label": "Normalised depth from the wetted surface", "unit": "-"},
+    "dependent_var": {"label": "Mobile species concentration", "unit": "kg/m^3"},
+    "primary_metric": {"label": "Leaching flux of mobile silicone"},
+    "reference_metric": {"label": "Leaching flux of mobile silicone (reference solver)"},
+    "performance_gain": {"label": "Reduction of leaching (degradation) rate vs oil-containing foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of leaching rate",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Leaching flux of mobile silicone",
+    "reference_metric": "Leaching flux of mobile silicone (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 30.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "non-negative concentration"],
+    "design_variables": ["skin_thickness", "platelet_volume_fraction", "platelet_aspect_ratio", "layer_thickness"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "mobile_diffusivity/layer_thickness",
+    "unit": "kg/(m^2 s)",
+    "label": "Leaching flux of mobile silicone"
+  },
+  "baseline_parameters": [
+    {"name": "mobile_concentration", "value": 45.0},
+    {"name": "layer_thickness", "value": 0.00015},
+    {"name": "platelet_volume_fraction", "value": 0.0},
+    {"name": "skin_thickness", "value": 5e-06}
+  ],
+  "baseline_description": "Conventional foul-release coating with 4.5 wt% free silicone oil, 150 um, no barrier skin"
+}

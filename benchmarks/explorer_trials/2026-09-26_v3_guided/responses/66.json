@@ -1,0 +1,91 @@
+{
+  "reviews": [
+    {
+      "order_id": "r006-01",
+      "plausible_simulated_benefit_pct": 60.0,
+      "plausible_objective_gain_pct": 0.5,
+      "plausible_gain_reasoning": "Most of the simulated 84 % comes from the oil-free, thicker parent layer compared with an oil-containing baseline; the skin itself contributes a factor ~0.7 at ideal alignment, less when sprayed; about 60 % lower leaching overall is plausible. The platelet skin stiffens the surface in-plane and raises barnacle release stress, so the net contribution to time-averaged friction is about 0.5 %.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Baseline is an oil-containing coating; against oil-free silicones the benefit is much smaller",
+        "Ideal Nielsen tortuosity with perfectly aligned platelets",
+        "Release penalty of the stiffened skin not simulated"
+      ],
+      "killer_risks": [
+        "Barrier skin raises in-plane stiffness and spreads fouler loads, degrading the foul-release function it is meant to protect",
+        "Crack initiation at platelet edges under cyclic strain",
+        "Poor platelet alignment in sprayed films"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.2, "reason": "About 0.5 % net."},
+        {"name": "no_toxic_biocides", "coverage": 0.8, "reason": "Low leaching, inert fillers."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.45, "reason": "Slower degradation of the soft layer, new cracking risk."},
+        {"name": "fouling_control", "coverage": 0.3, "reason": "Stiffer skin weakens hard-fouling release."},
+        {"name": "bionic_mechanism", "coverage": 0.45, "reason": "Cuticle wax-platelet barrier is a genuine plant principle."},
+        {"name": "practical_application", "coverage": 0.45, "reason": "Extra filled skin on an expensive soft layer."}
+      ]
+    },
+    {
+      "order_id": "r006-02",
+      "plausible_simulated_benefit_pct": 25.0,
+      "plausible_objective_gain_pct": 0.5,
+      "plausible_gain_reasoning": "The 50 % equals the assumed settlement factor; field results of microtextures against barnacles are much weaker and species-dependent than lab results, so about 25 % fewer settled barnacles is realistic. Valleys of ~40 um can host diatom slime, offsetting part of the gain; about 0.5 % of time-averaged friction.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Settlement reduction factor 0.5 is an input from lab studies",
+        "Cyprid transport through a 1 mm layer with an assumed effective diffusivity",
+        "Diatom colonisation of the texture not modelled"
+      ],
+      "killer_risks": [
+        "Diatom slime prefers the wrinkle valleys and raises the slime penalty",
+        "Wrinkles flatten by creep of the soft base or wear off the crests within years",
+        "Large-area controlled wrinkling on a hull is not an established process"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.25, "reason": "About 0.5 %, hydraulically smooth."},
+        {"name": "no_toxic_biocides", "coverage": 0.9, "reason": "Purely physical texture."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.35, "reason": "Texture stability on soft silicone over years is doubtful."},
+        {"name": "fouling_control", "coverage": 0.4, "reason": "Some barnacle deterrence, slime may increase."},
+        {"name": "bionic_mechanism", "coverage": 0.4, "reason": "Microtopography of crab carapaces is a loose analogue; wrinkling is an engineering route."},
+        {"name": "practical_application", "coverage": 0.4, "reason": "Needs a new large-area wrinkling process."}
+      ]
+    },
+    {
+      "order_id": "r006-03",
+      "plausible_simulated_benefit_pct": 30.0,
+      "plausible_objective_gain_pct": -0.5,
+      "plausible_gain_reasoning": "The contact-shear reduction is set by assumed friction coefficients and an unproven 80 % intact fraction; Mg/Na competition weakens seawater alginate gels, so about 30 % lower average traction is realistic. Calcium-bridged anionic surfaces promote diatom and bacterial EPS adhesion, so the time-averaged drag is likely slightly worse than the baseline.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Intact fraction 0.8 from assumed self-healing, not demonstrated",
+        "Friction coefficient of a seawater alginate gel (0.05) assumed",
+        "No model of fouling on an anionic, Ca-bridged surface"
+      ],
+      "killer_risks": [
+        "Promotes slime adhesion via Ca2+ bridging of EPS",
+        "Weak Mg-alginate gels in seawater provide little lubrication",
+        "Abraded anchored chains are not replaced"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.1, "reason": "Likely no gain or a small loss."},
+        {"name": "no_toxic_biocides", "coverage": 0.85, "reason": "Alginate is benign and anchored."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.3, "reason": "Ionic healing of the gel, but chain loss by abrasion."},
+        {"name": "fouling_control", "coverage": 0.15, "reason": "Anionic surface may attract slime."},
+        {"name": "bionic_mechanism", "coverage": 0.5, "reason": "Calcium-crosslinked alginate capsule is a genuine microbial principle."},
+        {"name": "practical_application", "coverage": 0.5, "reason": "Cheap biopolymer, but grafting onto silicone at hull scale is unproven."}
+      ]
+    }
+  ]
+}

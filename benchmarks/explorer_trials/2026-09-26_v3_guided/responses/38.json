@@ -1,0 +1,14 @@
+{
+  "governing_equation": "d2c_dy2 = 0",
+  "boundary_conditions": [
+    "dc_dy(0) = concentration_boundary_layer_thickness * contact_attachment_velocity * (idle_fraction / (1 + release_probability_per_switch * consolidation_time / switching_period) + (1 - idle_fraction) * survival_fraction_under_flow) / effective_near_wall_diffusivity * c(0)",
+    "c(1) = bulk_cell_concentration"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["c"],
+  "parameters": [
+    {"name": "concentration_boundary_layer_thickness", "value": 5.0e-5, "min_bound": 1.0e-5, "max_bound": 5.0e-4, "justification": "Near-wall transport layer."},
+    {"name": "effective_near_wall_diffusivity", "value": 1.0e-8, "min_bound": 1.0e-10, "max_bound": 1.0e-6, "justification": "Effective near-wall transport coefficient of diatom cells, time-averaged."},
+    {"name": "bulk_cell_concentration", "value": 1.0e9, "min_bound": 1.0e7, "max_bound": 1.0e11, "justification": "Coastal diatom concentration."}
+  ]
+}

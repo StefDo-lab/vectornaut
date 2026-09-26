@@ -1,0 +1,125 @@
+{
+  "function_analysis": "Same functions as fixed for this map: (F1) hydraulically smooth wetted surface; (F2) prevent or shed slime and macrofouling without biocides over a 5-year interval including idle periods; (F3) 5+ years of seawater durability (abrasion, UV, cathodic protection, hydrolysis); (F4) shipyard application without continuous energy or material supply. Round-1 evidence: release-stress concepts give large simulated benefits but only ~1 % objective gain because slime and durability dominate; renewal by erosion alone does not control macrofouling.",
+  "requirements": [
+    {"name": "friction_drag_reduction", "criterion": "Lowers the time-averaged hull friction resistance over the service interval compared with the conventional biocide-free foul-release coating."},
+    {"name": "no_toxic_biocides", "criterion": "Releases no biocides, heavy metals, or other toxic or persistent substances (including leaching oils or polymer fragments) into seawater."},
+    {"name": "multi_year_seawater_durability", "criterion": "Keeps adhesion, integrity and function for at least 5 years in seawater, including abrasion, UV at the waterline, cathodic protection and hydrolysis."},
+    {"name": "fouling_control", "criterion": "Limits slime and macrofouling (or allows its easy release at service speeds or by gentle cleaning) throughout the interval, including idle periods."},
+    {"name": "bionic_mechanism", "criterion": "The working mechanism is genuinely derived from a biological model."},
+    {"name": "practical_application", "criterion": "Can be applied to large steel hulls with shipyard processes at a cost comparable to premium coatings and without continuous energy or material supply."}
+  ],
+  "mechanism_classes_considered": [
+    "trapped_gas_or_liquid (bound hydration layer, renewed from a bound reservoir)",
+    "graded_stiffness (compliant sublayer under a tougher skin, or soft skin over stiff base)",
+    "other: surface renewal by wear exposing fresh functional material"
+  ],
+  "analogues_considered": [
+    "Mucin bottle-brush glycoproteins in fish and mammalian mucus (dense glycan side chains bind water and repel adhesion)",
+    "Temperate glaciers sliding over a water-saturated, deformable soft-till bed (soft layer under a stiff body lowers the shear needed to move it)",
+    "Commercial foul-release coatings containing free silicone oils, whose oil depletion and release degrade performance over years",
+    "Hydrolysis-activated carboxybetaine esters from biomedical coatings"
+  ],
+  "objective_statement": "Time-averaged hull frictional resistance of a merchant ship over a 5-year docking interval in seawater (mixed operating profile around 12-16 kn with idle periods), including the drag added by slime and macrofouling and by coating degradation, not the friction of a freshly applied clean surface.",
+  "baseline_statement": "Conventional biocide-free silicone (PDMS/fluoropolymer-modified) foul-release coating averaged over the same 5-year interval, i.e. in its typical in-service state after 12-24 months with a light-to-medium slime layer and occasional macrofouling during idle periods.",
+  "relevant_governing_quantities": ["wall_shear", "fouling_adhesion", "degradation_rate", "stress"],
+  "candidates": [
+    {
+      "order_id": "r002-01",
+      "title": "Oil-free bound hydration reservoir: slowly cleaving zwitterion tethers replace leaching silicone oil",
+      "summary": "A silicone foul-release matrix without any free silicone oil in which 10 wt% zwitterionic side chains are tethered through hydrolytically slow linkers; the hydration layer at the surface is renewed from the bound reservoir as wear and very slow linker cleavage expose and release segments, like mucus renewed from the epidermis. The concept combines the hydration layer with self-renewal, but loses functional material about two orders of magnitude slower than conventional foul-release coatings lose their free oil, so the function should last the full 5 years.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "nm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "degradation_rate"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "oil-containing FR coatings lose most of their free oil within 1-3 years, after which slime release worsens (slime penalty rising from ~3 % to ~7 %); a bound reservoir with loss flux S*L/2 = 3e-8*1.5e-4/2 = 2e-12 kg/m^2/s (0.07 g/m^2/yr) keeps the hydration function for >5 years; if it holds the slime penalty at ~4 % instead of an average ~5.5 %: ~1.5 %",
+        "value": 1.5,
+        "unit": "%"
+      },
+      "main_risk": "The surface hydration function fails for other reasons (conditioning films, surface reconstruction) long before the reservoir is exhausted, so the slow depletion buys nothing.",
+      "novelty_vs_known": "Closest: amphiphilic/hydrogel foul-release coatings, many of which contain free silicone oils. New: no free oil at all; the functional species is tethered with a chosen cleavage rate so that material loss to the sea and loss of function are both set by design, like mucus renewed from a bound source rather than secreted in bulk.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating (with 3-5 wt% free silicone oil, as in many commercial systems) averaged over the same 5-year interval in service.",
+      "inspiration_source": "Fish epidermal mucus renewed from tethered mucin glycoproteins of the epidermis, combined with the continuous shedding of coral mucus: function is maintained by renewal from a bound reservoir, not by a finite free liquid.",
+      "domain": "Polymer transport / degradation",
+      "physical_mechanism": "The loss of functional material from a foul-release coating is a diffusion-limited leaching flux. Free silicone oil (conventional coatings) diffuses to the surface from a finite reservoir: J = D*c_free/L. In the new coating the functional zwitterionic segments are tethered; only segments whose linker has hydrolysed (rate k) become mobile, giving a volumetric source S = k*c_bound and a steady surface flux J = S*L/2. With k chosen small, the loss rate (degradation_rate) and the release to the sea fall by orders of magnitude while the surface is continuously renewed by wear.",
+      "parameters": [
+        {"name": "bound_zwitterion_concentration", "value": 100.0, "min_bound": 20.0, "max_bound": 200.0, "justification": "10 wt% tethered zwitterionic segments in a matrix of about 1000 kg/m^3."},
+        {"name": "linker_cleavage_rate", "value": 3.0e-10, "min_bound": 1.0e-12, "max_bound": 1.0e-8, "justification": "Hydrolysis of a slow (amide or hindered silyl ether) linker in seawater, half-life of decades."},
+        {"name": "mobile_diffusivity", "value": 1.0e-15, "min_bound": 1.0e-17, "max_bound": 1.0e-12, "justification": "Diffusion of oligomeric species through a crosslinked silicone network."},
+        {"name": "depletion_depth", "value": 1.5e-4, "min_bound": 5.0e-5, "max_bound": 4.0e-4, "justification": "Topcoat thickness over which mobile species reach the surface."},
+        {"name": "free_mobile_concentration", "value": 0.0, "min_bound": 0.0, "max_bound": 100.0, "justification": "Free (untethered) functional species at the reservoir front; zero in the new coating, about 40-50 kg/m^3 (4-5 wt% oil) in a conventional oil-containing foul-release coating."}
+      ]
+    },
+    {
+      "order_id": "r002-02",
+      "title": "Mucin bottle-brush hydration skin with idle-period protection",
+      "summary": "Instead of linear zwitterions, the silicone surface carries mucin-like bottle-brush polymers (a siloxane-anchored backbone with dense short sulfobetaine/oligo-glycerol side chains) that bind a thicker, steric hydration layer of about 10-20 nm. The higher hydration repulsion lowers slime adhesion both at service shear and at rest, so the benefit does not vanish during idle periods, and the dense brush resists burial by silicone surface reconstruction.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "trapped_gas_or_liquid"},
+        {"axis": "length_scale", "value": "nm"},
+        {"axis": "inspiration_origin", "value": "animal"},
+        {"axis": "governing_quantity", "value": "fouling_adhesion"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "time-averaged retained settlement ratio with 25 % idle time: [0.25*a_new + 0.75*a_new*exp(-25/tau_new)] / [0.25*1 + 0.75*exp(-25/30)] with sticking a_new = 0.5 (steric repulsion at rest) and tau_new = 15 Pa: (0.125+0.071)/(0.25+0.326) = 0.34, i.e. -66 % on fresh surfaces; with half the benefit lost to ageing: -33 % slime, times a ~5 % slime penalty = ~1.6 %",
+        "value": 1.6,
+        "unit": "%"
+      },
+      "main_risk": "Bottle-brush layers are still a few-nm molecular coating that conditioning films, oil and abrasion defeat within months at sea.",
+      "novelty_vs_known": "Closest: the parent zwitterionic silicone and PEG-based amphiphilic coatings. New: mucin bottle-brush architecture (steric plus hydration repulsion) that also lowers the sticking probability at rest, and a time-averaged model including idle periods instead of a constant-shear lab ratio.",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service (light-to-medium slime).",
+      "inspiration_source": "Mucins in fish and mammalian mucus: bottle-brush glycoproteins whose dense glycan side chains hold water and give the steric and hydration repulsion that keeps microbes and particles from adhering.",
+      "domain": "Interfacial physics / near-wall particle transport",
+      "physical_mechanism": "Diatoms and bacteria reach the wall through a near-wall transport layer and attach with a sticking probability set by the repulsion barrier of the surface; attached cells survive the flow if their adhesion strength exceeds the wall shear. A bottle-brush hydration layer lowers both the sticking probability (steric barrier, active also at rest) and the adhesion strength (active at speed). The time-averaged effective attachment velocity is k_eff = k_c*a*[f_idle + (1-f_idle)*exp(-tau_w/tau_adh)], giving the retained settlement flux J = k_eff*c_b/(1+delta*k_eff/D).",
+      "parameters": [
+        {"name": "sticking_probability_new", "value": 0.5, "min_bound": 0.1, "max_bound": 1.0, "justification": "Relative initial sticking of diatoms on dense PEG/zwitterionic brushes vs PDMS in static settlement assays (reductions of 30-70 %)."},
+        {"name": "slime_adhesion_strength_new", "value": 15.0, "min_bound": 3.0, "max_bound": 60.0, "justification": "Wall shear for 50 % removal from brush surfaces, conservative against lab data (8-15 Pa)."},
+        {"name": "idle_fraction", "value": 0.25, "min_bound": 0.05, "max_bound": 0.6, "justification": "Fraction of time a merchant ship is at anchor or in port."},
+        {"name": "wall_shear_service", "value": 25.0, "min_bound": 5.0, "max_bound": 80.0, "justification": "Hull wall shear at 12-16 kn."},
+        {"name": "brush_hydration_thickness", "value": 1.5e-8, "min_bound": 3.0e-9, "max_bound": 5.0e-8, "justification": "Steric hydration layer of bottle-brush polymers is thicker than that of linear zwitterions."},
+        {"name": "contact_attachment_velocity", "value": 1.0e-4, "min_bound": 1.0e-6, "max_bound": 1.0e-3, "justification": "Contact frequency times sticking probability of diatoms on PDMS."}
+      ]
+    },
+    {
+      "order_id": "r002-03",
+      "title": "Glacier soft-bed release: tough thin skin on an ultra-compliant decoupling layer",
+      "summary": "Inverting the whale gradient: a thin (50 um), tougher silicone skin (E ~5 MPa, good tear and cut resistance) lies on a thick (350 um), ultra-compliant decoupling layer (E ~0.1 MPa), like a temperate glacier sliding over a water-saturated soft till bed. The soft bed supplies the elastic compliance that lowers the release stress of hard foulers, while the skin protects the soft layer from cutting and gives a durable, low-energy surface.",
+      "descriptors": [
+        {"axis": "mechanism_class", "value": "graded_stiffness"},
+        {"axis": "length_scale", "value": "100_um"},
+        {"axis": "inspiration_origin", "value": "atmosphere_ocean"},
+        {"axis": "governing_quantity", "value": "fouling_adhesion"}
+      ],
+      "back_of_envelope": {
+        "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+        "formula": "areal shear compliance C = 3*(t_bed/E_bed + t_skin/E_skin) = 3*(3.5e-4/1e5 + 5e-5/5e6) = 1.05e-8 m/Pa vs baseline 3*1.5e-4/1e6 = 4.5e-10 m/Pa; sigma_c ratio = sqrt(4.5e-10/1.05e-8) = 0.21 (-79 % release stress); macrofouling after idle periods ~3-5 % of time-averaged friction, half removed: ~2 %; slime unaffected",
+        "value": 2.0,
+        "unit": "%"
+      },
+      "main_risk": "The stiff skin on a very soft bed wrinkles or buckles under hull strain and local pressure, and a barnacle bonded to the skin loads it in bending so that the skin, not the compliance of the bed, controls release.",
+      "novelty_vs_known": "Closest: silicone foul-release coatings and the graded soft skin in this map (soft on top). New: the opposite ordering, a tough protective skin over a compliant decoupling bed, taken from glacier sliding over soft beds, which separates cut resistance (skin) from compliance (bed).",
+      "target_feasible": true,
+      "infeasibility_reason": null,
+      "baseline": "Conventional biocide-free silicone foul-release coating (uniform topcoat, E about 1 MPa, 150 um) averaged over the same 5-year interval in service.",
+      "inspiration_source": "Temperate glaciers and ice streams (cryosphere) that slide over a water-saturated, deformable till bed: the soft bed takes up the shear so that the stiff ice mass moves at a small basal shear stress (tens of kPa instead of hundreds).",
+      "domain": "Contact and fracture mechanics of layered soft coatings",
+      "physical_mechanism": "A rigid fouler base bonded to the coating surface detaches when the energy release rate, G = tau^2*C/2 with the areal shear compliance C of the layer stack, exceeds the work of adhesion w, so sigma_c = sqrt(2w/C). For a thin stiff skin on a soft bed the shear compliance is dominated by the bed (C ~ 3*t_bed/E_bed), while the skin carries cut and puncture loads and seals the soft bed. Lower sigma_c means hard fouling releases at lower speed or gentler cleaning, keeping the hull smoother over the interval.",
+      "parameters": [
+        {"name": "skin_modulus", "value": 5.0e6, "min_bound": 1.0e6, "max_bound": 2.0e7, "justification": "Tough, filled silicone or silicone-polyurea skin; ice analogue."},
+        {"name": "skin_thickness", "value": 5.0e-5, "min_bound": 1.0e-5, "max_bound": 1.5e-4, "justification": "Thin enough to add little shear stiffness, thick enough for cut resistance."},
+        {"name": "bed_modulus", "value": 1.0e5, "min_bound": 3.0e4, "max_bound": 1.0e6, "justification": "Ultra-soft silicone gel bed, till analogue."},
+        {"name": "bed_thickness", "value": 3.5e-4, "min_bound": 1.0e-4, "max_bound": 1.0e-3, "justification": "Thick compliant bed supplies the compliance."},
+        {"name": "work_of_adhesion", "value": 0.05, "min_bound": 0.01, "max_bound": 0.3, "justification": "Barnacle cement on low-energy silicone."},
+        {"name": "fouler_base_radius", "value": 5.0e-3, "min_bound": 1.0e-3, "max_bound": 1.5e-2, "justification": "Adult barnacle base plate."}
+      ]
+    }
+  ]
+}

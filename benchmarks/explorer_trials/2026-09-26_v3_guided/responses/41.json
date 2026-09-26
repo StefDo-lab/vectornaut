@@ -1,0 +1,10 @@
+{
+  "governing_equation": "d2u_dxi2 = 0",
+  "boundary_conditions": [
+    "u(0) = 0",
+    "du_dxi(1) = friction_coefficient_new * contact_pressure * coating_thickness / coating_shear_modulus"
+  ],
+  "independent_variables": ["xi"],
+  "dependent_variables": ["u"],
+  "parameters": []
+}

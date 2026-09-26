@@ -1,0 +1,54 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: near-wall settlement with time-split effective attachment: idle periods (fraction f_idle, no shear, thermal switching every t_s removes a fraction p of unconsolidated cells) and service periods (survival s_flow under shear, no switching). k_eff = k_c*[f_idle/(1+p*t_c/t_s) + (1-f_idle)*s_flow]. Design: 1e-4*(0.25/2 + 0.75*0.435) = 4.51e-5 m/s, Da = 0.226, J = 3.68e4 1/(m^2 s). Baseline silicone foul-release without switching (p = 0): 5.76e-5 m/s, Da = 0.288, J = 4.47e4 1/(m^2 s). Expected gain ~18 %, much smaller than the parent's 49 % because switching now happens only during idle periods. The linear flux model underweights idle-period fouling, which consolidates and is not shed later at speed; this is noted but not modelled. Energy check: induction penetration in steel at ~20 kHz is ~0.1-0.2 mm; heating 0.2 mm of steel plus ~0.2 mm of coating by 15 K takes ~3.6e6*2e-4*15 + 1.5e6*2e-4*15 = 11 + 4.5 kJ/m^2, plus losses to water (h ~300 W/m^2K, 2 s) ~9 kJ/m^2 and conduction into the plate: ~20-30 kJ/m^2 per pass. Two passes per day over 10,000 m^2: ~0.5 GJ/day, ~6 kW average during idle; peak power of a 1 m wide head at 0.2 m/s: 0.2 m^2/s*25 kJ/m^2 = 5 kW. Feasible for a battery robot with charging. Heat must pass the 200 um coating within the dwell time: diffusion time (2e-4)^2/1e-7 = 0.4 s, fine. Caveats: p = 0.5 and t_c = 1 day are assumed; brush ageing not modelled. Dimensionless: Da 0.226 (design), 0.288 (baseline); p*t_c/t_s = 1.0. Simulation coefficient: design k_eff 4.51e-5 m/s (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "release_probability_per_switch", "value": 0.5},
+    {"name": "consolidation_time", "value": 86400.0},
+    {"name": "switching_period", "value": 43200.0},
+    {"name": "idle_fraction", "value": 0.25},
+    {"name": "survival_fraction_under_flow", "value": 0.435},
+    {"name": "contact_attachment_velocity", "value": 0.0001},
+    {"name": "concentration_boundary_layer_thickness", "value": 5e-05},
+    {"name": "effective_near_wall_diffusivity", "value": 1e-08},
+    {"name": "bulk_cell_concentration", "value": 1000000000.0}
+  ],
+  "dimensionless_numbers": [
+    {"name": "DamkoehlerNumber_design", "value": 0.226},
+    {"name": "DamkoehlerNumber_baseline", "value": 0.288},
+    {"name": "RemovalToConsolidationRatio", "value": 1.0}
+  ],
+  "simulation_coefficient": 4.51e-05,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Near-wall transport and attachment of fouling cells",
+    "independent_var": {"label": "Normalised distance from the hull wall", "unit": "-"},
+    "dependent_var": {"label": "Diatom cell concentration", "unit": "1/m^3"},
+    "primary_metric": {"label": "Time-averaged retained diatom settlement flux"},
+    "reference_metric": {"label": "Time-averaged retained diatom settlement flux (reference solver)"},
+    "performance_gain": {"label": "Reduction of retained slime settlement vs silicone foul-release"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of retained slime settlement",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Time-averaged retained diatom settlement flux",
+    "reference_metric": "Time-averaged retained diatom settlement flux (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 10.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds", "non-negative concentration"],
+    "design_variables": ["release_probability_per_switch", "switching_period"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "effective_near_wall_diffusivity/concentration_boundary_layer_thickness",
+    "unit": "1/(m^2 s)",
+    "label": "Time-averaged retained diatom settlement flux"
+  },
+  "baseline_parameters": [
+    {"name": "release_probability_per_switch", "value": 0.0}
+  ],
+  "baseline_description": "Conventional silicone foul-release surface without switching or grooming"
+}

@@ -1,0 +1,50 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: through-thickness shear of the topcoat under a sliding contact with traction mu*p: u'' = 0, u(0) = 0 at the primer, G u'(1)/t = mu*p at the surface. The shear stress transmitted into the coating (and to the primer interface) equals mu*p: design 0.02*0.2 MPa = 4 kPa, baseline 0.4*0.2 MPa = 80 kPa, gain 95 % by construction, entirely set by the ratio of friction coefficients. This is the honest limit of a 1D model: the benefit is a tribological input, not a simulated result. Checks: shear strain in the baseline, 80 kPa/0.33 MPa = 0.24, elastic but a large cyclic strain for a soft silicone under brushes; with hydration lubrication 0.012. Tearing of soft silicones under sliding contact starts where traction exceeds a few tens of kPa near asperity edges, so the reduction is meaningful for durability if the lubricating layer survives. Caveats: (1) mu = 0.02 is from clean lab tribometry with smooth counterfaces; sand, debris and biofilm in the contact raise it; (2) the PC layer is itself abraded by the contacts; (3) contact pressure under fenders can exceed 1 MPa, where hydration layers of polymer brushes (not liposomes) may be squeezed out. Dimensionless: friction ratio 20; shear strain 0.012 (design) vs 0.24 (baseline). Simulation coefficient: design traction 4000 Pa (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "friction_coefficient_new", "value": 0.02},
+    {"name": "friction_coefficient_baseline", "value": 0.4},
+    {"name": "contact_pressure", "value": 200000.0},
+    {"name": "coating_shear_modulus", "value": 330000.0},
+    {"name": "coating_thickness", "value": 0.00015}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FrictionRatio", "value": 20.0},
+    {"name": "ShearStrain_design", "value": 0.012},
+    {"name": "ShearStrain_baseline", "value": 0.24}
+  ],
+  "simulation_coefficient": 4000.0,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Contact mechanics of lubricated soft coatings",
+    "independent_var": {"label": "Normalised depth from primer to surface", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement in the coating", "unit": "m"},
+    "primary_metric": {"label": "Contact shear stress transmitted into the coating"},
+    "reference_metric": {"label": "Contact shear stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of contact shear stress vs unlubricated silicone"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of contact shear stress",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Contact shear stress transmitted into the coating",
+    "reference_metric": "Contact shear stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 30.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["friction_coefficient_new", "coating_shear_modulus", "coating_thickness"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "coating_shear_modulus/coating_thickness",
+    "unit": "Pa",
+    "label": "Contact shear stress transmitted into the coating"
+  },
+  "baseline_parameters": [
+    {"name": "friction_coefficient_new", "value": 0.4}
+  ],
+  "baseline_description": "Conventional silicone foul-release topcoat under the same sliding contact (mu = 0.4)"
+}

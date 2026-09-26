@@ -1,0 +1,13 @@
+{
+  "governing_equation": "d2c_dy2 = 0",
+  "boundary_conditions": [
+    "dc_dy(0) = cyprid_boundary_layer_thickness * contact_attachment_velocity * settlement_reduction_factor / cyprid_effective_diffusivity * c(0)",
+    "c(1) = cyprid_concentration"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["c"],
+  "parameters": [
+    {"name": "cyprid_boundary_layer_thickness", "value": 1.0e-3, "min_bound": 1.0e-4, "max_bound": 1.0e-2, "justification": "Near-wall layer through which exploring cyprids (0.5 mm) reach the surface during idle periods; y = distance/thickness."},
+    {"name": "cyprid_effective_diffusivity", "value": 1.0e-6, "min_bound": 1.0e-8, "max_bound": 1.0e-4, "justification": "Effective transport of swimming larvae by active swimming and ambient turbulence in port."}
+  ]
+}

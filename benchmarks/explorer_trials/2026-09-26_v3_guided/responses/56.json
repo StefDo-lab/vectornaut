@@ -1,0 +1,293 @@
+{
+ "function_analysis": "Unchanged for this map. After five rounds the best concepts reach about 1-1.5 % objective gain; the clean-surface route (compliant wall) was judged ~0; the remaining levers are hard-fouling settlement and release, durability of soft layers, and leaching.",
+ "requirements": [
+  {
+   "name": "friction_drag_reduction",
+   "criterion": "Lowers the time-averaged hull friction resistance over the service interval compared with the conventional biocide-free foul-release coating."
+  },
+  {
+   "name": "no_toxic_biocides",
+   "criterion": "Releases no biocides, heavy metals, or other toxic or persistent substances (including leaching oils or polymer fragments) into seawater."
+  },
+  {
+   "name": "multi_year_seawater_durability",
+   "criterion": "Keeps adhesion, integrity and function for at least 5 years in seawater, including abrasion, UV at the waterline, cathodic protection and hydrolysis."
+  },
+  {
+   "name": "fouling_control",
+   "criterion": "Limits slime and macrofouling (or allows its easy release at service speeds or by gentle cleaning) throughout the interval, including idle periods."
+  },
+  {
+   "name": "bionic_mechanism",
+   "criterion": "The working mechanism is genuinely derived from a biological model."
+  },
+  {
+   "name": "practical_application",
+   "criterion": "Can be applied to large steel hulls with shipyard processes at a cost comparable to premium coatings and without continuous energy or material supply."
+  }
+ ],
+ "objective_statement": "Time-averaged hull frictional resistance of a merchant ship over a 5-year docking interval in seawater (mixed operating profile around 12-16 kn with idle periods), including the drag added by slime and macrofouling and by coating degradation, not the friction of a freshly applied clean surface.",
+ "baseline_statement": "Conventional biocide-free silicone (PDMS/fluoropolymer-modified) foul-release coating averaged over the same 5-year interval, i.e. in its typical in-service state after 12-24 months with a light-to-medium slime layer and occasional macrofouling during idle periods.",
+ "relevant_governing_quantities": [
+  "wall_shear",
+  "fouling_adhesion",
+  "degradation_rate",
+  "stress"
+ ],
+ "mechanism_classes_considered": [
+  "graded_stiffness (thin platelet-filled barrier skin over a soft layer)",
+  "graded_stiffness (stiff-skin buckling wrinkles at 10-100 um)",
+  "trapped_gas_or_liquid (ionically self-healing hydrated gel using seawater calcium)"
+ ],
+ "analogues_considered": [
+  "Plant cuticle with embedded crystalline wax platelets that make water diffusion tortuous",
+  "Microtextures of 30-45 um profile height that deter barnacle cyprid settlement (Berntsson et al.), crab carapace and dolphin skin ridges",
+  "Hierarchically wrinkled PDMS coatings (Efimenko et al.)",
+  "Pseudomonas aeruginosa alginate capsule, crosslinked reversibly by calcium in biofilms"
+ ],
+ "candidates": [
+  {
+   "order_id": "r006-01",
+   "title": "Wax-platelet cuticle skin: tortuous-path barrier over an oil-free soft layer",
+   "summary": "A 20 um soft silicone skin filled with 10 vol% aligned impermeable platelets (glass flakes or clay, aspect ratio ~100) sits on the oil-free supersoft layer, like the plant cuticle whose embedded wax crystallites make water diffusion tortuous. The skin cuts the leaching of the remaining mobile silicone and the ingress of water, so the soft layer keeps its properties longer, while staying thin enough not to spoil its compliance.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "graded_stiffness"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "plant"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "degradation_rate"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+    "formula": "Nielsen tortuosity D_skin/D = (1-phi)/(1+alpha*phi/2) = 0.9/(1+100*0.1/2) = 0.15; skin conductance k = 1.5e-16/2e-5 = 7.5e-12 m/s in series with the bulk D/L = 3.3e-12 m/s: J = c*(k*D/L)/(k+D/L) = 20*2.3e-12 = 4.6e-11 kg/m^2/s vs 3e-10 for the oil-containing conventional coating (-85 %), and -31 % vs the unskinned parent; objective: sustained softness ~0.3 % on top of the release benefit, total ~1 %",
+    "value": 1.0,
+    "unit": "%"
+   },
+   "main_risk": "Aligned platelets raise the in-plane stiffness of the skin (Halpin-Tsai, several MPa), which spreads the fouler load and raises the release stress, cancelling part of the soft layer's benefit.",
+   "novelty_vs_known": "Closest: glass-flake barrier coatings (anticorrosion) and the oil-free soft layer in this map. New: a thin platelet barrier skin inside a foul-release stack to slow leaching and water ingress of a soft layer, taken from the plant cuticle's wax platelets.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Conventional biocide-free silicone foul-release coating (with 3-5 wt% free silicone oil, as in many commercial systems) averaged over the same 5-year interval in service.",
+   "inspiration_source": "Plant cuticle: a 1-10 um cutin layer with embedded crystalline wax platelets and intracuticular waxes that lengthen the diffusion path and make the cuticle a very effective water barrier while remaining flexible.",
+   "domain": "Transport in layered composites / coating degradation",
+   "physical_mechanism": "Mobile species leave the soft layer by diffusion through the bulk (D/L) and then through the skin (conductance k = D_skin/L_skin) in series; impermeable aligned platelets reduce D_skin by the tortuosity factor (1-phi)/(1+alpha*phi/2). The steady flux is J = c*(1/(L/D + L_skin/D_skin)). Lower leaching keeps the layer soft and lowers release of silicone to the sea.",
+   "parameters": [
+    {
+     "name": "mobile_concentration",
+     "value": 20.0,
+     "min_bound": 5.0,
+     "max_bound": 100.0,
+     "justification": "Sol fraction ~2 wt% of the oil-free supersoft layer (kg/m^3)."
+    },
+    {
+     "name": "mobile_diffusivity",
+     "value": 1e-15,
+     "min_bound": 1e-17,
+     "max_bound": 1e-12,
+     "justification": "Oligomer diffusion in crosslinked silicone."
+    },
+    {
+     "name": "layer_thickness",
+     "value": 0.0003,
+     "min_bound": 0.0001,
+     "max_bound": 0.001,
+     "justification": "Soft layer thickness."
+    },
+    {
+     "name": "skin_thickness",
+     "value": 2e-05,
+     "min_bound": 5e-06,
+     "max_bound": 5e-05,
+     "justification": "Thin barrier skin, cuticle analogue."
+    },
+    {
+     "name": "platelet_volume_fraction",
+     "value": 0.1,
+     "min_bound": 0.02,
+     "max_bound": 0.3,
+     "justification": "Glass flake or clay loading."
+    },
+    {
+     "name": "platelet_aspect_ratio",
+     "value": 100.0,
+     "min_bound": 10.0,
+     "max_bound": 500.0,
+     "justification": "Glass flakes/clay platelets."
+    }
+   ]
+  },
+  {
+   "order_id": "r006-02",
+   "title": "Cyprid-disc-scale wrinkled soft skin: 30-50 um buckling wrinkles on a graded silicone",
+   "summary": "A stiff 2-5 um oxidised or highly crosslinked silicone skin on a soft graded silicone base is made to buckle into wrinkles of 30-50 um wavelength and ~10 um amplitude (by curing on a pre-swollen base), a texture scale close to the ridges of crab carapaces and cetacean skin and smaller than the 20-30 um antennular discs and 500 um body of barnacle cyprids. The discs cannot make full contact, so fewer cyprids settle, and the soft base still eases release of those that do.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "graded_stiffness"
+    },
+    {
+     "axis": "length_scale",
+     "value": "10_um"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "animal"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "fouling_adhesion"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+    "formula": "microtextures of 30-45 um cut Balanus settlement by up to ~90 % in lab (Berntsson 2000); field effects smaller, take -50 % barnacle settlement; macrofouling ~3-5 % of time-averaged friction on foul-release ships, half removed: ~2 %; roughness penalty: k ~10 um amplitude, k_s+ ~ 0.5*10/6.3 ~ 0.8, hydraulically smooth; diatoms may colonise the valleys (+slime), net ~1 %",
+    "value": 1.0,
+    "unit": "%"
+   },
+   "main_risk": "Diatoms and bacteria (5-20 um) colonise the wrinkle valleys and the slime penalty rises, and wrinkles on soft silicone flatten or tear over years.",
+   "novelty_vs_known": "Closest: Efimenko's hierarchically wrinkled PDMS coatings and Berntsson's microtextures against barnacles. New: wrinkle wavelength tuned to the antennular disc scale on a graded soft base that also lowers release stress, instead of on standard PDMS.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service.",
+   "inspiration_source": "Crab carapace (Cancer pagurus) and cetacean skin ridges: surface microtopography of tens of micrometres on a compliant tissue that reduces settlement of barnacle larvae (Bers and Wahl 2004).",
+   "domain": "Surface mechanics / larval settlement",
+   "physical_mechanism": "A stiff thin skin on a soft base under compressive strain buckles into wrinkles with wavelength lambda = 2*pi*t_s*(E_s/(3*E_b))^(1/3). When lambda is comparable to or smaller than the cyprid's antennular disc (20-30 um), the disc can only contact the crests, reducing the adhesive contact area and the probability of permanent settlement (attachment point theory). The settled fraction lowers the macrofouling load; the soft base keeps the release stress low.",
+   "parameters": [
+    {
+     "name": "skin_thickness",
+     "value": 3e-06,
+     "min_bound": 1e-06,
+     "max_bound": 1e-05,
+     "justification": "Oxidised or highly crosslinked silicone skin."
+    },
+    {
+     "name": "skin_modulus",
+     "value": 50000000.0,
+     "min_bound": 10000000.0,
+     "max_bound": 1000000000.0,
+     "justification": "Stiff skin sets the wavelength."
+    },
+    {
+     "name": "base_modulus",
+     "value": 200000.0,
+     "min_bound": 50000.0,
+     "max_bound": 2000000.0,
+     "justification": "Soft graded base."
+    },
+    {
+     "name": "settlement_reduction_factor",
+     "value": 0.5,
+     "min_bound": 0.1,
+     "max_bound": 1.0,
+     "justification": "Fraction of cyprids settling relative to smooth silicone (lab up to 0.1, field ~0.5)."
+    },
+    {
+     "name": "contact_attachment_velocity",
+     "value": 1e-05,
+     "min_bound": 1e-07,
+     "max_bound": 0.001,
+     "justification": "Settlement rate constant of cyprids on smooth silicone during idle periods."
+    },
+    {
+     "name": "cyprid_concentration",
+     "value": 1000.0,
+     "min_bound": 1.0,
+     "max_bound": 100000.0,
+     "justification": "Cyprid larvae per m^3 in coastal waters during settlement season."
+    }
+   ]
+  },
+  {
+   "order_id": "r006-03",
+   "title": "Alginate-capsule self-healing gel: seawater-calcium crosslinked polyanion layer that absorbs contact shear",
+   "summary": "A covalently anchored, guluronate-rich polyanion brush on the silicone topcoat forms a nm-to-sub-um hydrated gel by reversible ionic crosslinks with the calcium and magnesium of seawater, like the alginate capsule of Pseudomonas biofilms. Under a sliding contact the gel lubricates and its ionic bonds break and reform, so the layer heals itself from the ions of the sea without any supply and stays in place longer than a non-healing hydration brush, lowering the traction shear on the soft coating on average.",
+   "descriptors": [
+    {
+     "axis": "mechanism_class",
+     "value": "trapped_gas_or_liquid"
+    },
+    {
+     "axis": "length_scale",
+     "value": "nm"
+    },
+    {
+     "axis": "inspiration_origin",
+     "value": "microbe"
+    },
+    {
+     "axis": "governing_quantity",
+     "value": "stress"
+    }
+   ],
+   "back_of_envelope": {
+    "quantity": "time-averaged hull friction reduction vs conventional foul-release coating over 5 years",
+    "formula": "time-averaged friction mu_avg = mu_gel*f_intact + mu_bare*(1-f_intact) = 0.05*0.8 + 0.4*0.2 = 0.12 vs 0.4 (-70 % traction shear); protects the soft coating in contacts; but Ca-bridged polyanions bind diatom EPS, so the slime penalty may rise: net objective ~0 to +0.5 %",
+    "value": 0.3,
+    "unit": "%"
+   },
+   "main_risk": "Calcium-bridged anionic surfaces are exactly what diatom and bacterial EPS use to adhere, so the layer may attract slime and raise the drag penalty.",
+   "novelty_vs_known": "Closest: the cartilage phosphocholine concept in this map (hydration lubrication) and alginate hydrogels. New: the mechanism is reversible ionic crosslinking supplied by seawater itself, giving self-healing of the lubricating gel, taken from the calcium-crosslinked alginate capsule of biofilm bacteria.",
+   "target_feasible": true,
+   "infeasibility_reason": null,
+   "baseline": "Conventional biocide-free silicone foul-release coating averaged over the same 5-year interval in service, subjected to the same contacts.",
+   "inspiration_source": "Pseudomonas aeruginosa and Azotobacter alginate capsules: guluronate blocks crosslink reversibly with environmental Ca2+ ('egg-box' junctions), forming a hydrated, self-healing protective gel around the cells.",
+   "domain": "Tribology / polyelectrolyte gels",
+   "physical_mechanism": "Guluronate blocks bind Ca2+ in egg-box junctions; seawater (10 mM Ca2+, 53 mM Mg2+) keeps supplying ions, so junctions broken by shear reform within seconds. The hydrated gel acts as a boundary lubricant (low mu) and as a sacrificial, healing layer; the fraction of time it is intact is higher than for a non-healing brush. The traction shear transmitted into the coating is tau = mu_avg*p.",
+   "parameters": [
+    {
+     "name": "friction_coefficient_gel",
+     "value": 0.05,
+     "min_bound": 0.005,
+     "max_bound": 0.3,
+     "justification": "Hydrated polyelectrolyte gels in salt water, 0.01-0.1."
+    },
+    {
+     "name": "friction_coefficient_bare",
+     "value": 0.4,
+     "min_bound": 0.1,
+     "max_bound": 1.5,
+     "justification": "Wet sliding friction of soft silicone."
+    },
+    {
+     "name": "intact_fraction",
+     "value": 0.8,
+     "min_bound": 0.2,
+     "max_bound": 0.99,
+     "justification": "Fraction of time the self-healing gel covers the contact zone (vs ~0.3 for a non-healing brush after months)."
+    },
+    {
+     "name": "contact_pressure",
+     "value": 200000.0,
+     "min_bound": 10000.0,
+     "max_bound": 2000000.0,
+     "justification": "Brush or fender contact pressure."
+    },
+    {
+     "name": "coating_shear_modulus",
+     "value": 330000.0,
+     "min_bound": 30000.0,
+     "max_bound": 3000000.0,
+     "justification": "Silicone topcoat."
+    },
+    {
+     "name": "coating_thickness",
+     "value": 0.00015,
+     "min_bound": 5e-05,
+     "max_bound": 0.0004,
+     "justification": "Topcoat thickness."
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,51 @@
+{
+  "audit_passed": true,
+  "audit_notes": "Model: through-thickness shear of the topcoat under a sliding contact with a time-averaged traction mu_avg*p, mu_avg = mu_gel*f_intact + mu_bare*(1-f_intact); u'' = 0, u(0) = 0, G u'(1)/t = mu_avg*p; metric: shear stress transmitted to the primer, G/t*u'(0) = mu_avg*p. Design: mu_avg = 0.05*0.8 + 0.4*0.2 = 0.12, tau = 24 kPa. Baseline (bare silicone, f_intact = 0): mu = 0.4, tau = 80 kPa. Gain 70 %, entirely set by the assumed friction coefficients and intact fraction (0.8), which is the untested self-healing claim. Chemistry check: seawater Ca2+ ~10 mM is enough to gel guluronate-rich alginate (gelation from ~1-2 mM), but Mg2+ (53 mM) and Na+ (470 mM) compete; Mg-alginate gels are weak, so the gel will be softer and more swollen than in freshwater Ca solutions; ionic crosslinks re-form in seconds, supporting the healing claim for the gel network but not for chains lost by abrasion (the brush must be covalently anchored). Fouling concern: diatom and bacterial EPS adhere to anionic surfaces through Ca2+ bridges, so this layer may increase slime adhesion; not simulated. Dimensionless: mu ratio 3.3, shear strain 0.073 (design) vs 0.24 (baseline). Simulation coefficient: mean traction 24 kPa (informational).",
+  "request_feasible": true,
+  "infeasibility_reason": null,
+  "audited_parameters": [
+    {"name": "friction_coefficient_gel", "value": 0.05},
+    {"name": "friction_coefficient_bare", "value": 0.4},
+    {"name": "intact_fraction", "value": 0.8},
+    {"name": "contact_pressure", "value": 200000.0},
+    {"name": "coating_shear_modulus", "value": 330000.0},
+    {"name": "coating_thickness", "value": 0.00015}
+  ],
+  "dimensionless_numbers": [
+    {"name": "FrictionRatio_bare_to_average", "value": 3.33},
+    {"name": "ShearStrain_design", "value": 0.073},
+    {"name": "ShearStrain_baseline", "value": 0.24}
+  ],
+  "simulation_coefficient": 24000.0,
+  "solver_method": "analytical",
+  "ui_metadata": {
+    "domain_name": "Contact mechanics of self-healing lubricated coatings",
+    "independent_var": {"label": "Normalised depth from primer to surface", "unit": "-"},
+    "dependent_var": {"label": "Shear displacement in the coating", "unit": "m"},
+    "primary_metric": {"label": "Time-averaged contact shear stress in the coating"},
+    "reference_metric": {"label": "Contact shear stress (reference solver)"},
+    "performance_gain": {"label": "Reduction of contact shear stress vs unlubricated silicone"}
+  },
+  "objective_metric": {
+    "objective_name": "Reduction of contact shear stress",
+    "score_field": "performance_gain_pct",
+    "direction": "maximize",
+    "primary_metric": "Time-averaged contact shear stress in the coating",
+    "reference_metric": "Contact shear stress (reference solver)",
+    "lower_is_better": true,
+    "acceptance_threshold": 30.0,
+    "hard_constraints": ["relative error between solvers < 1 %", "finite outputs", "parameters within audited bounds"],
+    "design_variables": ["friction_coefficient_gel", "intact_fraction"]
+  },
+  "metric": {
+    "kind": "derivative_at",
+    "location": "0",
+    "scale": "coating_shear_modulus/coating_thickness",
+    "unit": "Pa",
+    "label": "Time-averaged contact shear stress in the coating"
+  },
+  "baseline_parameters": [
+    {"name": "intact_fraction", "value": 0.0}
+  ],
+  "baseline_description": "Conventional silicone foul-release topcoat under the same sliding contact (mu = 0.4)"
+}

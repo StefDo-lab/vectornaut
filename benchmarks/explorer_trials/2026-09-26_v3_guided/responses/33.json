@@ -1,0 +1,91 @@
+{
+  "reviews": [
+    {
+      "order_id": "r003-01",
+      "plausible_simulated_benefit_pct": 35.0,
+      "plausible_objective_gain_pct": 1.0,
+      "plausible_gain_reasoning": "The guided-cantilever shear stiffness assumes fibres bonded at both ends and the model ignores the soft cover skin, fibre waviness and misalignment from flocking, and viscoelastic barnacle adhesion; about 35 % lower release stress than a commercial topcoat is realistic. The objective gain comes from keeping a compliant layer intact for longer and from macrofouling release after idle periods, about 1 %; slime is unaffected.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Fibres assumed perfectly normal, straight and bonded at primer and skin; flocked fibres are tilted and wavy, changing the shear stiffness by factors",
+        "Elastic Kendall energy balance with w = 0.05 J/m^2",
+        "Fibre density gradient described in the concept is not modelled"
+      ],
+      "killer_risks": [
+        "Fibre tips breaking through the thin soft skin create roughness and anchor points for barnacles and weed (as on flock coatings)",
+        "Fibre-matrix debonding and fibre buckling under repeated fender loads above ~0.4 MPa",
+        "Nylon/PET fibre fragments released when the layer wears (microplastic)"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.3, "reason": "About 1 % time-averaged; risk of roughness from fibre tips."},
+        {"name": "no_toxic_biocides", "coverage": 0.7, "reason": "No biocide; worn fibre fragments would be microplastic."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.45, "reason": "Better indentation resistance than ultra-soft silicone, but debonding and buckling are untested."},
+        {"name": "fouling_control", "coverage": 0.45, "reason": "Easier hard-fouling release; no effect on slime."},
+        {"name": "bionic_mechanism", "coverage": 0.55, "reason": "Fibre-in-parenchyma architecture of monocot stems genuinely supplies the anisotropy."},
+        {"name": "practical_application", "coverage": 0.45, "reason": "Flocking a wet soft silicone on a ship hull in dock is new, weather-sensitive and slow."}
+      ]
+    },
+    {
+      "order_id": "r003-02",
+      "plausible_simulated_benefit_pct": 25.0,
+      "plausible_objective_gain_pct": 1.0,
+      "plausible_gain_reasoning": "Thermoresponsive release works in the lab on weakly adhered cells; diatoms consolidate EPS within hours and brush layers age, so a 25 % lower retained slime flux is more realistic than 49 %, giving about 1 % of time-averaged friction. The energy cost is modest, but it is a continuous supply.",
+      "simulated_quantity_relevant": true,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Release probability 0.6 per switch and consolidation time 1 day are assumed from lab studies with bacteria, not marine diatom films",
+        "LCST switching must stay above the highest route temperature, needing heating to ~45 C",
+        "No ageing or fouling of the brush in the model"
+      ],
+      "killer_risks": [
+        "Embedded heater grid on a steel hull: insulation failure, interference with cathodic protection, fender damage, cabling through the hull",
+        "Molecular brush layer ages and is masked by conditioning films",
+        "Continuous electrical energy and control system required for the whole service life"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.25, "reason": "About 1 % time-averaged, only while brush and heater work."},
+        {"name": "no_toxic_biocides", "coverage": 0.8, "reason": "No substance released by design."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.2, "reason": "Heater grid and brush layer are unlikely to survive 5 years on a hull without failures."},
+        {"name": "fouling_control", "coverage": 0.45, "reason": "Works on slime also in port; no effect on consolidated macrofouling."},
+        {"name": "bionic_mechanism", "coverage": 0.0, "reason": "Explicitly a technology concept, not bionic."},
+        {"name": "practical_application", "coverage": 0.1, "reason": "Needs electrical infrastructure on the hull and continuous energy supply."}
+      ]
+    },
+    {
+      "order_id": "r003-03",
+      "plausible_simulated_benefit_pct": 60.0,
+      "plausible_objective_gain_pct": -0.5,
+      "plausible_gain_reasoning": "Against an oil-containing foul-release coating an oil-free clay-filled silicone does lose less mobile material, but wear of platelets (not modelled) dominates and the 100 % is by construction; about 60 % lower loss is plausible. The metric says nothing about fouling: clay faces raise surface energy and stiffness, and natural mineral surfaces foul readily, so the objective effect is about zero or slightly negative.",
+      "simulated_quantity_relevant": false,
+      "relabelled_analogue": false,
+      "relabel_reason": "",
+      "baseline_conventional": true,
+      "baseline_issue": "",
+      "key_assumption_issues": [
+        "Gain is by construction: the design has no mobile species, so the loss-flux metric cannot fail",
+        "Wear, the real loss path of platelets, is not modelled",
+        "No model of whether clay faces reduce slime adhesion at all"
+      ],
+      "killer_risks": [
+        "Clay-faced surfaces are colonised like natural rock; no anti-fouling function",
+        "Platelets stiffen the silicone and raise surface energy, worsening barnacle release",
+        "Hydration layer in seawater only 1-2 water layers after cation exchange"
+      ],
+      "requirement_coverage": [
+        {"name": "friction_drag_reduction", "coverage": 0.1, "reason": "No demonstrated mechanism for lower time-averaged drag."},
+        {"name": "no_toxic_biocides", "coverage": 0.9, "reason": "Mineral filler, no oil, no biocide."},
+        {"name": "multi_year_seawater_durability", "coverage": 0.5, "reason": "Mineral is stable; the silicone matrix limits durability as in the baseline."},
+        {"name": "fouling_control", "coverage": 0.15, "reason": "Unlikely to reduce slime or macrofouling; may worsen release."},
+        {"name": "bionic_mechanism", "coverage": 0.05, "reason": "Geological, not biological inspiration."},
+        {"name": "practical_application", "coverage": 0.7, "reason": "Cheap filler in a sprayable silicone."}
+      ]
+    }
+  ]
+}

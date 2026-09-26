@@ -1,0 +1,15 @@
+{
+  "governing_equation": "d2c_dy2 = 0",
+  "boundary_conditions": [
+    "dc_dy(0) = concentration_boundary_layer_thickness * contact_attachment_velocity * exp(-wall_shear_service / slime_adhesion_strength_new) / effective_near_wall_diffusivity * c(0)",
+    "c(1) = bulk_cell_concentration"
+  ],
+  "independent_variables": ["y"],
+  "dependent_variables": ["c"],
+  "parameters": [
+    {"name": "concentration_boundary_layer_thickness", "value": 5.0e-5, "min_bound": 1.0e-5, "max_bound": 5.0e-4, "justification": "Near-wall transport layer of the order of the viscous sublayer, about 5*nu/u_tau = 5e-6/0.16 m = 3e-5 m at 12-16 kn, widened for the buffer layer."},
+    {"name": "effective_near_wall_diffusivity", "value": 1.0e-8, "min_bound": 1.0e-10, "max_bound": 1.0e-6, "justification": "Effective transport coefficient of 5-20 um diatom cells near the wall (turbophoresis and eddy transport; Brownian diffusion alone is ~1e-13 m^2/s)."},
+    {"name": "contact_attachment_velocity", "value": 1.0e-4, "min_bound": 1.0e-6, "max_bound": 1.0e-3, "justification": "Wall-reaction velocity: contact frequency times initial sticking probability of diatoms on low-energy surfaces."},
+    {"name": "bulk_cell_concentration", "value": 1.0e9, "min_bound": 1.0e7, "max_bound": 1.0e11, "justification": "Coastal diatom concentration 1e3-1e5 cells/mL (1e9-1e11 per m^3)."}
+  ]
+}
